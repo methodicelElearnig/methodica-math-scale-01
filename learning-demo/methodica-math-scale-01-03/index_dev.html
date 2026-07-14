@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>DEV — לומדה | methodica-math-scale-01</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; overflow: hidden; }
+    #lomdah-frame { width: 100vw; height: 100vh; border: none; display: block; }
+    #dev-bar {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.88); color: #fff; border: 2px solid #ffe600;
+      border-radius: 32px; padding: 10px 22px;
+      display: flex; align-items: center; gap: 14px;
+      z-index: 9999; font-family: monospace; font-size: 15px; user-select: none;
+      white-space: nowrap;
+    }
+    #dev-label {
+      color: #ffe600; font-weight: 700; font-size: 13px; letter-spacing: 1px;
+      padding-left: 10px; border-left: 1px solid #444; margin-left: 2px;
+    }
+    #dev-bar button {
+      background: transparent; border: 1px solid #ffe600; color: #ffe600;
+      border-radius: 8px; padding: 5px 14px; cursor: pointer; font-size: 17px;
+    }
+    #dev-bar button:hover { background: #ffe600; color: #000; }
+    #dev-bar button:disabled { opacity: 0.3; cursor: default; background: transparent; color: #ffe600; }
+    #dev-screen-input {
+      width: 46px; text-align: center; background: #1a1a1a;
+      color: #ffe600; border: 1px solid #ffe600; border-radius: 6px;
+      font-size: 16px; font-family: monospace; padding: 4px;
+    }
+    #dev-total { color: #aaa; font-size: 14px; }
+    #dev-screen-name { color: #ffe600; font-size: 13px; min-width: 60px; text-align: center; }
+    #dev-hint { color: #555; font-size: 11px; border-right: 1px solid #333; padding-right: 12px; }
+  </style>
+</head>
+<body>
+  <iframe id="lomdah-frame" src="index.html"></iframe>
+
+  <div id="dev-bar">
+    <!-- RTL: next (◀) on LEFT, prev (▶) on RIGHT -->
+    <span id="dev-hint">Ctrl+← / Ctrl+→</span>
+    <button id="btn-next" onclick="devNext()" title="מסך הבא (Ctrl+←)">◀</button>
+    <input id="dev-screen-input" type="number" min="0" max="2" value="0"
+           title="הקלד מספר מסך לקפיצה ישירה" onchange="devJump(this.value)">
+    <span id="dev-total">/ 2</span>
+    <span id="dev-screen-name">s0</span>
+    <button id="btn-prev" onclick="devPrev()" title="מסך קודם (Ctrl+→)">▶</button>
+    <span id="dev-label">DEV</span>
+  </div>
+
+  <script>
+    'use strict';
+
+    var SCREEN_NAMES = ['s0','s1','s2'];
+
+    var frame      = document.getElementById('lomdah-frame');
+    var inputEl    = document.getElementById('dev-screen-input');
+    var totalLabel = document.getElementById('dev-total');
+    var nameLabel  = document.getElementById('dev-screen-name');
+    var btnPrev    = document.getElementById('btn-prev');
+    var btnNext    = document.getElementById('btn-next');
+    var devCurrent = 0;
+    var TOTAL      = 3;
+
+    // Receive actual screen count from script.js via DEV_READY
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.type === 'DEV_READY') {
+        TOTAL = e.data.total || TOTAL;
+        totalLabel.textContent = '/ ' + (TOTAL - 1);
+        inputEl.max = TOTAL - 1;
+        updateButtons();
+      }
+    });
+
+    frame.addEventListener('load', function() {
+      devCurrent = 0;
+      inputEl.value = 0;
+      updateButtons();
+    });
+
+    function devGoTo(n) {
+      n = Math.max(0, Math.min(TOTAL - 1, n));
+      frame.contentWindow.postMessage({ type: 'DEV_GOTO', screen: n }, '*');
+      devCurrent = n;
+      inputEl.value = n;
+      nameLabel.textContent = SCREEN_NAMES[n] || ('s' + n);
+      updateButtons();
+    }
+
+    function devNext() { devGoTo(devCurrent + 1); }
+    function devPrev() { devGoTo(devCurrent - 1); }
+
+    function devJump(val) {
+      var n = parseInt(val, 10);
+      if (!isNaN(n)) devGoTo(n);
+    }
+
+    function updateButtons() {
+      btnPrev.disabled = (devCurrent <= 0);
+      btnNext.disabled = (devCurrent >= TOTAL - 1);
+    }
+
+    // RTL keyboard: Ctrl+← = forward (next), Ctrl+→ = backward (prev)
+    window.addEventListener('keydown', function(e) {
+      if (!e.ctrlKey) return;
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); devNext(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); devPrev(); }
+    });
+
+    inputEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') devJump(inputEl.value);
+    });
+
+    updateButtons();
+  </script>
+</body>
+</html>

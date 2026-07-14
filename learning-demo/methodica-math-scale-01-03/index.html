@@ -1,0 +1,200 @@
+﻿<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>קנה מידה — לומדה</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="app">
+
+    <!-- ═══════════════════════════════════════
+         GLOBAL — Flag / Report Issue button
+    ════════════════════════════════════════ -->
+    <button class="flag-btn" id="flag-btn" onclick="openReportModal()" aria-label="דיווח על בעיה">
+      <span class="flag-icon" aria-hidden="true"><svg width="12" height="17" viewBox="0 0 12 17" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.397164 17C0.177722 17 0 16.8239 0 16.6065V0.393501C0 0.176082 0.177722 0 0.397164 0C0.616607 0 0.794329 0.176082 0.794329 0.393501V16.607C0.794329 16.8245 0.616607 17.0005 0.397164 17.0005V17Z" fill="#484848"/><path d="M2.76227 9.90917C1.91972 9.90917 1.06958 9.7492 0.213483 9.30738C0.0823588 9.23974 0 9.10499 0 8.95844V1.54473C0 1.40837 0.0715221 1.28168 0.188558 1.20974C0.305594 1.13834 0.45189 1.13136 0.574886 1.19256C0.577053 1.19363 0.578679 1.19471 0.580846 1.19578C2.31309 2.08961 4.05563 1.63975 5.90003 1.16357C7.80946 0.670755 9.78336 0.161835 11.7865 1.19524C11.9176 1.26289 12 1.39763 12 1.54419V8.9579C12 9.08835 11.9344 9.21075 11.8255 9.28376C11.7166 9.35677 11.5774 9.3718 11.4555 9.32349C11.443 9.31866 11.4311 9.31329 11.4197 9.30738C9.68745 8.41355 7.94491 8.86342 6.10051 9.33905C5.00709 9.62089 3.89199 9.90864 2.76281 9.90864L2.76227 9.90917ZM0.793787 8.7131C2.45559 9.46682 4.13094 9.03413 5.90003 8.57782C7.62469 8.13278 9.40191 7.67432 11.2062 8.35181V1.79006C9.54441 1.03634 7.86906 1.46903 6.09997 1.92534C4.37531 2.37038 2.59755 2.82884 0.793787 2.15135V8.7131Z" fill="#484848"/></svg></span>
+    </button>
+    <section class="screen active" data-screen="0" id="s0">
+
+      <div class="s0-content">
+        <div class="s6-text-block">
+          <p class="s25-text-small">השלמת בהצלחה את התרגול – כל הכבוד!</p>
+          <p class="s25-text-large">זמן טוב ללמוד גם בצורה אחרת,</p>
+          <p class="s0-text-hint">כי למידה מתרחשת בכל מיני צורות.</p>
+        </div>
+        <div class="s17-img-wrap">
+          <img id="s24-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" class="s6-char-img">
+          <div class="s0-bubble">
+            <svg width="241" height="137" viewBox="0 0 241 137" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <mask id="path-1-outside-1_s0_bubble" maskUnits="userSpaceOnUse" x="0" y="0" width="241" height="137" fill="black">
+                <rect fill="white" width="241" height="137"/>
+                <path d="M220.421 56.5269V11.4516C220.421 6.78392 215.45 3 209.319 3H14.1024C7.9707 3 3 6.78392 3 11.4516V125.548C3 130.216 7.9707 134 14.1024 134H209.319C215.45 134 220.421 130.216 220.421 125.548V79.0645C220.421 78.7124 238 67.7427 238 67.7427C231.109 63.3513 227.305 60.9243 220.421 56.5269Z"/>
+              </mask>
+              <path d="M220.421 56.5269V11.4516C220.421 6.78392 215.45 3 209.319 3H14.1024C7.9707 3 3 6.78392 3 11.4516V125.548C3 130.216 7.9707 134 14.1024 134H209.319C215.45 134 220.421 130.216 220.421 125.548V79.0645C220.421 78.7124 238 67.7427 238 67.7427C231.109 63.3513 227.305 60.9243 220.421 56.5269Z" fill="white"/>
+              <path d="M220.421 56.5269H217.421V58.1704L218.806 59.0551L220.421 56.5269ZM238 67.7427L239.588 70.2879C240.462 69.7425 240.995 68.787 241 67.757C241.005 66.7269 240.481 65.7664 239.612 65.2128L238 67.7427ZM220.421 11.4516H217.421V56.5269H220.421H223.421V11.4516H220.421ZM209.319 3V6C211.788 6 213.911 6.7653 215.352 7.86247C216.791 8.95784 217.421 10.2546 217.421 11.4516H220.421H223.421C223.421 7.98093 221.566 5.05188 218.986 3.08837C216.41 1.12666 212.982 0 209.319 0V3ZM220.421 79.0645H217.421V125.548H220.421H223.421V79.0645H220.421ZM220.421 125.548H217.421C217.421 126.745 216.791 128.042 215.352 129.138C213.911 130.235 211.788 131 209.319 131V134V137C212.982 137 216.41 135.873 218.986 133.912C221.566 131.948 223.421 129.019 223.421 125.548H220.421ZM209.319 134V131H14.1024V134V137H209.319V134ZM14.1024 134V131C11.6334 131 9.51023 130.235 8.06894 129.138C6.63002 128.042 6 126.745 6 125.548H3H0C0 129.019 1.85532 131.948 4.43467 133.912C7.01165 135.873 10.4397 137 14.1024 137V134ZM3 11.4516H6C6 10.2546 6.63002 8.95784 8.06894 7.86247C9.51023 6.7653 11.6334 6 14.1024 6V3V0C10.4397 0 7.01165 1.12666 4.43467 3.08837C1.85532 5.05188 0 7.98093 0 11.4516H3ZM3 125.548H6V11.4516H3H0V125.548H3ZM14.1024 3V6H209.319V3V0H14.1024V3ZM220.421 56.5269L218.806 59.0551C225.691 63.4531 229.496 65.8807 236.388 70.2727L238 67.7427L239.612 65.2128C232.722 60.822 228.919 58.3955 222.036 53.9987L220.421 56.5269ZM238 67.7427C236.412 65.1976 236.412 65.1977 236.412 65.1978C236.411 65.1979 236.411 65.198 236.411 65.1982C236.41 65.1985 236.41 65.199 236.408 65.1997C236.406 65.2011 236.403 65.2031 236.399 65.2058C236.39 65.2111 236.378 65.219 236.361 65.2295C236.327 65.2504 236.278 65.2813 236.213 65.3217C236.084 65.4024 235.895 65.5207 235.654 65.6713C235.172 65.9726 234.484 66.4032 233.659 66.921C232.009 67.9563 229.807 69.3412 227.604 70.7379C225.404 72.1329 223.192 73.5463 221.526 74.6363C220.696 75.1789 219.981 75.6545 219.466 76.0125C219.214 76.1872 218.974 76.3587 218.782 76.5072C218.694 76.575 218.559 76.6827 218.423 76.8092C218.363 76.8656 218.229 76.9935 218.088 77.1708C218.018 77.2582 217.892 77.425 217.771 77.6548C217.676 77.8354 217.421 78.3502 217.421 79.0645H220.421H223.421C223.421 79.7734 223.169 80.2814 223.078 80.4538C222.961 80.6756 222.841 80.833 222.78 80.9098C222.656 81.066 222.547 81.1676 222.52 81.1929C222.451 81.2573 222.414 81.2834 222.455 81.2514C222.521 81.2006 222.658 81.1003 222.887 80.9414C223.333 80.632 223.992 80.1929 224.81 79.6576C226.44 78.5917 228.622 77.1967 230.817 75.8052C233.009 74.4155 235.202 73.036 236.848 72.0035C237.67 71.4874 238.356 71.0583 238.835 70.7583C239.075 70.6082 239.264 70.4905 239.392 70.4104C239.456 70.3703 239.505 70.3396 239.538 70.319C239.555 70.3086 239.567 70.3008 239.576 70.2956C239.58 70.293 239.583 70.2911 239.585 70.2898C239.586 70.2891 239.587 70.2886 239.587 70.2883C239.588 70.2882 239.588 70.288 239.588 70.288C239.588 70.2879 239.588 70.2879 238 67.7427Z" fill="#7100B9" mask="url(#path-1-outside-1_s0_bubble)"/>
+            </svg>
+            <span class="s0-bubble-text">את המשימה הבאה נבצע בלי מחשב, במרחב הכיתה או בית הספר!</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-bar s3-bottom-bar">
+        <button class="btn-back-s3" type="button" onclick="goTo(23)">חזרה</button>
+        <button class="btn-continue" id="s24-continue" type="button" onclick="goTo(1)">המשך</button>
+      </div>
+
+    </section>
+
+    <section class="screen" data-screen="1" id="s1">
+
+      <div class="select-content">
+        <div class="select-head">
+          <h1 class="select-title">משימת כיתה</h1>
+          <div class="select-body">
+            <p><strong>מצאו חבר או חברה הנמצאים באותו שלב בלמידה.<br>לא מצאתם? תוכלו לבצע את המשימה לבד.​</strong></p>
+            <p><strong>העזרים הדרושים: סרגל, דף A4, כלי כתיבה.​</strong></p>
+            <ol class="s34-list">
+              <li>מדדו בעזרת סרגל מה האורך של צעד רגיל של אחד או אחת מכם. ​</li>
+              <li>צאו לחצר, ובחרו מסלול שאורכו לפחות 100 צעדים.​</li>
+              <li>הכפילו את מספר הצעדים באורך הצעד כדי למצוא מהו אורך המסלול במציאות.​</li>
+              <li>חשבו מהו קנה המידה שיאפשר לכם לסרטט את המסלול במלואו על דף A4.​</li>
+              <li>סרטטו את המסלול המלא על הדף, ורשמו בתחתית שלו את קנה המידה.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- תמונה — צד ימין -->
+      <img class="s34-side-img" src="./assets/images/Geer for assiement.jpg" alt="ציוד למשימה">
+      <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-v03-s1')" aria-label="הגדל תמונה">
+        <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#7100B9" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#7100B9"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#7100B9"/></svg>
+        <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#7100B9"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
+      </button>
+
+      <!-- דמות + בועה — שמאל למטה -->
+      <div class="character-widget" id="s34-char-widget">
+        <div class="speech-bubble">זמן טוב לחלץ עצמות!<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#7100B9" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#7100B9" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <img id="s34-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
+      </div>
+
+      <div class="bottom-bar s3-bottom-bar">
+        <button class="btn-back-s3" type="button" onclick="goTo(0)">חזרה</button>
+        <button class="btn-continue s34-continue-btn" id="s34-continue" type="button" onclick="goTo(2)">חזרתי. אפשר להמשיך</button>
+      </div>
+
+    </section>
+
+    <section class="screen" data-screen="2" id="s2">
+
+      <div class="select-content">
+        <div class="select-head">
+          <h1 class="select-title">משימת כיתה</h1>
+          <div class="select-body">
+            <p><strong>אז מהו קנה המידה של המסלול שלכם?</strong></p>
+            <div class="s35-input-row">
+              <span class="s35-label" id="label-s35">הקלידו אותו כאן:</span>
+              <input class="s35-input" id="s35-input" type="text" dir="rtl" oninput="s35OnInput()" aria-labelledby="label-s35">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- דמות — מוסתרת עד להקלדה -->
+      <div class="character-widget hidden" id="s35-char-widget">
+        <div class="speech-bubble">יופי של קנה מידה!<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#7100B9" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#7100B9" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <img id="s35-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
+      </div>
+
+      <div class="bottom-bar s3-bottom-bar">
+        <button class="btn-back-s3" type="button" onclick="goTo(1)">חזרה</button>
+        <button class="btn-continue s34-continue-btn" id="s35-continue" type="button" disabled onclick="goToAdvanced()">אפשר להמשיך</button>
+      </div>
+
+    </section>
+
+
+    <!-- ═══════════════════════════════════════
+         REPORT MODAL
+    ════════════════════════════════════════ -->
+    <div id="report-modal"
+         class="report-modal-overlay"
+         hidden
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="report-modal-title">
+      <div class="report-modal-box">
+        <button class="report-close-btn" onclick="tryCloseReportModal()" aria-label="סגור">&#10005;</button>
+        <h2 class="report-modal-title" id="report-modal-title">דיווח על בעיה</h2>
+        <p class="report-modal-body">משהו לא ברור או לא עובד כמו שצריך?<br>ספרו לנו מה קרה כדי שנטפל.</p>
+
+        <div class="report-field">
+          <label class="report-label" for="report-type"><span class="required-star">*</span> מה סוג הבעיה</label>
+                    <div class="report-custom-select" id="report-type-wrapper">
+            <button class="report-select-btn is-placeholder" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="report-select-value">בחרו סוג בעיה</span>
+            </button>
+            <ul class="report-select-list" role="listbox" hidden>
+              <li class="report-select-option" data-value="technical" role="option">תקלה טכנית או שמשהו לא עובד</li>
+              <li class="report-select-option" data-value="unclear" role="option">משהו לא ברור לי</li>
+              <li class="report-select-option" data-value="other" role="option">אחר</li>
+            </ul>
+            <input type="hidden" id="report-type" value="">
+          </div>
+          <span class="report-field-error" id="report-type-error" hidden>בחרו את סוג הבעיה</span>
+        </div>
+
+        <div class="report-field">
+          <label class="report-label" for="report-text"><span class="required-star">*</span> מה קרה?</label>
+          <textarea class="report-textarea" id="report-text" maxlength="250" rows="4" placeholder="פרטו מה קרה כדי שנוכל להבין את הבעיה"></textarea>
+          <span class="report-char-count" id="report-char-count">0 / 250</span>
+        </div>
+
+        <div class="report-actions">
+          <button class="report-cancel-btn" onclick="tryCloseReportModal()">ביטול</button>
+          <button class="report-submit-btn" onclick="submitReport()" disabled>שליחת דיווח</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         REPORT CONFIRM-CLOSE MODAL
+    ════════════════════════════════════════ -->
+    <div id="report-confirm-modal"
+         class="report-modal-overlay"
+         hidden
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="confirm-modal-title">
+      <div class="report-modal-box report-confirm-box">
+        <h2 class="report-modal-title" id="confirm-modal-title">בטוח לסגור את החלון?</h2>
+        <p class="report-modal-body">בלחיצה על סגירה לא יישלח דיווח</p>
+        <div class="report-actions">
+          <button class="report-cancel-btn" onclick="forceCloseReportModal()">סגור חלון</button>
+          <button class="report-submit-btn" onclick="backToReportForm()">אני רוצה לדווח</button>
+        </div>
+      </div>
+    </div>
+
+
+  <div id="a11y-announcer" role="status" aria-live="polite" aria-atomic="true"
+       style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
+
+    <div class="img-zoom-overlay" id="img-zoom-v03-s1" hidden onclick="closeImgZoom('img-zoom-v03-s1')">
+      <div class="img-zoom-modal__backdrop"></div>
+      <div class="img-zoom-modal__panel" role="dialog" aria-modal="true" aria-label="ציוד למשימה מוגדל" onclick="event.stopPropagation()">
+        <button class="img-zoom-modal__close" type="button" aria-label="סגירת התמונה" data-zoom-close="true" onclick="closeImgZoom('img-zoom-v03-s1')">
+          <svg class="zoom-close-normal" width="44" height="44" viewBox="10 20 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="21" width="42" height="42" rx="21" fill="white" stroke="#7100B9" stroke-width="2"/><path d="M39.151 34.849C38.9275 34.6255 38.6244 34.5 38.3084 34.5C37.9924 34.5 37.6893 34.6255 37.4658 34.849L32 40.3147L26.5342 34.849C26.3107 34.6255 26.0076 34.5 25.6916 34.5C25.3756 34.5 25.0725 34.6255 24.849 34.849C24.6255 35.0725 24.5 35.3756 24.5 35.6916C24.5 36.0076 24.6255 36.3107 24.849 36.5342L30.3147 42L24.849 47.4658C24.6255 47.6893 24.5 47.9924 24.5 48.3084C24.5 48.6244 24.6255 48.9275 24.849 49.151C25.0725 49.3745 25.3756 49.5 25.6916 49.5C26.0076 49.5 26.3107 49.3745 26.5342 49.151L32 43.6853L37.4658 49.151C37.6893 49.3745 37.9924 49.5 38.3084 49.5C38.6244 49.5 38.9275 49.3745 39.151 49.151C39.3745 48.9275 39.5 48.6244 39.5 48.3084C39.5 47.9924 39.3745 47.6893 39.151 47.4658L33.6853 42L39.151 36.5342C39.3745 36.3107 39.5 36.0076 39.5 35.6916C39.5 35.3756 39.3745 35.0725 39.151 34.849Z" fill="#7100B9"/></svg>
+          <svg class="zoom-close-hover" width="44" height="44" viewBox="10 20 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="21" width="42" height="42" rx="21" fill="#7100B9"/><path d="M39.151 34.849C38.9275 34.6255 38.6244 34.5 38.3084 34.5C37.9924 34.5 37.6893 34.6255 37.4658 34.849L32 40.3147L26.5342 34.849C26.3107 34.6255 26.0076 34.5 25.6916 34.5C25.3756 34.5 25.0725 34.6255 24.849 34.849C24.6255 35.0725 24.5 35.3756 24.5 35.6916C24.5 36.0076 24.6255 36.3107 24.849 36.5342L30.3147 42L24.849 47.4658C24.6255 47.6893 24.5 47.9924 24.5 48.3084C24.5 48.6244 24.6255 48.9275 24.849 49.151C25.0725 49.3745 25.3756 49.5 25.6916 49.5C26.0076 49.5 26.3107 49.3745 26.5342 49.151L32 43.6853L37.4658 49.151C37.6893 49.3745 37.9924 49.5 38.3084 49.5C38.6244 49.5 38.9275 49.3745 39.151 49.151C39.3745 48.9275 39.5 48.6244 39.5 48.3084C39.5 47.9924 39.3745 47.6893 39.151 47.4658L33.6853 42L39.151 36.5342C39.3745 36.3107 39.5 36.0076 39.5 35.6916C39.5 35.3756 39.3745 35.0725 39.151 34.849Z" fill="white"/></svg>
+        </button>
+        <div class="img-zoom-modal__stage">
+          <div class="scq-img-inner img-zoom-clone">
+            <img src="./assets/images/Geer for assiement.jpg" alt="ציוד למשימה" onerror="this.style.display='none'">
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="script.js?v=2"></script>
+</body>
+</html>
