@@ -42,9 +42,9 @@
     <!-- RTL: next (◀) on LEFT, prev (▶) on RIGHT -->
     <span id="dev-hint">Ctrl+← / Ctrl+→</span>
     <button id="btn-next" onclick="devNext()" title="מסך הבא (Ctrl+←)">◀</button>
-    <input id="dev-screen-input" type="number" min="0" max="10" value="0"
+    <input id="dev-screen-input" type="number" min="0" max="9" value="0"
            title="הקלד מספר מסך לקפיצה ישירה" onchange="devJump(this.value)">
-    <span id="dev-total">/ 10</span>
+    <span id="dev-total">/ 9</span>
     <span id="dev-screen-name">s0</span>
     <button id="btn-prev" onclick="devPrev()" title="מסך קודם (Ctrl+→)">▶</button>
     <span id="dev-label">DEV</span>
@@ -53,8 +53,8 @@
   <script>
     'use strict';
 
-    var SCREEN_NAMES   = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10'];
-    var SCREEN_NUMBERS = [0,1,2,3,4,5,6,7,8,9,10];
+    var SCREEN_NAMES   = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9'];
+    var SCREEN_NUMBERS = [0,1,2,3,4,5,6,7,8,9];
 
     var frame      = document.getElementById('lomdah-frame');
     var inputEl    = document.getElementById('dev-screen-input');
@@ -63,7 +63,7 @@
     var btnPrev    = document.getElementById('btn-prev');
     var btnNext    = document.getElementById('btn-next');
     var devCurrent = 0;
-    var TOTAL      = 11;
+    var TOTAL      = 10;
 
     // Receive actual screen count from script.js via DEV_READY
     window.addEventListener('message', function(e) {

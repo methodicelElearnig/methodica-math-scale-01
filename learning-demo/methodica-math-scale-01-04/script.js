@@ -60,10 +60,10 @@ let ddqKeySelected = null;
 /* ── Viewport scaling ── */
 function scaleApp() {
   const scaleX = window.innerWidth / 1280;
-  const scaleY = window.innerHeight / 710;
+  const scaleY = window.innerHeight / 720;
   const scale = Math.min(scaleX, scaleY);
   const left = (window.innerWidth - 1280 * scale) / 2;
-  const top = (window.innerHeight - 710 * scale) / 2;
+  const top = (window.innerHeight - 720 * scale) / 2;
   const el = document.getElementById('app');
   el.style.transform = `scale(${scale})`;
   el.style.left = left + 'px';
@@ -180,7 +180,6 @@ function s38Enter() {
   if (fb) { fb.hidden = true; fb.className = 's5-inline-feedback s18-feedback-bar'; }
   document.getElementById('s38-fb-bold').textContent    = '';
   document.getElementById('s38-fb-regular').textContent = '';
-  document.getElementById('s38-fb-icon').innerHTML      = '';
   var cont = document.getElementById('s38-continue');
   if (cont) { cont.disabled = true; cont.onclick = function() { s38Submit(); }; }
   var hintBtn = document.getElementById('s38-hint-btn');
@@ -218,13 +217,10 @@ function s38Submit() {
   var fb      = document.getElementById('s38-feedback');
   var fbBold  = document.getElementById('s38-fb-bold');
   var fbReg   = document.getElementById('s38-fb-regular');
-  var fbIcon  = document.getElementById('s38-fb-icon');
   var cont    = document.getElementById('s38-continue');
   var hintBtn = document.getElementById('s38-hint-btn');
   var opts    = document.querySelectorAll('[data-screen="2"] .s5-opt');
 
-  var checkSvg    = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var xSvg        = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var explanation = 'יובל הגדיל את התמונה פי 2 ואז הגדיל את התמונה החדשה פי 3. ​\nלכן, שתי הלחיצות על כפתור הזום הגדילו את התמונה פי 6, ומכאן שקנה המידה לאחר ההגדלה הוא 50 : 1 (50 = 6 ÷ 300). ​';
 
   fb.classList.remove('s5-fb--correct', 's5-fb--incorrect');
@@ -238,7 +234,6 @@ function s38Submit() {
     fbBold.textContent  = 'נכון מאוד!​';
     announce('נכון מאוד!​');
     fbReg.innerHTML     = explanation;
-    fbIcon.innerHTML    = checkSvg;
     fb.classList.add('s5-fb--correct');
     fb.hidden     = false;
     cont.disabled = false;
@@ -248,7 +243,6 @@ function s38Submit() {
     fbBold.textContent  = 'זה לא מדויק, ננסה שוב?';
     announce('זה לא מדויק, ננסה שוב?');
     fbReg.textContent   = '';
-    fbIcon.innerHTML    = xSvg;
     fb.classList.add('s5-fb--incorrect');
     fb.hidden           = false;
     if (hintBtn) hintBtn.hidden = false;
@@ -265,7 +259,6 @@ function s38Submit() {
     fbBold.textContent  = 'זו טעות – בואו נבין למה:​';
     announce('זו טעות – בואו נבין למה:​');
     fbReg.innerHTML     = explanation;
-    fbIcon.innerHTML    = xSvg;
     fb.classList.add('s5-fb--incorrect');
     fb.hidden     = false;
     cont.disabled = false;
@@ -299,7 +292,6 @@ function s37Enter() {
   if (fb) { fb.hidden = true; fb.className = 's5-inline-feedback s18-feedback-bar'; }
   document.getElementById('s37-fb-bold').textContent    = '';
   document.getElementById('s37-fb-regular').textContent = '';
-  document.getElementById('s37-fb-icon').innerHTML      = '';
   var cont = document.getElementById('s37-continue');
   if (cont) { cont.disabled = true; cont.onclick = function() { s37Submit(); }; }
   var hintBtn = document.getElementById('s37-hint-btn');
@@ -337,13 +329,10 @@ function s37Submit() {
   var fb      = document.getElementById('s37-feedback');
   var fbBold  = document.getElementById('s37-fb-bold');
   var fbReg   = document.getElementById('s37-fb-regular');
-  var fbIcon  = document.getElementById('s37-fb-icon');
   var cont    = document.getElementById('s37-continue');
   var hintBtn = document.getElementById('s37-hint-btn');
   var opts    = document.querySelectorAll('[data-screen="1"] .s5-opt');
 
-  var checkSvg    = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var xSvg        = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var explanation = 'גובה המגדל במציאות הוא 828.8 מטרים, שהם 82,880 ס"מ. נחלק את הגובה ב-3,000, ונקבל שרטוט באורך של קצת יותר מ-27.6 ס"מ, ש"נכנס" בשלמותו בתוך 29.7 הסנטימטרים של הדף. ​';
 
   fb.classList.remove('s5-fb--correct', 's5-fb--incorrect');
@@ -357,7 +346,6 @@ function s37Submit() {
     fbBold.textContent  = 'יופי של תשובה! ​';
     announce('יופי של תשובה! ​');
     fbReg.innerHTML     = explanation;
-    fbIcon.innerHTML    = checkSvg;
     fb.classList.add('s5-fb--correct');
     fb.hidden     = false;
     cont.disabled = false;
@@ -367,7 +355,6 @@ function s37Submit() {
     fbBold.textContent  = 'זה לא מדויק, ננסה שוב?';
     announce('זה לא מדויק, ננסה שוב?');
     fbReg.textContent   = '';
-    fbIcon.innerHTML    = xSvg;
     fb.classList.add('s5-fb--incorrect');
     fb.hidden           = false;
     if (hintBtn) hintBtn.hidden = false;
@@ -384,7 +371,6 @@ function s37Submit() {
     fbBold.textContent  = 'זו טעות, לא נורא – בואו נלמד ממנה:​';
     announce('זו טעות, לא נורא – בואו נלמד ממנה:​');
     fbReg.innerHTML     = explanation;
-    fbIcon.innerHTML    = xSvg;
     fb.classList.add('s5-fb--incorrect');
     fb.hidden     = false;
     cont.disabled = false;
@@ -421,10 +407,11 @@ function s39Enter() {
   if (fb) { fb.hidden = true; fb.className = 's5-inline-feedback s18-feedback-bar'; }
   var fbBold = document.getElementById('s39-fb-bold');
   var fbReg  = document.getElementById('s39-fb-regular');
-  var fbIcon = document.getElementById('s39-fb-icon');
   if (fbBold) fbBold.textContent = '';
   if (fbReg)  fbReg.textContent  = '';
-  if (fbIcon) fbIcon.innerHTML   = '';
+  s39GateSatisfied = true;
+  var s39FbCloseBtn = document.getElementById('s39-fb-close');
+  if (s39FbCloseBtn) s39FbCloseBtn.disabled = false;
   var btn = document.getElementById('ddq-check');
   if (btn) { btn.disabled = true; btn.textContent = 'צדקתי?'; btn.onclick = function() { ddqCheck(); }; }
   var hintBtn = document.getElementById('s39-hint-btn');
@@ -614,6 +601,38 @@ function ddqUpdateCheckBtn() {
   if (btn) btn.disabled = !allFilled;
 }
 
+var s39GateSatisfied = true;
+
+/* Long feedback on this screen (correct / final-wrong explanations): fixed-
+   height popup body scrolls, and the close/continue buttons stay locked
+   until the learner has scrolled to the bottom (or the text never
+   overflowed in the first place). See /720-templates ValueInputQuestion.md
+   -> Long-feedback variant. Not used for the short "try again" state. */
+function s39ShowFeedbackGated() {
+  var fb       = document.getElementById('s39-feedback');
+  var body     = document.getElementById('s39-fb-body');
+  var closeBtn = document.getElementById('s39-fb-close');
+  var btn      = document.getElementById('ddq-check');
+  fb.classList.add('is-scroll');
+  s39GateSatisfied = false;
+  if (closeBtn) closeBtn.disabled = true;
+  if (btn) btn.disabled = true;
+  fb.hidden = false;
+  if (body) body.scrollTop = 0;
+  s39CheckScrollGate();
+}
+
+function s39CheckScrollGate() {
+  if (s39GateSatisfied) return;
+  var body = document.getElementById('s39-fb-body');
+  if (!body || body.scrollHeight - body.scrollTop - body.clientHeight > 2) return;
+  s39GateSatisfied = true;
+  var closeBtn = document.getElementById('s39-fb-close');
+  var btn      = document.getElementById('ddq-check');
+  if (closeBtn) closeBtn.disabled = false;
+  if (btn) btn.disabled = false;
+}
+
 function ddqCheck() {
   if (ddqChecked) { goTo(4); return; }
   ddqAttempts++;
@@ -629,14 +648,10 @@ function ddqCheck() {
   var fb      = document.getElementById('s39-feedback');
   var fbBold  = document.getElementById('s39-fb-bold');
   var fbReg   = document.getElementById('s39-fb-regular');
-  var fbIcon  = document.getElementById('s39-fb-icon');
   var btn     = document.getElementById('ddq-check');
   var hintBtn = document.getElementById('s39-hint-btn');
 
-  var checkSvg = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var xSvg     = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-  fb.classList.remove('s5-fb--correct', 's5-fb--incorrect', 's5-fb--try-again');
+  fb.classList.remove('s5-fb--correct', 's5-fb--incorrect', 's5-fb--try-again', 'is-scroll');
 
   if (allCorrect) {
     ddqChecked = true;
@@ -649,12 +664,10 @@ function ddqCheck() {
     fbBold.textContent = 'נכון מאוד!​';
     announce('נכון מאוד!​');
     fbReg.innerHTML  = 'נמיר את המידות במציאות לסנטימטרים ונקבל אורך 1,200 ס"מ וגובה 600 ס"מ. ​<br>בתמונה של יובל (קנה מידה 1:50) נחלק את המידות ב-50 ונקבל: אורך 24 ס"מ, גובה 12 ס"מ.​<br>בתמונה של ליאור (קנה מידה 1:20) נחלק את המידות ב-20 ונקבל: אורך 60 ס"מ, גובה 30 ס"מ.​';
-    fbIcon.innerHTML   = checkSvg;
     fb.classList.add('s5-fb--correct');
-    fb.hidden = false;
-    btn.disabled    = false;
     btn.textContent = 'שנמשיך?';
     btn.onclick     = function() { goTo(4); };
+    s39ShowFeedbackGated();
 
   } else if (ddqAttempts === 1) {
     /* First wrong — reset chips to source so learner starts fresh */
@@ -663,7 +676,6 @@ function ddqCheck() {
     fbBold.textContent = 'לא מדויק, ננסה שוב?';
     announce('לא מדויק, ננסה שוב?');
     fbReg.textContent  = '';
-    fbIcon.innerHTML   = xSvg;
     fb.classList.add('s5-fb--incorrect', 's5-fb--try-again');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
@@ -700,12 +712,10 @@ function ddqCheck() {
     fbBold.textContent = 'לא מדויק, בואו נבין למה:​';
     announce('לא מדויק, בואו נבין למה:​');
     fbReg.innerHTML  = 'נמיר את המידות במציאות לסנטימטרים ונקבל אורך 1,200 ס"מ וגובה 600 ס"מ. ​<br>בתמונה של יובל (קנה מידה 1:50) נחלק את המידות ב-50 ונקבל: אורך 24 ס"מ, גובה 12 ס"מ.​<br>בתמונה של ליאור (קנה מידה 1:20) נחלק את המידות ב-20 ונקבל: אורך 60 ס"מ, גובה 30 ס"מ.​';
-    fbIcon.innerHTML   = xSvg;
     fb.classList.add('s5-fb--incorrect');
-    fb.hidden = false;
-    btn.disabled    = false;
     btn.textContent = 'שנמשיך?';
     btn.onclick     = function() { goTo(4); };
+    s39ShowFeedbackGated();
   }
 }
 
@@ -754,10 +764,8 @@ function s40Enter() {
   if (fb) { fb.hidden = true; fb.className = 's5-inline-feedback s18-feedback-bar'; }
   var fbBold = document.getElementById('s40-fb-bold');
   var fbReg  = document.getElementById('s40-fb-regular');
-  var fbIcon = document.getElementById('s40-fb-icon');
   if (fbBold) fbBold.textContent = '';
   if (fbReg)  fbReg.textContent  = '';
-  if (fbIcon) fbIcon.innerHTML   = '';
   var btn = document.getElementById('s40-check');
   if (btn) { btn.disabled = true; btn.textContent = 'צדקתי?'; btn.onclick = function() { s40Check(); }; }
   var hintBtn = document.getElementById('s40-hint-btn');
@@ -783,12 +791,8 @@ function s40Check() {
   var fb      = document.getElementById('s40-feedback');
   var fbBold  = document.getElementById('s40-fb-bold');
   var fbReg   = document.getElementById('s40-fb-regular');
-  var fbIcon  = document.getElementById('s40-fb-icon');
   var btn     = document.getElementById('s40-check');
   var hintBtn = document.getElementById('s40-hint-btn');
-
-  var checkSvg = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var xSvg     = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   fb.classList.remove('s5-fb--correct', 's5-fb--incorrect');
 
@@ -798,7 +802,6 @@ function s40Check() {
     fbBold.textContent = 'נכון מאוד!​';
     announce('נכון מאוד!​');
     fbReg.innerHTML    = 'קנה המידה הוא 1:200, לכן 12 ס״מ בתמונה מייצגים  2,400 ס"מ שהם 24 מטרים במציאות. העמדה צריכה להיות ברבע הדרך, ולכן נחשב <sup>1</sup>/<sub>4</sub> מ-24 מטרים, ונקבל 6 מטרים.​';
-    fbIcon.innerHTML   = checkSvg;
     fb.classList.add('s5-fb--correct');
     fb.hidden = false;
     btn.disabled    = false;
@@ -809,11 +812,10 @@ function s40Check() {
     fbBold.textContent = 'לא מדויק, ננסה שוב?';
     announce('לא מדויק, ננסה שוב?');
     fbReg.textContent  = '';
-    fbIcon.innerHTML   = xSvg;
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
-    if (input) { input.value = ''; input.disabled = false; }
+    if (input) { input.disabled = false; }
     btn.disabled = true;
 
   } else {
@@ -822,7 +824,6 @@ function s40Check() {
     fbBold.textContent = 'לא מדויק, בואו נבין למה:​';
     announce('לא מדויק, בואו נבין למה:​');
     fbReg.innerHTML    = 'קנה המידה הוא 1:200, לכן 12 ס״מ בתמונה מייצגים  2,400 ס"מ שהם 24 מטרים במציאות. העמדה צריכה להיות ברבע הדרך, ולכן נחשב <sup>1</sup>/<sub>4</sub> מ-24 מטרים ונקבל 6 מטרים.​';
-    fbIcon.innerHTML   = xSvg;
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     btn.disabled    = false;
@@ -878,10 +879,8 @@ function s41Enter() {
   if (fb) { fb.hidden = true; fb.classList.remove('s5-fb--correct', 's5-fb--incorrect'); }
   var fbBold = document.getElementById('s41-fb-bold');
   var fbReg  = document.getElementById('s41-fb-regular');
-  var fbIcon = document.getElementById('s41-fb-icon');
   if (fbBold) fbBold.textContent = '';
   if (fbReg)  fbReg.textContent  = '';
-  if (fbIcon) fbIcon.innerHTML   = '';
 
   var cont = document.getElementById('s41-continue');
   if (cont) { cont.disabled = true; cont.textContent = 'צדקתי?'; cont.onclick = function() { s41Submit(); }; }
@@ -921,13 +920,9 @@ function s41Submit() {
   var fb      = document.getElementById('s41-feedback');
   var fbBold  = document.getElementById('s41-fb-bold');
   var fbReg   = document.getElementById('s41-fb-regular');
-  var fbIcon  = document.getElementById('s41-fb-icon');
   var cont    = document.getElementById('s41-continue');
   var hintBtn = document.getElementById('s41-hint-btn');
   var opts    = Array.from(document.querySelectorAll('[data-screen="5"] .s5-opt'));
-
-  var checkSvg = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var xSvg     = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   fb.classList.remove('s5-fb--correct', 's5-fb--incorrect');
 
@@ -939,7 +934,6 @@ function s41Submit() {
     fbBold.textContent = 'יופי!​';
     announce('יופי!​');
     fbReg.innerHTML    = 'אורך צלע המתחם בתמונה הוא 8 ס”מ, וקנה המידה הוא 200 : 1.​\nלכן, אורך צלע המתחם במציאות הוא 1,600 ס”מ שהם 16 מטרים. ​\nכעת, נחשב את שטח הריבוע:  256 מ”ר =  16 · 16​';
-    fbIcon.innerHTML   = checkSvg;
     fb.classList.add('s5-fb--correct');
     fb.hidden = false;
     cont.disabled    = false;
@@ -950,7 +944,6 @@ function s41Submit() {
     fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
     announce('זה לא מדויק, ננסה שוב?');
     fbReg.textContent  = '';
-    fbIcon.innerHTML   = xSvg;
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
@@ -968,7 +961,6 @@ function s41Submit() {
     fbBold.textContent = 'לא מדויק, בואו נבין למה:​';
     announce('לא מדויק, בואו נבין למה:​');
     fbReg.innerHTML    = 'אורך צלע המתחם בתמונה הוא 8 ס”מ, וקנה המידה הוא 200 : 1.​\nלכן, אורך צלע המתחם במציאות הוא 1,600 ס”מ שהם 16 מטרים. ​\nכעת, נחשב את שטח הריבוע:  256 מ”ר =  16 · 16​';
-    fbIcon.innerHTML   = xSvg;
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     cont.disabled    = false;
@@ -1003,8 +995,21 @@ document.addEventListener('mousemove', function(e) {
   if (!ruler) return;
   var dx = (e.clientX - s41RulerDrag.startX) / s41RulerDrag.scale;
   var dy = (e.clientY - s41RulerDrag.startY) / s41RulerDrag.scale;
-  ruler.style.left = (s41RulerDrag.startLeft + dx) + 'px';
-  ruler.style.top  = (s41RulerDrag.startTop  + dy) + 'px';
+  var newLeft = s41RulerDrag.startLeft + dx;
+  var newTop  = s41RulerDrag.startTop  + dy;
+
+  /* הסרגל מסתובב 90 מעלות — התיבה החזותית שלו הפוכה (רוחב/גובה מוחלפים) */
+  var w = ruler.offsetWidth, h = ruler.offsetHeight;
+  var off = (w - h) / 2;
+  var minLeft = Math.min(-off, 1280 - h - off);
+  var maxLeft = Math.max(-off, 1280 - h - off);
+  var minTop  = Math.min(off, 720 - w + off);
+  var maxTop  = Math.max(off, 720 - w + off);
+  newLeft = Math.min(Math.max(newLeft, minLeft), maxLeft);
+  newTop  = Math.min(Math.max(newTop, minTop), maxTop);
+
+  ruler.style.left = newLeft + 'px';
+  ruler.style.top  = newTop  + 'px';
 });
 
 document.addEventListener('mouseup', function() {
@@ -1098,7 +1103,7 @@ function s42Check() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
-    if (input) { input.value = ''; input.disabled = false; }
+    if (input) { input.disabled = false; }
     btn.disabled = true;
 
   } else {
@@ -1387,17 +1392,38 @@ document.addEventListener('keydown', function(event) {
 });
 
 
+function s5FbClose(id) {
+  var el = document.getElementById(id);
+  if (el) el.hidden = true;
+}
+
 /* ── Draggable inline feedback elements ── */
 (function () {
+  /* #app has an active transform:scale(...), which makes it the containing
+     block for position:fixed descendants — so drag math must convert viewport
+     (clientX/clientY) coordinates into #app's own local, pre-scale space. */
+  function getAppTransform() {
+    var app = document.getElementById('app');
+    var m = app.style.transform.match(/scale\(([^)]+)\)/);
+    return {
+      scale: m ? parseFloat(m[1]) : 1,
+      left:  parseFloat(app.style.left) || 0,
+      top:   parseFloat(app.style.top)  || 0,
+    };
+  }
+
+  var BOTTOM_BAR_H = 74; /* .bottom-bar height — keep the popup from covering it */
+
   function liftFeedback(el) {
     if (el.dataset.lifted) return;
     el.dataset.lifted = '1';
     var w    = el.offsetWidth;
     var rect = el.getBoundingClientRect();
+    var t    = getAppTransform();
     el.style.width    = w + 'px';
     el.style.position = 'fixed';
-    el.style.left     = rect.left  + 'px';
-    el.style.top      = rect.top   + 'px';
+    el.style.left     = ((rect.left - t.left) / t.scale) + 'px';
+    el.style.top      = ((rect.top  - t.top)  / t.scale) + 'px';
     el.style.bottom   = 'auto';
     el.style.height   = 'auto';
     el.style.zIndex   = '9999';
@@ -1409,16 +1435,23 @@ document.addEventListener('keydown', function(event) {
     el.dataset.dragAttached = '1';
     el.addEventListener('mousedown', function (e) {
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+      if (e.target.closest('.s5-fb-body')) return;
       e.preventDefault();
       if (!el.dataset.lifted) liftFeedback(el);
-      var startX   = e.clientX;
-      var startY   = e.clientY;
+      var t0 = getAppTransform();
+      var startLocalX = (e.clientX - t0.left) / t0.scale;
+      var startLocalY = (e.clientY - t0.top)  / t0.scale;
       var baseLeft = parseFloat(el.style.left)  || 0;
       var baseTop  = parseFloat(el.style.top)   || 0;
       el.style.cursor = 'grabbing';
       function onMove(e) {
-        el.style.left = (baseLeft + e.clientX - startX) + 'px';
-        el.style.top  = (baseTop  + e.clientY - startY) + 'px';
+        var t = getAppTransform();
+        var curLocalX = (e.clientX - t.left) / t.scale;
+        var curLocalY = (e.clientY - t.top)  / t.scale;
+        var nx = baseLeft + (curLocalX - startLocalX);
+        var ny = baseTop  + (curLocalY - startLocalY);
+        el.style.left = Math.max(0, Math.min(nx, 1280 - el.offsetWidth))  + 'px';
+        el.style.top  = Math.max(0, Math.min(ny, 720 - BOTTOM_BAR_H - el.offsetHeight)) + 'px';
       }
       function onUp() {
         el.style.cursor = 'grab';
@@ -1434,23 +1467,41 @@ document.addEventListener('keydown', function(event) {
     document.querySelectorAll('.s5-inline-feedback').forEach(attachDrag);
   }
 
-  function resetFeedbacks() {
-    document.querySelectorAll('.s5-inline-feedback[data-lifted]').forEach(function (el) {
-      el.removeAttribute('data-lifted');
-      el.style.position = '';
-      el.style.left     = '';
-      el.style.top      = '';
-      el.style.width    = '';
-      el.style.zIndex   = '';
-      el.style.margin   = '';
-      el.style.cursor   = '';
-      el.style.height   = '';
-      el.style.bottom   = '';
-    });
+  function resetOne(el) {
+    el.removeAttribute('data-lifted');
+    el.style.position = '';
+    el.style.left     = '';
+    el.style.top      = '';
+    el.style.width    = '';
+    el.style.zIndex   = '';
+    el.style.margin   = '';
+    el.style.cursor   = '';
+    el.style.height   = '';
+    el.style.bottom   = '';
   }
+
+  function resetFeedbacks() {
+    document.querySelectorAll('.s5-inline-feedback[data-lifted]').forEach(resetOne);
+  }
+
+  /* Every submit handler updates the feedback's class list (correct/incorrect)
+     on each new attempt, even when re-showing the SAME element for a retry
+     without ever hiding it in between — a user-dragged position would
+     otherwise persist across attempts. Watching the class attribute (rather
+     than editing every submit function) resets a lifted element back to its
+     original layout position the moment new feedback content is about to
+     appear, before the browser paints the next frame. */
+  var feedbackClassObserver = new MutationObserver(function (mutations) {
+    mutations.forEach(function (m) {
+      if (m.target.dataset.lifted) resetOne(m.target);
+    });
+  });
 
   document.addEventListener('DOMContentLoaded', function () {
     initAll();
+    document.querySelectorAll('.s5-inline-feedback').forEach(function (el) {
+      feedbackClassObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+    });
     var _orig = window.goTo;
     if (typeof _orig === 'function') {
       window.goTo = function (n) {

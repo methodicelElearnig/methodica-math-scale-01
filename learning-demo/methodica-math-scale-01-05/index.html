@@ -13,8 +13,12 @@
     <!-- ═══════════════════════════════════════
          GLOBAL — Flag / Report Issue button
     ════════════════════════════════════════ -->
-    <button class="flag-btn" id="flag-btn" onclick="openReportModal()" aria-label="דיווח על בעיה">
-      <span class="flag-icon" aria-hidden="true"><svg width="12" height="17" viewBox="0 0 12 17" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.397164 17C0.177722 17 0 16.8239 0 16.6065V0.393501C0 0.176082 0.177722 0 0.397164 0C0.616607 0 0.794329 0.176082 0.794329 0.393501V16.607C0.794329 16.8245 0.616607 17.0005 0.397164 17.0005V17Z" fill="#484848"/><path d="M2.76227 9.90917C1.91972 9.90917 1.06958 9.7492 0.213483 9.30738C0.0823588 9.23974 0 9.10499 0 8.95844V1.54473C0 1.40837 0.0715221 1.28168 0.188558 1.20974C0.305594 1.13834 0.45189 1.13136 0.574886 1.19256C0.577053 1.19363 0.578679 1.19471 0.580846 1.19578C2.31309 2.08961 4.05563 1.63975 5.90003 1.16357C7.80946 0.670755 9.78336 0.161835 11.7865 1.19524C11.9176 1.26289 12 1.39763 12 1.54419V8.9579C12 9.08835 11.9344 9.21075 11.8255 9.28376C11.7166 9.35677 11.5774 9.3718 11.4555 9.32349C11.443 9.31866 11.4311 9.31329 11.4197 9.30738C9.68745 8.41355 7.94491 8.86342 6.10051 9.33905C5.00709 9.62089 3.89199 9.90864 2.76281 9.90864L2.76227 9.90917ZM0.793787 8.7131C2.45559 9.46682 4.13094 9.03413 5.90003 8.57782C7.62469 8.13278 9.40191 7.67432 11.2062 8.35181V1.79006C9.54441 1.03634 7.86906 1.46903 6.09997 1.92534C4.37531 2.37038 2.59755 2.82884 0.793787 2.15135V8.7131Z" fill="#484848"/></svg></span>
+    <button class="flag-btn" id="flag-btn" onclick="openReportModal()" aria-label="מצאתם בעיה?" title="מצאתם בעיה?">
+      <span class="flag-btn-icon" aria-hidden="true">
+        <img class="flag-btn-icon-default" src="assets/images/btn-flag-default.png" alt="">
+        <img class="flag-btn-icon-hover" src="assets/images/btn-flag-hover.png" alt="">
+      </span>
+      <span class="flag-btn-label">מצאתם בעיה?</span>
     </button>
 
     <section class="screen active" data-screen="0" id="s0">
@@ -93,11 +97,11 @@
 
       <!-- Inline feedback bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s45-feedback" hidden>
-        <div class="s5-fb-icon" id="s45-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s45-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s45-fb-bold"></span>
-          <span class="s5-fb-regular" id="s45-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s45-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->
@@ -212,11 +216,11 @@
 
       <!-- Inline feedback bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s47-feedback" hidden>
-        <div class="s5-fb-icon" id="s47-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s47-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s47-fb-bold"></span>
-          <span class="s5-fb-regular" id="s47-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s47-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->
@@ -284,22 +288,22 @@
                 <div class="s18-q-text">
                   ג. כדי לראות טוב יותר את האגם, נועה לוחצת על כפתור הזום ומגדילה את התמונה שעל המסך פי 4. ​<br>
                   צוות הרחפן רוצה לבדוק איך משפיע הזום על קנה המידה של התמונה.​<br>
-                  נזכיר – קנה המידה לפני ההגדלה היה 25,000 : 1.​<br>
+                  נזכיר – קנה המידה לפני הגדלת התמונה היה 25,000 : 1.​<br>
                   <strong>מי מהם צודק?​</strong>
                 </div>
               </div>
               <div class="s5-answers" role="group" aria-label="אפשרויות תשובה">
                 <button class="s5-opt" data-index="0" type="button" onclick="s49Select(0)">
                   <span class="s5-opt-circle"></span>
-                  <span class="s5-opt-text"><strong>דן: </strong>הגדלנו את התמונה שעל המסך פי 4, ולכן קנה המידה השתנה ל-100,000 : 1. ​</span>
+                  <span class="s5-opt-text"><strong>דן: </strong>הגדלנו את התמונה שעל המסך פי 4, ולכן קנה המידה השתנה ל-100,000 : 1 ​</span>
                 </button>
                 <button class="s5-opt" data-index="1" type="button" onclick="s49Select(1)">
                   <span class="s5-opt-circle"></span>
-                  <span class="s5-opt-text"><strong>נועה: </strong>הגדלנו את התמונה שעל המסך פי 4, ולכן קנה המידה השתנה ל- 6,250 : 1. ​</span>
+                  <span class="s5-opt-text"><strong>נועה: </strong>הגדלנו את התמונה שעל המסך פי 4, ולכן קנה המידה השתנה ל- 6,250 : 1 ​</span>
                 </button>
                 <button class="s5-opt" data-index="2" type="button" onclick="s49Select(2)">
                   <span class="s5-opt-circle"></span>
-                  <span class="s5-opt-text"><strong>שירה: </strong>קנה המידה נשאר 25,000 : 1. הפארק במציאות לא שינה את הגודל שלו, ולכן קנה המידה לא משתנה.​</span>
+                  <span class="s5-opt-text"><strong>שירה: </strong>קנה המידה נשאר 25,000 : 1. הפארק במציאות לא שינה את הגודל שלו, ולכן קנה המידה לא משתנה​</span>
                 </button>
               </div>
             </div>
@@ -324,11 +328,11 @@
 
       <!-- Inline feedback bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s49-feedback" hidden>
-        <div class="s5-fb-icon" id="s49-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s49-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s49-fb-bold"></span>
-          <span class="s5-fb-regular" id="s49-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s49-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->
@@ -437,11 +441,11 @@
 
       <!-- Inline feedback bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s51-feedback" hidden>
-        <div class="s5-fb-icon" id="s51-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s51-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s51-fb-bold"></span>
-          <span class="s5-fb-regular" id="s51-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s51-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->
@@ -502,16 +506,9 @@
 
       <div class="s0-content">
         <div class="s6-text-block">
-          <!-- Success state -->
-          <div id="s53-success" hidden>
+          <div id="s53-success">
             <p class="s25-text-large">כל הכבוד!</p>
             <p class="s25-text-large">השלמת את היחידה בהצלחה!</p>
-          </div>
-
-          <!-- Failure state -->
-          <div id="s53-retry" hidden>
-            <p class="s25-text-large">אני רואה שזה היה קצת קשה.</p>
-            <p class="s25-text-large">העיקר שניסית והתאמצת!</p>
           </div>
         </div>
 

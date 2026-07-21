@@ -12,8 +12,12 @@
     <!-- ═══════════════════════════════════════
          GLOBAL — Flag / Report Issue button
     ════════════════════════════════════════ -->
-    <button class="flag-btn" id="flag-btn" onclick="openReportModal()" aria-label="דיווח על בעיה">
-      <span class="flag-icon" aria-hidden="true"><svg width="12" height="17" viewBox="0 0 12 17" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.397164 17C0.177722 17 0 16.8239 0 16.6065V0.393501C0 0.176082 0.177722 0 0.397164 0C0.616607 0 0.794329 0.176082 0.794329 0.393501V16.607C0.794329 16.8245 0.616607 17.0005 0.397164 17.0005V17Z" fill="#484848"/><path d="M2.76227 9.90917C1.91972 9.90917 1.06958 9.7492 0.213483 9.30738C0.0823588 9.23974 0 9.10499 0 8.95844V1.54473C0 1.40837 0.0715221 1.28168 0.188558 1.20974C0.305594 1.13834 0.45189 1.13136 0.574886 1.19256C0.577053 1.19363 0.578679 1.19471 0.580846 1.19578C2.31309 2.08961 4.05563 1.63975 5.90003 1.16357C7.80946 0.670755 9.78336 0.161835 11.7865 1.19524C11.9176 1.26289 12 1.39763 12 1.54419V8.9579C12 9.08835 11.9344 9.21075 11.8255 9.28376C11.7166 9.35677 11.5774 9.3718 11.4555 9.32349C11.443 9.31866 11.4311 9.31329 11.4197 9.30738C9.68745 8.41355 7.94491 8.86342 6.10051 9.33905C5.00709 9.62089 3.89199 9.90864 2.76281 9.90864L2.76227 9.90917ZM0.793787 8.7131C2.45559 9.46682 4.13094 9.03413 5.90003 8.57782C7.62469 8.13278 9.40191 7.67432 11.2062 8.35181V1.79006C9.54441 1.03634 7.86906 1.46903 6.09997 1.92534C4.37531 2.37038 2.59755 2.82884 0.793787 2.15135V8.7131Z" fill="#484848"/></svg></span>
+    <button class="flag-btn" id="flag-btn" onclick="openReportModal()" aria-label="מצאתם בעיה?" title="מצאתם בעיה?">
+      <span class="flag-btn-icon" aria-hidden="true">
+        <img class="flag-btn-icon-default" src="assets/images/btn-flag-default.png" alt="">
+        <img class="flag-btn-icon-hover" src="assets/images/btn-flag-hover.png" alt="">
+      </span>
+      <span class="flag-btn-label">מצאתם בעיה?</span>
     </button>
     <section class="screen active" data-screen="0">
       <div class="s0-content">
@@ -59,28 +63,28 @@
               השתמשו בכפתור ובדקו: <strong>באיזה יחס נוכל לראות את מספר החולצה של השחקן במרכז המגרש כדי לזהות מיהו?</strong>
             </p>
             <div class="scale-zone">
-              <div style="display:flex; flex-direction:column; align-items:flex-start;">
+              <div style="display:flex; flex-direction:column; align-items:center;">
                 <p style="font-weight:700; margin-bottom:8px; font-size:26px;">יחס</p>
-                <div class="scale-widget" dir="rtl" role="group" aria-label="בחירת קנה מידה">
+                <div class="scale-widget" dir="ltr" role="group" aria-label="בחירת קנה מידה">
                 <div class="scale-track-wrap">
                   <div class="scale-track"></div>
 
                   <label class="scale-step">
                     <input type="radio" name="scale" value="1000" class="sr-only scale-input" checked onchange="setScale(1000)">
                     <span class="scale-marker"></span>
-                    <span class="scale-label">1,000 : 1</span>
+                    <span class="scale-label">1 : 1,000</span>
                   </label>
 
                   <label class="scale-step">
                     <input type="radio" name="scale" value="100" class="sr-only scale-input" onchange="setScale(100)">
                     <span class="scale-marker"></span>
-                    <span class="scale-label">100 : 1</span>
+                    <span class="scale-label">1 : 100</span>
                   </label>
 
                   <label class="scale-step">
                     <input type="radio" name="scale" value="10" class="sr-only scale-input" onchange="setScale(10)">
                     <span class="scale-marker"></span>
-                    <span class="scale-label">10 : 1</span>
+                    <span class="scale-label">1 : 10</span>
                   </label>
                 </div>
               </div>
@@ -130,7 +134,7 @@
 
       <!-- Character widget 1 (absolute, bottom-left) -->
       <div class="character-widget s1-char-visible" id="s1-char-widget-1">
-        <div class="speech-bubble">מה אני רואה שם?<br>המספר על החולצה הוא 6?<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#7100B9" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#7100B9" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div class="speech-bubble">מה אני רואה שם?<br>מה מספר החולצה?<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#7100B9" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#7100B9" stroke-width="2" stroke-linecap="round"/></svg></div>
         <img id="s1-char-img-1" src="./assets/images/Character2_binoculars.png" alt="דמות עם משקפת">
       </div>
 
@@ -297,11 +301,11 @@
                   </button>
                 </div>
                 <div class="s5-inline-feedback" id="s3q-inline-feedback" hidden>
-                  <div class="s5-fb-icon" id="s3q-fb-icon"></div>
-                  <div class="s5-fb-text">
+                  <div class="s5-fb-header">
+                    <button class="s5-fb-close" type="button" onclick="s5FbClose('s3q-inline-feedback')" aria-label="סגור">✕</button>
                     <span class="s5-fb-bold" id="s3q-fb-bold"></span>
-                    <span class="s5-fb-regular" id="s3q-fb-regular"></span>
                   </div>
+                  <span class="s5-fb-regular" id="s3q-fb-regular"></span>
                 </div>
               </div>
               <div class="s5-img-wrap">
@@ -401,11 +405,11 @@
               צדקתי?
             </button>
             <div class="s5-inline-feedback" id="s3q-q2-inline-feedback" hidden>
-              <div class="s5-fb-icon" id="s3q-q2-fb-icon"></div>
-              <div class="s5-fb-text">
+              <div class="s5-fb-header">
+                <button class="s5-fb-close" type="button" onclick="s5FbClose('s3q-q2-inline-feedback')" aria-label="סגור">✕</button>
                 <span class="s5-fb-bold" id="s3q-q2-fb-bold"></span>
-                <span class="s5-fb-regular" id="s3q-q2-fb-regular"></span>
               </div>
+              <span class="s5-fb-regular" id="s3q-q2-fb-regular"></span>
             </div>
           </div>
 
@@ -493,11 +497,11 @@
                   </button>
                 </div>
                 <div class="s5-inline-feedback" id="s4q-inline-feedback" hidden>
-                  <div class="s5-fb-icon" id="s4q-fb-icon"></div>
-                  <div class="s5-fb-text">
+                  <div class="s5-fb-header">
+                    <button class="s5-fb-close" type="button" onclick="s5FbClose('s4q-inline-feedback')" aria-label="סגור">✕</button>
                     <span class="s5-fb-bold" id="s4q-fb-bold"></span>
-                    <span class="s5-fb-regular" id="s4q-fb-regular"></span>
                   </div>
+                  <span class="s5-fb-regular" id="s4q-fb-regular"></span>
                 </div>
               </div>
               <div class="s5-img-wrap">
@@ -597,11 +601,11 @@
               צדקתי?
             </button>
             <div class="s5-inline-feedback" id="s4q-q2-inline-feedback" hidden>
-              <div class="s5-fb-icon" id="s4q-q2-fb-icon"></div>
-              <div class="s5-fb-text">
+              <div class="s5-fb-header">
+                <button class="s5-fb-close" type="button" onclick="s5FbClose('s4q-q2-inline-feedback')" aria-label="סגור">✕</button>
                 <span class="s5-fb-bold" id="s4q-q2-fb-bold"></span>
-                <span class="s5-fb-regular" id="s4q-q2-fb-regular"></span>
               </div>
+              <span class="s5-fb-regular" id="s4q-q2-fb-regular"></span>
             </div>
           </div>
 
@@ -857,7 +861,7 @@
         <div class="s8-popup" id="s10-popup">
           <div class="s8-popup-content">
             <svg width="40" height="35" viewBox="0 0 40 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M27.3745 4.25243C25.1822 2.12258 22.3177 1.05892 19.3069 1.25552C13.97 1.60335 9.65119 6.02688 9.25901 11.5418C9.01056 15.0378 10.3137 18.3775 12.8373 20.7014C14.2014 21.9592 14.9857 23.7941 14.9857 25.7349H17.2754H22.7293H25.019C25.019 23.8243 25.8351 21.9566 27.26 20.6107C29.4937 18.5035 30.7726 15.5016 30.7726 12.3761C30.7726 9.25064 29.5327 6.34699 27.3721 4.24739L27.3745 4.25243ZM20.0012 8.53229C17.955 8.53229 16.2865 10.2563 16.2865 12.3786C16.2865 13.0314 15.7725 13.5633 15.1416 13.5633C14.5107 13.5633 13.9968 13.0314 13.9968 12.3786C13.9968 8.95069 16.6908 6.16299 20.0012 6.16299C20.6369 6.16299 21.1509 6.69482 21.1509 7.34764C21.1509 8.00046 20.6369 8.53229 20.0012 8.53229Z" fill="white"/><path d="M14.9829 30.1932C14.9829 31.2771 15.3824 32.2953 16.1205 33.0641L16.1448 33.0893C16.8902 33.8631 17.884 34.2916 18.9412 34.2916H21.0604C22.12 34.2916 23.1163 33.8656 23.8641 33.0868C24.6094 32.3155 25.0211 31.2871 25.0211 30.1983V27.6777H14.9829V30.1932ZM17.2726 30.047H22.7265V30.1983C22.7265 30.6545 22.556 31.0905 22.2418 31.4157C21.93 31.7333 21.5013 31.9223 21.0604 31.9223H18.9412C18.5052 31.9223 18.0911 31.7459 17.7793 31.4333L17.7622 31.4132C17.4504 31.0956 17.2726 30.652 17.2726 30.1957V30.0496V30.047Z" fill="white"/><path d="M38.8568 11.1934H34.7816C34.1482 11.1934 33.6367 11.7252 33.6367 12.378C33.6367 13.0308 34.1507 13.5627 34.7816 13.5627H38.8568C39.4901 13.5627 40.0016 13.0308 40.0016 12.378C40.0016 11.7252 39.4877 11.1934 38.8568 11.1934Z" fill="white"/><path d="M6.36734 12.378C6.36734 11.7227 5.85338 11.1934 5.22249 11.1934H1.14486C0.511531 11.1934 0 11.7252 0 12.378C0 13.0308 0.513967 13.5627 1.14486 13.5627H5.22005C5.85338 13.5627 6.36491 13.0308 6.36491 12.378H6.36734Z" fill="white"/><path d="M32.1095 4.79094C32.3361 4.79094 32.565 4.72036 32.7648 4.57669L36.1043 2.15699C36.6232 1.78143 36.7474 1.04291 36.3845 0.506038C36.0215 -0.0308348 35.3078 -0.161902 34.789 0.216177L31.4494 2.63589C30.9306 3.01145 30.8063 3.74996 31.1693 4.28683C31.3909 4.61702 31.7466 4.79346 32.1095 4.79346V4.79094Z" fill="white"/><path d="M7.23672 20.1805L3.89716 22.6002C3.37832 22.9757 3.25409 23.7142 3.61703 24.2511C3.8387 24.5813 4.19433 24.7577 4.55727 24.7577C4.78381 24.7577 5.01278 24.6872 5.21252 24.5435L8.55209 22.1238C9.07093 21.7482 9.19516 21.0097 8.83221 20.4728C8.46927 19.936 7.75556 19.8049 7.23672 20.183V20.1805Z" fill="white"/><path d="M36.1042 22.5989L32.7646 20.1792C32.2457 19.8037 31.532 19.9347 31.1691 20.4691C30.8062 21.006 30.9328 21.7445 31.4492 22.12L34.7888 24.5397C34.9885 24.6859 35.2175 24.754 35.444 24.754C35.8045 24.754 36.1602 24.5776 36.3843 24.2474C36.7472 23.7105 36.6206 22.972 36.1042 22.5964V22.5989Z" fill="white"/><path d="M8.5524 2.63605L5.21283 0.216338C4.69399 -0.159221 3.98028 -0.0281535 3.61734 0.506199C3.2544 1.04307 3.38106 1.78159 3.89746 2.15715L7.23703 4.57685C7.43677 4.72305 7.66574 4.7911 7.89228 4.7911C8.25279 4.7911 8.60842 4.61466 8.83252 4.28447C9.19546 3.7476 9.0688 3.00908 8.5524 2.63353V2.63605Z" fill="white"/></svg>
-            <p class="s8-popup-text">לא נוכל לבנות יחס בין יחידות מידה שונות, לכן נמיר את המטרים לסנטימטרים.</p>
+            <p class="s8-popup-text">לא נוכל לבנות יחס בין יחידות מידה שונות, לכן נמיר מטרים לסנטימטרים.</p>
             <p class="s8-popup-text">כמה סנטימטרים יש ב-10 מטרים?</p>
           </div>
           <div class="s8-popup-btns">
@@ -1030,7 +1034,7 @@
       <div class="s0-content">
         <div class="s6-text-block">
           <h1 class="s0-title">מה נשאר לנו בראש? ​</h1>
-          <p class="s15-subtitle">שתי שאלות קלילות לחימום לפני שנתקדם</p>
+          <p class="s15-subtitle">שאלה קלילה לחימום לפני שנתקדם</p>
         </div>
         <img id="s15-char-img" src="./assets/images/Character1_workout.png" alt="דמות מתאמנת" class="s6-char-img">
       </div>
@@ -1067,11 +1071,11 @@
                 </button>
               </div>
               <div class="s5-inline-feedback" id="s16-inline-feedback" hidden>
-                <div class="s5-fb-icon" id="s16-fb-icon"></div>
-                <div class="s5-fb-text">
+                <div class="s5-fb-header">
+                  <button class="s5-fb-close" type="button" onclick="s5FbClose('s16-inline-feedback')" aria-label="סגור">✕</button>
                   <span class="s5-fb-bold" id="s16-fb-bold"></span>
-                  <span class="s5-fb-regular" id="s16-fb-regular"></span>
                 </div>
+                <span class="s5-fb-regular" id="s16-fb-regular"></span>
               </div>
             </div>
 
@@ -1214,11 +1218,11 @@
 
       <!-- Feedback — above bottom bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s18-feedback" hidden>
-        <div class="s5-fb-icon" id="s18-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s18-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s18-fb-bold"></span>
-          <span class="s5-fb-regular" id="s18-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s18-fb-regular"></span>
       </div>
 
       <!-- Bottom bar -->
@@ -1279,7 +1283,8 @@
                   לפניכם תרשים של חדר ילדים.<br>
                   אורך שולחן הכתיבה בתרשים הוא 7 ס"מ.<br>
                   אורך השולחן במציאות הוא 1.4 מטרים.<br>
-                  <strong>א. מהו קנה המידה של התרשים?​</strong>
+                  <strong>א. מהו קנה המידה של התרשים?​</strong><br>
+                  זכרו, קנה מידה נכתב כך - אורך במציאות : אורך מתאים בסרטוט, לדוגמה 10 : 1.
                 </div>
               </div>
               <div class="s18-fill-row">
@@ -1302,11 +1307,11 @@
 
       <!-- Feedback — above bottom bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s19-feedback" hidden>
-        <div class="s5-fb-icon" id="s19-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s19-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s19-fb-bold"></span>
-          <span class="s5-fb-regular" id="s19-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s19-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->
@@ -1414,11 +1419,11 @@
 
       <!-- Feedback — above bottom bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s20-feedback" hidden>
-        <div class="s5-fb-icon" id="s20-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s20-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s20-fb-bold"></span>
-          <span class="s5-fb-regular" id="s20-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s20-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->
@@ -1510,11 +1515,11 @@
 
       <!-- Feedback — above bottom bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s21-feedback" hidden>
-        <div class="s5-fb-icon" id="s21-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s21-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s21-fb-bold"></span>
-          <span class="s5-fb-regular" id="s21-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s21-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->
@@ -1637,11 +1642,11 @@
 
       <!-- Feedback — above bottom bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s22-feedback" hidden>
-        <div class="s5-fb-icon" id="s22-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s22-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s22-fb-bold"></span>
-          <span class="s5-fb-regular" id="s22-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s22-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->
@@ -1709,7 +1714,7 @@
               שני רחפנים צילמו מלמעלה את אותו מסלול טיול, וייצרו שתי מפות תצלום שונות של האזור:<br>
               במפה של רחפן א, אורך המסלול היה <span>y</span> ס"מ.<br>
               במפה של רחפן ב, אותו המסלול היה <span>y+5</span> ס"מ.<br>
-              <strong>האם קנה מידה של שתי המפות זהה?</strong>
+              <strong>האם קנה המידה של שתי המפות זהה?​</strong>
             </div>
           </div>
           <div class="s5-answers" role="group" aria-label="אפשרויות תשובה">
@@ -1731,11 +1736,11 @@
 
       <!-- Feedback — above bottom bar -->
       <div class="s5-inline-feedback s18-feedback-bar" id="s23-feedback" hidden>
-        <div class="s5-fb-icon" id="s23-fb-icon"></div>
-        <div class="s5-fb-text">
+        <div class="s5-fb-header">
+          <button class="s5-fb-close" type="button" onclick="s5FbClose('s23-feedback')" aria-label="סגור">✕</button>
           <span class="s5-fb-bold" id="s23-fb-bold"></span>
-          <span class="s5-fb-regular" id="s23-fb-regular"></span>
         </div>
+        <span class="s5-fb-regular" id="s23-fb-regular"></span>
       </div>
 
       <!-- Hint popup -->

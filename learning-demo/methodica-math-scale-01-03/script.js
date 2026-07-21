@@ -35,10 +35,10 @@ let s8Timer = null;
 /* ── Viewport scaling ── */
 function scaleApp() {
   const scaleX = window.innerWidth / 1280;
-  const scaleY = window.innerHeight / 710;
+  const scaleY = window.innerHeight / 720;
   const scale = Math.min(scaleX, scaleY);
   const left = (window.innerWidth - 1280 * scale) / 2;
-  const top = (window.innerHeight - 710 * scale) / 2;
+  const top = (window.innerHeight - 720 * scale) / 2;
   const el = document.getElementById('app');
   el.style.transform = `scale(${scale})`;
   el.style.left = left + 'px';

@@ -96,10 +96,10 @@ let s8Timer = null;
 /* ── Viewport scaling ── */
 function scaleApp() {
   const scaleX = window.innerWidth / 1280;
-  const scaleY = window.innerHeight / 710;
+  const scaleY = window.innerHeight / 720;
   const scale = Math.min(scaleX, scaleY);
   const left = (window.innerWidth - 1280 * scale) / 2;
-  const top = (window.innerHeight - 710 * scale) / 2;
+  const top = (window.innerHeight - 720 * scale) / 2;
   const el = document.getElementById('app');
   el.style.transform = `scale(${scale})`;
   el.style.left = left + 'px';
@@ -700,10 +700,6 @@ function sqRestoreUI() {
       feedback.classList.add(q1correct ? 's5-fb--correct' : 's5-fb--incorrect');
       document.getElementById(p + 'fb-bold').textContent = q1correct ? 'צדקת!' : 'זו טעות';
       document.getElementById(p + 'fb-regular').textContent = 'המספר 100 שבצד ימין של קנה המידה מייצג את האורך במציאות. ​';
-      var icon = document.getElementById(p + 'fb-icon');
-      if (icon) icon.innerHTML = q1correct
-        ? '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#609E12"/><path d="M9 16.5L13.5 21L23 11" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-        : '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       feedback.hidden = false;
     } else {
       feedback.hidden = true;
@@ -711,8 +707,6 @@ function sqRestoreUI() {
       if (fbBold) fbBold.textContent = '';
       var fbReg = document.getElementById(p + 'fb-regular');
       if (fbReg) fbReg.textContent = '';
-      var fbIcon = document.getElementById(p + 'fb-icon');
-      if (fbIcon) fbIcon.innerHTML = '';
     }
   }
 
@@ -755,10 +749,6 @@ function sqRestoreUI() {
       if (q2Bold) q2Bold.textContent = allCorrect ? 'צדקת!' : 'זו טעות';
       var q2Reg = document.getElementById(p + 'q2-fb-regular');
       if (q2Reg) q2Reg.textContent = 'התשובות הנכונות מוצגות כעת.';
-      var q2icon = document.getElementById(p + 'q2-fb-icon');
-      if (q2icon) q2icon.innerHTML = allCorrect
-        ? '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#609E12"/><path d="M9 16.5L13.5 21L23 11" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-        : '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       q2feedback.hidden = false;
     } else {
       q2feedback.hidden = true;
@@ -766,8 +756,6 @@ function sqRestoreUI() {
       if (q2Bold2) q2Bold2.textContent = '';
       var q2Reg2 = document.getElementById(p + 'q2-fb-regular');
       if (q2Reg2) q2Reg2.textContent = '';
-      var q2Icon2 = document.getElementById(p + 'q2-fb-icon');
-      if (q2Icon2) q2Icon2.innerHTML = '';
     }
   }
 
@@ -801,12 +789,6 @@ function sqSubmit() {
   if (checkBtn) checkBtn.disabled = true;
   document.getElementById(p + 'fb-bold').textContent = correct ? 'צדקת!' : 'זו טעות';
   document.getElementById(p + 'fb-regular').textContent = 'המספר 100 שבצד ימין של קנה המידה מייצג את האורך במציאות. ​';
-  var icon = document.getElementById(p + 'fb-icon');
-  if (correct) {
-    icon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#609E12"/><path d="M9 16.5L13.5 21L23 11" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  } else {
-    icon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  }
   var feedback = document.getElementById(p + 'inline-feedback');
   feedback.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
@@ -868,12 +850,6 @@ function sqQ2Submit() {
   });
   document.getElementById(p + 'q2-fb-bold').textContent = allCorrect ? 'צדקת!' : 'זו טעות';
   document.getElementById(p + 'q2-fb-regular').textContent = 'התשובות הנכונות מוצגות כעת.';
-  var q2icon = document.getElementById(p + 'q2-fb-icon');
-  if (q2icon) {
-    q2icon.innerHTML = allCorrect
-      ? '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#609E12"/><path d="M9 16.5L13.5 21L23 11" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-      : '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  }
   var feedback = document.getElementById(p + 'q2-inline-feedback');
   feedback.classList.add(allCorrect ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
@@ -903,7 +879,6 @@ function s16Enter() {
     feedback.classList.remove('s5-fb--correct', 's5-fb--incorrect');
     document.getElementById('s16-fb-bold').textContent = '';
     document.getElementById('s16-fb-regular').textContent = '';
-    document.getElementById('s16-fb-icon').innerHTML = '';
   }
 
   var charImg = document.getElementById('s16-char-img');
@@ -1012,7 +987,7 @@ var s18RulerInitialized = false;
 
 function s18GetScale() {
   var scaleX = window.innerWidth / 1280;
-  var scaleY = window.innerHeight / 710;
+  var scaleY = window.innerHeight / 720;
   return Math.min(scaleX, scaleY);
 }
 
@@ -1037,8 +1012,21 @@ function s18InitRuler() {
     var scale = s18GetScale();
     var app = document.getElementById('app');
     var appRect = app.getBoundingClientRect();
-    r.style.left = ((e.clientX - appRect.left) / scale - s18RulerOffX) + 'px';
-    r.style.top  = ((e.clientY - appRect.top)  / scale - s18RulerOffY) + 'px';
+    var newLeft = (e.clientX - appRect.left) / scale - s18RulerOffX;
+    var newTop  = (e.clientY - appRect.top)  / scale - s18RulerOffY;
+
+    /* הסרגל מסתובב 90 מעלות — התיבה החזותית שלו הפוכה (רוחב/גובה מוחלפים) */
+    var w = r.offsetWidth, h = r.offsetHeight;
+    var dx = (w - h) / 2;
+    var minLeft = Math.min(-dx, 1280 - h - dx);
+    var maxLeft = Math.max(-dx, 1280 - h - dx);
+    var minTop  = Math.min(dx, 720 - w + dx);
+    var maxTop  = Math.max(dx, 720 - w + dx);
+    newLeft = Math.min(Math.max(newLeft, minLeft), maxLeft);
+    newTop  = Math.min(Math.max(newTop, minTop), maxTop);
+
+    r.style.left = newLeft + 'px';
+    r.style.top  = newTop + 'px';
   });
   document.addEventListener('mouseup', function() {
     if (!s18RulerDragging) return;
@@ -1107,7 +1095,6 @@ function s18Submit() {
   var feedback  = document.getElementById('s18-feedback');
   var fbBold    = document.getElementById('s18-fb-bold');
   var fbRegular = document.getElementById('s18-fb-regular');
-  var fbIcon    = document.getElementById('s18-fb-icon');
   var continueBtn = document.getElementById('s18-continue');
 
   var explanationCorrect = 'לפי קנה המידה הנתון, אורך הנעל במציאות גדול פי 6 מאורך הנעל בתמונה. ​<br>' +
@@ -1124,7 +1111,6 @@ function s18Submit() {
     s18QuizResults[1] = 'correct';
     fbBold.textContent = 'יפה מאוד!​';
     fbRegular.innerHTML = explanationCorrect;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--correct');
     feedback.hidden = false;
     input.disabled = true;
@@ -1134,19 +1120,16 @@ function s18Submit() {
   } else if (s18Attempts === 1) {
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
     fbRegular.innerHTML = '';
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
     document.getElementById('s18-hint-btn').hidden = false;
-    input.value = '';
     continueBtn.disabled = true;
   } else {
     s18Solved = true;
     s18QuizResults[1] = 'wrong';
     fbBold.textContent = 'זו טעות, בואו נדייק​';
     fbRegular.innerHTML = explanationWrong;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     input.disabled = true;
@@ -1219,13 +1202,12 @@ function s19Submit() {
   var feedback    = document.getElementById('s19-feedback');
   var fbBold      = document.getElementById('s19-fb-bold');
   var fbRegular   = document.getElementById('s19-fb-regular');
-  var fbIcon      = document.getElementById('s19-fb-icon');
   var continueBtn = document.getElementById('s19-continue');
 
   var explanationCorrect = '1.4 מטרים שווים ל-140 ס"מ,​ ולכן היחס בין האורכים הוא 140 : 7.​<br>' +
                     'נצמצם את היחס ב-7 ​ונקבל שקנה המידה הוא 20 : 1.​';
-  var explanationWrong = '1.4 מטרים שווים ל-140 ס"מ,​ ולכן קנה המידה הוא 140 : 7.​<br>' +
-                    'כדי להגיע לקנה מידה מצומצם, נחלק את שני המספרים ב-7, ונקבל 20 : 1.​';
+  var explanationWrong = '1.4 מטרים שווים ל-140 ס"מ,​ ולכן היחס בין האורכים הוא 140 : 7.​<br>' +
+                    'נצמצם את היחס ב-7 ​ונקבל שקנה המידה הוא 20 : 1.​';
 
   feedback.classList.remove('s5-fb--correct', 's5-fb--incorrect');
 
@@ -1235,7 +1217,6 @@ function s19Submit() {
     s18QuizResults[2] = 'correct';
     fbBold.textContent = 'יפה מאוד!​';
     fbRegular.innerHTML = explanationCorrect;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--correct');
     feedback.hidden = false;
     input.disabled = true;
@@ -1245,11 +1226,9 @@ function s19Submit() {
   } else if (s19Attempts === 1) {
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
     fbRegular.innerHTML = '';
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     document.getElementById('s19-hint-btn').hidden = false;
-    input.value = '';
     continueBtn.disabled = true;
     announce('זה לא מדוייק, ננסה שוב?');
   } else {
@@ -1257,7 +1236,6 @@ function s19Submit() {
     s18QuizResults[2] = 'wrong';
     fbBold.textContent = 'זו טעות, בואו נדייק​';
     fbRegular.innerHTML = explanationWrong;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     input.disabled = true;
@@ -1315,7 +1293,6 @@ function s20Submit() {
   var feedback    = document.getElementById('s20-feedback');
   var fbBold      = document.getElementById('s20-fb-bold');
   var fbRegular   = document.getElementById('s20-fb-regular');
-  var fbIcon      = document.getElementById('s20-fb-icon');
   var continueBtn = document.getElementById('s20-continue');
   var explanationCorrect = 'נמיר את מידות השטיח במציאות לסנטימטרים: 180 ס"מ ו-240 ס"מ. ​<br>' +
     'מכיוון שקנה המידה הוא 20 : 1 (הקטנה פי 20 של מידות השטיח בתרשים), נחלק כל מידה ב-20 ונקבל שרוחב השטיח בתרשים הוא 9 ס"מ ואורכו 12 ס"מ.​';
@@ -1326,7 +1303,6 @@ function s20Submit() {
     s20Solved = true; s20Correct = true; s18QuizResults[3] = 'correct';
     opts.forEach(function(o,i){ o.disabled=true; o.classList.toggle('is-correct', i===S20_CORRECT); });
     fbBold.textContent = 'יפה!​'; fbRegular.innerHTML = explanationCorrect;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--correct'); feedback.hidden = false; continueBtn.textContent = 'שנמשיך?'; continueBtn.disabled = false;
     announce('יפה!');
   } else if (s20Attempts === 1) {
@@ -1335,14 +1311,12 @@ function s20Submit() {
     continueBtn.disabled = true;
     document.getElementById('s20-hint-btn').hidden = false;
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?'; fbRegular.innerHTML = '';
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
   } else {
     s20Solved = true; s18QuizResults[3] = 'wrong';
     opts.forEach(function(o,i){ o.disabled=true; o.classList.toggle('is-correct',i===S20_CORRECT); o.classList.toggle('is-incorrect',i===s20Selected&&i!==S20_CORRECT); });
     fbBold.textContent = 'זו טעות, בואו נדייק​'; fbRegular.innerHTML = explanationWrong;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false;
     continueBtn.textContent = 'שנמשיך?';
     continueBtn.disabled = false;
@@ -1396,7 +1370,6 @@ function s21Submit() {
   var feedback    = document.getElementById('s21-feedback');
   var fbBold      = document.getElementById('s21-fb-bold');
   var fbRegular   = document.getElementById('s21-fb-regular');
-  var fbIcon      = document.getElementById('s21-fb-icon');
   var continueBtn = document.getElementById('s21-continue');
   var explanation = '2 ק"מ הם 200,000 ס"מ.<br>' +
                     'מכאן שהיחס בין אורך כל קטע במפה לבין אורך כל קטע במציאות הוא 200,000 : 8.<br>' +
@@ -1405,19 +1378,16 @@ function s21Submit() {
   if (correct) {
     s21Solved = true; s21Correct = true; s18QuizResults[4] = 'correct';
     fbBold.textContent = 'יפה מאוד!'; fbRegular.innerHTML = explanation;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--correct'); feedback.hidden = false; input.disabled = true; continueBtn.textContent = 'שנמשיך?'; continueBtn.disabled = false;
     announce('יפה מאוד!');
   } else if (s21Attempts === 1) {
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?'; fbRegular.innerHTML = '';
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false;
-    document.getElementById('s21-hint-btn').hidden = false; input.value = ''; continueBtn.disabled = true;
+    document.getElementById('s21-hint-btn').hidden = false; continueBtn.disabled = true;
     announce('זה לא מדוייק, ננסה שוב?');
   } else {
     s21Solved = true; s18QuizResults[4] = 'wrong';
     fbBold.textContent = 'זו טעות, בואו נדייק'; fbRegular.innerHTML = explanation;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false; input.disabled = true; continueBtn.textContent = 'שנמשיך?'; continueBtn.disabled = false;
     announce('זו טעות, בואו נדייק');
   }
@@ -1491,7 +1461,6 @@ function s22Submit() {
   var feedback    = document.getElementById('s22-feedback');
   var fbBold      = document.getElementById('s22-fb-bold');
   var fbRegular   = document.getElementById('s22-fb-regular');
-  var fbIcon      = document.getElementById('s22-fb-icon');
   var continueBtn = document.getElementById('s22-continue');
 
   var explanationCorrect = 'לפי קנה המידה כל ס"מ על המפה מייצג 100,000,000 ס"מ במציאות. ​<br>' +
@@ -1510,7 +1479,6 @@ function s22Submit() {
     opts.forEach(function(o) { o.disabled = true; });
     fbBold.textContent = 'יפה!​';
     fbRegular.innerHTML = explanationCorrect;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--correct');
     feedback.hidden = false;
     continueBtn.textContent = 'שנמשיך?';
@@ -1520,7 +1488,6 @@ function s22Submit() {
     opts[s22Selected].classList.remove('is-selected');
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
     fbRegular.innerHTML = '';
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     document.getElementById('s22-hint-btn').hidden = false;
@@ -1538,7 +1505,6 @@ function s22Submit() {
     });
     fbBold.textContent = 'זו טעות, בואו נדייק​';
     fbRegular.innerHTML = explanationWrong;
-    fbIcon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     continueBtn.textContent = 'שנמשיך?';
@@ -1562,13 +1528,6 @@ function s16Submit() {
   document.getElementById('s16-fb-bold').textContent = s16FbBoldText;
   document.getElementById('s16-fb-regular').innerHTML = 'קנה מידה נקרא משמאל לימין:​ המספר השמאלי מייצג את הגודל בסרטוט, והמספר הימני מייצג את הגודל המתאים במציאות. ​';
   announce(s16FbBoldText);
-
-  var icon = document.getElementById('s16-fb-icon');
-  if (correct) {
-    icon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  } else {
-    icon.innerHTML = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  }
 
   var feedback = document.getElementById('s16-inline-feedback');
   feedback.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
@@ -1634,12 +1593,6 @@ function s16Q2Submit() {
   document.getElementById('s16-q2-fb-bold').textContent = allCorrect ? 'נכון!' : 'זו טעות, אבל חשוב שניסיתם!';
   document.getElementById('s16-q2-fb-regular').innerHTML = 'קנה מידה נקרא משמאל לימין:​ המספר השמאלי מייצג את הגודל בסרטוט, והמספר הימני מייצג את הגודל המתאים במציאות. ​';
 
-  var q2icon = document.getElementById('s16-q2-fb-icon');
-  if (q2icon) {
-    q2icon.innerHTML = allCorrect
-      ? '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#609E12"/><path d="M9 16.5L13.5 21L23 11" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-      : '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  }
   var feedback = document.getElementById('s16-q2-inline-feedback');
   feedback.classList.remove('s5-fb--correct', 's5-fb--incorrect');
   feedback.classList.add(allCorrect ? 's5-fb--correct' : 's5-fb--incorrect');
@@ -1913,13 +1866,10 @@ function s23Submit() {
   var feedback    = document.getElementById('s23-feedback');
   var fbBold      = document.getElementById('s23-fb-bold');
   var fbRegular   = document.getElementById('s23-fb-regular');
-  var fbIcon      = document.getElementById('s23-fb-icon');
   var continueBtn = document.getElementById('s23-continue');
 
   var explanation = 'קנה מידה מייצג את היחס בין האורך במפה לאורך המתאים במציאות. ​<br>' +
                     'המסלול במציאות זהה. אם קנה המידה היה זהה, גם אורך המסלול בשתי המפות היה צריך להיות זהה. לכן נסיק שקני המידה שונים.  ​';
-  var checkIcon = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var xIcon     = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   feedback.classList.remove('s5-fb--correct', 's5-fb--incorrect', 's23-fb--final');
   var opts = document.querySelectorAll('[data-screen="23"] .s5-opt');
@@ -1933,7 +1883,6 @@ function s23Submit() {
     opts.forEach(function(o) { o.disabled = true; });
     fbBold.textContent = 'טוב מאוד!';
     fbRegular.innerHTML = explanation;
-    fbIcon.innerHTML = checkIcon;
     feedback.classList.add('s5-fb--correct', 's23-fb--final');
     feedback.hidden = false;
     continueBtn.textContent = 'שנמשיך?';
@@ -1943,7 +1892,6 @@ function s23Submit() {
     opts[s23Selected].classList.remove('is-selected');
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
     fbRegular.innerHTML = '';
-    fbIcon.innerHTML = xIcon;
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     document.getElementById('s23-hint-btn').hidden = false;
@@ -1961,7 +1909,6 @@ function s23Submit() {
     });
     fbBold.textContent = 'זו טעות, לא נורא – בואו נלמד ממנה:​';
     fbRegular.innerHTML = explanation;
-    fbIcon.innerHTML = xIcon;
     feedback.classList.add('s5-fb--incorrect', 's23-fb--final');
     feedback.hidden = false;
     continueBtn.textContent = 'שנמשיך?';
@@ -2273,17 +2220,38 @@ document.addEventListener('keydown', function(event) {
   if (!reportModal.hasAttribute('hidden'))  { tryCloseReportModal();   return; }
 });
 
+function s5FbClose(id) {
+  var el = document.getElementById(id);
+  if (el) el.hidden = true;
+}
+
 /* ── Draggable inline feedback elements ── */
 (function () {
+  /* #app has an active transform:scale(...), which makes it the containing
+     block for position:fixed descendants — so drag math must convert viewport
+     (clientX/clientY) coordinates into #app's own local, pre-scale space. */
+  function getAppTransform() {
+    var app = document.getElementById('app');
+    var m = app.style.transform.match(/scale\(([^)]+)\)/);
+    return {
+      scale: m ? parseFloat(m[1]) : 1,
+      left:  parseFloat(app.style.left) || 0,
+      top:   parseFloat(app.style.top)  || 0,
+    };
+  }
+
+  var BOTTOM_BAR_H = 74; /* .bottom-bar height — keep the popup from covering it */
+
   function liftFeedback(el) {
     if (el.dataset.lifted) return;
     el.dataset.lifted = '1';
     var w    = el.offsetWidth;
     var rect = el.getBoundingClientRect();
+    var t    = getAppTransform();
     el.style.width    = w + 'px';
     el.style.position = 'fixed';
-    el.style.left     = rect.left  + 'px';
-    el.style.top      = rect.top   + 'px';
+    el.style.left     = ((rect.left - t.left) / t.scale) + 'px';
+    el.style.top      = ((rect.top  - t.top)  / t.scale) + 'px';
     el.style.bottom   = 'auto';
     el.style.height   = 'auto';
     el.style.zIndex   = '9999';
@@ -2301,16 +2269,22 @@ document.addEventListener('keydown', function(event) {
       /* אם עדיין לא שולף — שלוף עכשיו */
       if (!el.dataset.lifted) liftFeedback(el);
 
-      var startX   = e.clientX;
-      var startY   = e.clientY;
+      var t0 = getAppTransform();
+      var startLocalX = (e.clientX - t0.left) / t0.scale;
+      var startLocalY = (e.clientY - t0.top)  / t0.scale;
       var baseLeft = parseFloat(el.style.left)  || 0;
       var baseTop  = parseFloat(el.style.top)   || 0;
 
       el.style.cursor = 'grabbing';
 
       function onMove(e) {
-        el.style.left = (baseLeft + e.clientX - startX) + 'px';
-        el.style.top  = (baseTop  + e.clientY - startY) + 'px';
+        var t = getAppTransform();
+        var curLocalX = (e.clientX - t.left) / t.scale;
+        var curLocalY = (e.clientY - t.top)  / t.scale;
+        var nx = baseLeft + (curLocalX - startLocalX);
+        var ny = baseTop  + (curLocalY - startLocalY);
+        el.style.left = Math.max(0, Math.min(nx, 1280 - el.offsetWidth))  + 'px';
+        el.style.top  = Math.max(0, Math.min(ny, 720 - BOTTOM_BAR_H - el.offsetHeight)) + 'px';
       }
       function onUp() {
         el.style.cursor = 'grab';
@@ -2327,23 +2301,41 @@ document.addEventListener('keydown', function(event) {
   }
 
   /* איפוס כשעוברים עמוד */
-  function resetFeedbacks() {
-    document.querySelectorAll('.s5-inline-feedback[data-lifted]').forEach(function (el) {
-      el.removeAttribute('data-lifted');
-      el.style.position = '';
-      el.style.left     = '';
-      el.style.top      = '';
-      el.style.width    = '';
-      el.style.zIndex   = '';
-      el.style.margin   = '';
-      el.style.cursor   = '';
-      el.style.height   = '';
-      el.style.bottom   = '';
-    });
+  function resetOne(el) {
+    el.removeAttribute('data-lifted');
+    el.style.position = '';
+    el.style.left     = '';
+    el.style.top      = '';
+    el.style.width    = '';
+    el.style.zIndex   = '';
+    el.style.margin   = '';
+    el.style.cursor   = '';
+    el.style.height   = '';
+    el.style.bottom   = '';
   }
+
+  function resetFeedbacks() {
+    document.querySelectorAll('.s5-inline-feedback[data-lifted]').forEach(resetOne);
+  }
+
+  /* Every submit handler updates the feedback's class list (correct/incorrect)
+     on each new attempt, even when re-showing the SAME element for a retry
+     without ever hiding it in between — a user-dragged position would
+     otherwise persist across attempts. Watching the class attribute (rather
+     than editing every submit function) resets a lifted element back to its
+     original layout position the moment new feedback content is about to
+     appear, before the browser paints the next frame. */
+  var feedbackClassObserver = new MutationObserver(function (mutations) {
+    mutations.forEach(function (m) {
+      if (m.target.dataset.lifted) resetOne(m.target);
+    });
+  });
 
   document.addEventListener('DOMContentLoaded', function () {
     initAll();
+    document.querySelectorAll('.s5-inline-feedback').forEach(function (el) {
+      feedbackClassObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+    });
     var _orig = window.goTo;
     if (typeof _orig === 'function') {
       window.goTo = function (n) {

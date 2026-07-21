@@ -3225,46 +3225,60 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 4px 8px;
   gap: 4px;
   width: 88px;
-  height: 68px;
   background: transparent;
   border: none;
+  padding: 0;
   cursor: pointer;
   outline: none;
+}
+
+.flag-btn-icon {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.flag-btn-icon-default,
+.flag-btn-icon-hover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   transition: opacity 0.12s;
 }
 
-.flag-btn .flag-icon {
-  box-sizing: border-box;
-  width: 38px;
-  height: 38px;
-  background: #ECECEC;
-  border: 0.5px solid rgba(0, 0, 0, 0.06);
-  border-radius: 1000px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: #484848;
-  flex: none;
-  transition: background 0.12s;
+.flag-btn-icon-hover {
+  opacity: 0;
 }
 
-.flag-btn .flag-label {
+.flag-btn:hover .flag-btn-icon-default,
+.flag-btn:focus-visible .flag-btn-icon-default {
+  opacity: 0;
+}
+
+.flag-btn:hover .flag-btn-icon-hover,
+.flag-btn:focus-visible .flag-btn-icon-hover {
+  opacity: 1;
+}
+
+.flag-btn-label {
   font-family: 'Assistant', sans-serif;
   font-weight: 600;
   font-size: 14px;
-  line-height: 20px;
+  color: #7100B9;
   text-align: center;
-  color: #484848;
-  flex: none;
-  white-space: nowrap;
+  width: 80px;
+  opacity: 0;
+  transition: opacity 0.12s;
 }
 
-.flag-btn:hover .flag-icon {
-  background: #d8d8d8;
+.flag-btn:hover .flag-btn-label,
+.flag-btn:focus-visible .flag-btn-label {
+  opacity: 1;
 }
 
 .flag-btn:focus-visible {

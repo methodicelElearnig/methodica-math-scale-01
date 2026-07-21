@@ -1170,17 +1170,17 @@ body {
 /* â”€â”€ Inline feedback â€” in-flow below the ×‘×“×•×§ button â”€â”€ */
 .s5-inline-feedback {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 15px;
   border-radius: 12px;
   width: 100%;
   box-sizing: border-box;
   direction: rtl;
 }
-.s5-inline-feedback.s5-fb--correct  { background: #F2FFE8; }
-.s5-inline-feedback.s5-fb--incorrect { background: #FFDBDC; }
+.s5-inline-feedback[hidden] { display: none !important; }
+.s5-inline-feedback.s5-fb--correct  { background: #edf8ed; }
+.s5-inline-feedback.s5-fb--incorrect { background: #ffdbdc; }
 
 /* Screen 5 character image â€” same size as screen 1/2 */
 #s5-char-img {
@@ -1217,26 +1217,70 @@ body {
   height: 16px;
 }
 
-.s5-fb-text {
+.s5-fb-header {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: right;
+  align-items: flex-start;
+  gap: 8px;
+  direction: ltr;
+  width: 100%;
 }
 
+.s5-fb-close {
+  position: relative;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #303030;
+  border-radius: 50%;
+  background: #fff;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+}
+.s5-fb-close::before,
+.s5-fb-close::after {
+  content: '';
+  position: absolute;
+  width: 11.31px;
+  height: 1.333px;
+  background: #303030;
+  border-radius: 999px;
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+}
+.s5-fb-close::before { transform: translate(-50%, -50%) rotate(45deg); }
+.s5-fb-close::after  { transform: translate(-50%, -50%) rotate(-45deg); }
+
 .s5-fb-bold {
+  flex: 1;
   font-family: 'Assistant', sans-serif;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: #222222;
+  text-align: right;
+  direction: rtl;
+  line-height: normal;
+  padding-top: 4px;
+  margin: 0;
   display: block;
 }
 
 .s5-fb-regular {
   font-family: 'Assistant', sans-serif;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 400;
   color: #222222;
+  text-align: right;
+  direction: rtl;
+  line-height: normal;
+  margin: 0;
   display: block;
 }
 
@@ -1303,17 +1347,6 @@ body {
 #s21 .s18-console-img { max-width: 45%; max-height: none; margin-top: 0; }
 #s21-char-widget { right: 40px; left: auto; bottom: 84px; }
 #s21-char-widget img { width: 140px; height: auto; }
-
-.s5-fb-icon {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: flex-start;
-  margin-top: 4px;
-}
 
 /* â”€â”€ Q2: dropdown fill-in-the-blank â”€â”€ */
 .s5-q2-wrap {
@@ -3314,46 +3347,60 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 4px 8px;
   gap: 4px;
   width: 88px;
-  height: 68px;
   background: transparent;
   border: none;
+  padding: 0;
   cursor: pointer;
   outline: none;
+}
+
+.flag-btn-icon {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.flag-btn-icon-default,
+.flag-btn-icon-hover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   transition: opacity 0.12s;
 }
 
-.flag-btn .flag-icon {
-  box-sizing: border-box;
-  width: 38px;
-  height: 38px;
-  background: #ECECEC;
-  border: 0.5px solid rgba(0, 0, 0, 0.06);
-  border-radius: 1000px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: #484848;
-  flex: none;
-  transition: background 0.12s;
+.flag-btn-icon-hover {
+  opacity: 0;
 }
 
-.flag-btn .flag-label {
+.flag-btn:hover .flag-btn-icon-default,
+.flag-btn:focus-visible .flag-btn-icon-default {
+  opacity: 0;
+}
+
+.flag-btn:hover .flag-btn-icon-hover,
+.flag-btn:focus-visible .flag-btn-icon-hover {
+  opacity: 1;
+}
+
+.flag-btn-label {
   font-family: 'Assistant', sans-serif;
   font-weight: 600;
   font-size: 14px;
-  line-height: 20px;
+  color: #7100B9;
   text-align: center;
-  color: #484848;
-  flex: none;
-  white-space: nowrap;
+  width: 80px;
+  opacity: 0;
+  transition: opacity 0.12s;
 }
 
-.flag-btn:hover .flag-icon {
-  background: #d8d8d8;
+.flag-btn:hover .flag-btn-label,
+.flag-btn:focus-visible .flag-btn-label {
+  opacity: 1;
 }
 
 .flag-btn:focus-visible {
