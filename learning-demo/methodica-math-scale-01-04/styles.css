@@ -2866,7 +2866,7 @@ body {
 #s5 .s18-feedback-bar { max-width: 600px; left: 40px; transform: none; }
 #s5 .s18-console-img  { margin-top: 57px; }
 #s5 .s18-q-left       { padding-top: 80px; align-items: flex-start; }
-#s5 .s18-ruler        { cursor: grab; left: 190px; top: 327px; height: auto; max-height: 507px; transform: rotate(90deg); }
+#s5 .s18-ruler        { cursor: grab; left: 190px; top: 327px; height: auto; max-height: 471px; transform: rotate(90deg); }
 #s5 .s5-inline-feedback { z-index: 350; }
 
 

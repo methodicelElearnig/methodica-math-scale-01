@@ -36,7 +36,7 @@ let s4PlayerReady = false;
 
 window.onYouTubeIframeAPIReady = function () {
   var playerConfig = {
-    videoId: 'AllYTxb3ezk',
+    videoId: 'Bk9KunjWSiA',
     host: 'https://www.youtube.com',
     playerVars: {
       rel: 0,
@@ -104,6 +104,7 @@ function scaleApp() {
   el.style.transform = `scale(${scale})`;
   el.style.left = left + 'px';
   el.style.top = top + 'px';
+  document.documentElement.style.setProperty('--sb-width', (12 / scale) + 'px');
 }
 
 window.addEventListener('resize', scaleApp);
@@ -354,6 +355,19 @@ function advanceFromS3() {
 function setScale(ratio) {
   const container = document.querySelector('.field-container');
   if (container) container.dataset.scale = String(ratio);
+
+  const img = document.getElementById('field-img');
+  if (img) {
+    const newSrc = (ratio === 10)
+      ? './assets/images/Football yard zoom.jpg'
+      : (ratio === 100)
+        ? './assets/images/Football yard med zoom.jpg'
+        : './assets/images/Football yard.jpg';
+
+    if (!img.src.endsWith(newSrc.replace('./', ''))) {
+      img.src = newSrc;
+    }
+  }
 
   document.querySelectorAll('.scale-input').forEach(inp => {
     inp.checked = (parseInt(inp.value) === ratio);
@@ -982,7 +996,6 @@ var s18Attempts = 0;
 var s18Solved = false;
 var s18Correct = false;
 var s18RulerDragging = false;
-var s18RulerOffX = 0, s18RulerOffY = 0;
 var s18RulerInitialized = false;
 
 function s18GetScale() {
@@ -996,12 +1009,13 @@ function s18InitRuler() {
   s18RulerInitialized = true;
   var ruler = document.getElementById('s18-ruler');
   if (!ruler) return;
+  var s18RulerStartX = 0, s18RulerStartY = 0, s18RulerStartLeft = 0, s18RulerStartTop = 0;
   ruler.addEventListener('mousedown', function(e) {
     s18RulerDragging = true;
-    var scale = s18GetScale();
-    var rect = ruler.getBoundingClientRect();
-    s18RulerOffX = (e.clientX - rect.left) / scale;
-    s18RulerOffY = (e.clientY - rect.top) / scale;
+    s18RulerStartX = e.clientX;
+    s18RulerStartY = e.clientY;
+    s18RulerStartLeft = ruler.offsetLeft;
+    s18RulerStartTop  = ruler.offsetTop;
     ruler.style.cursor = 'grabbing';
     e.preventDefault();
   });
@@ -1010,10 +1024,10 @@ function s18InitRuler() {
     var r = document.getElementById('s18-ruler');
     if (!r) return;
     var scale = s18GetScale();
-    var app = document.getElementById('app');
-    var appRect = app.getBoundingClientRect();
-    var newLeft = (e.clientX - appRect.left) / scale - s18RulerOffX;
-    var newTop  = (e.clientY - appRect.top)  / scale - s18RulerOffY;
+    var dx2 = (e.clientX - s18RulerStartX) / scale;
+    var dy2 = (e.clientY - s18RulerStartY) / scale;
+    var newLeft = s18RulerStartLeft + dx2;
+    var newTop  = s18RulerStartTop  + dy2;
 
     /* הסרגל מסתובב 90 מעלות — התיבה החזותית שלו הפוכה (רוחב/גובה מוחלפים) */
     var w = r.offsetWidth, h = r.offsetHeight;
@@ -1204,10 +1218,10 @@ function s19Submit() {
   var fbRegular   = document.getElementById('s19-fb-regular');
   var continueBtn = document.getElementById('s19-continue');
 
-  var explanationCorrect = '1.4 מטרים שווים ל-140 ס"מ,​ ולכן היחס בין האורכים הוא 140 : 7.​<br>' +
-                    'נצמצם את היחס ב-7 ​ונקבל שקנה המידה הוא 20 : 1.​';
-  var explanationWrong = '1.4 מטרים שווים ל-140 ס"מ,​ ולכן היחס בין האורכים הוא 140 : 7.​<br>' +
-                    'נצמצם את היחס ב-7 ​ונקבל שקנה המידה הוא 20 : 1.​';
+  var explanationCorrect = '1.4 מטרים שווים ל-140 ס"מ,​ ולכן היחס בין האורכים הוא 140 : 7 .​<br>' +
+                    'נצמצם את היחס ב-7 ​ונקבל שקנה המידה הוא 20 : 1 .​';
+  var explanationWrong = '1.4 מטרים שווים ל-140 ס"מ,​ ולכן היחס בין האורכים הוא 140 : 7 .​<br>' +
+                    'נצמצם את היחס ב-7 ​ונקבל שקנה המידה הוא 20 : 1 .​';
 
   feedback.classList.remove('s5-fb--correct', 's5-fb--incorrect');
 
@@ -1371,8 +1385,8 @@ function s21Submit() {
   var fbBold      = document.getElementById('s21-fb-bold');
   var fbRegular   = document.getElementById('s21-fb-regular');
   var continueBtn = document.getElementById('s21-continue');
-  var explanation = '2 ק"מ הם 200,000 ס"מ.<br>' +
-                    'מכאן שהיחס בין אורך כל קטע במפה לבין אורך כל קטע במציאות הוא 200,000 : 8.<br>' +
+  var explanation = '2 ק"מ הם 200,000 ס"מ .<br>' +
+                    'מכאן שהיחס בין אורך כל קטע במפה לבין אורך כל קטע במציאות הוא 200,000 : 8 .<br>' +
                     'נצמצם ב-8, ונקבל את קנה המידה: 25,000 : 1';
   feedback.classList.remove('s5-fb--correct', 's5-fb--incorrect');
   if (correct) {

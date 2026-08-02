@@ -871,9 +871,10 @@ body {
   align-items: center;
 }
 .s53-gif {
-  width: 640px;
-  height: 360px;
-  object-fit: contain;
+  width: 311px;
+  height: 315px;
+  object-fit: cover;
+  object-position: left top;
   border-radius: 16px;
 }
 #s53-success p,
