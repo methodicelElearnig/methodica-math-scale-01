@@ -43,17 +43,21 @@ if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
 /* Final assessment tracking (screens 43-52) */
 let finalAssessmentScore = { correct: 0 };
 
-/* ── Viewport scaling ── */
+/* ── Viewport scaling ──
+   Width is locked to the 1280px design grid (screens anchor content to BOTH edges);
+   the design HEIGHT is fluid. Since scale <= innerHeight / 720, the fluid height is
+   always >= 720, so the scaled canvas exactly fills the viewport and .bottom-bar can
+   never be pushed off-screen. See RESPONSIVENESS.md. */
 function scaleApp() {
   const scaleX = window.innerWidth / 1280;
   const scaleY = window.innerHeight / 720;
   const scale = Math.min(scaleX, scaleY);
   const left = (window.innerWidth - 1280 * scale) / 2;
-  const top = (window.innerHeight - 720 * scale) / 2;
   const el = document.getElementById('app');
   el.style.transform = `scale(${scale})`;
+  el.style.height = (window.innerHeight / scale) + 'px';
   el.style.left = left + 'px';
-  el.style.top = top + 'px';
+  el.style.top = '0px';
 }
 
 window.addEventListener('resize', scaleApp);

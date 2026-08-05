@@ -116,17 +116,21 @@ function s4OnPlayerStateChange(e) {
 let s7Timer = null;
 let s8Timer = null;
 
-/* ── Viewport scaling ── */
+/* ── Viewport scaling ──
+   Width is locked to the 1280px design grid (screens anchor content to BOTH edges);
+   the design HEIGHT is fluid. Since scale <= innerHeight / 720, the fluid height is
+   always >= 720, so the scaled canvas exactly fills the viewport and .bottom-bar can
+   never be pushed off-screen. See RESPONSIVENESS.md. */
 function scaleApp() {
   const scaleX = window.innerWidth / 1280;
   const scaleY = window.innerHeight / 720;
   const scale = Math.min(scaleX, scaleY);
   const left = (window.innerWidth - 1280 * scale) / 2;
-  const top = (window.innerHeight - 720 * scale) / 2;
   const el = document.getElementById('app');
   el.style.transform = `scale(${scale})`;
+  el.style.height = (window.innerHeight / scale) + 'px';
   el.style.left = left + 'px';
-  el.style.top = top + 'px';
+  el.style.top = '0px';
   document.documentElement.style.setProperty('--sb-width', (12 / scale) + 'px');
 }
 
@@ -1053,6 +1057,8 @@ var s18Correct = false;
 var s18RulerDragging = false;
 var s18RulerInitialized = false;
 
+/* INVARIANT: must return exactly the scale scaleApp() applies, or the ruler stops
+   tracking the cursor 1:1. If the formula changes in one place, change it in both. */
 function s18GetScale() {
   var scaleX = window.innerWidth / 1280;
   var scaleY = window.innerHeight / 720;
