@@ -21,9 +21,13 @@
     vocabulary the metadata files use (state-general, core-curriculum-basic,
     project-or-inquiry-task, interactive-content ...), so no remapping is needed in
     this direction. Fields KATA adds and the metadata format has no place for
-    (status, masteryLevel, manufacturerGroupId, hostedContentRef, kind, providerName,
+    (status, manufacturerGroupId, hostedContentRef, kind, providerName,
     providerLogoUrl, componentCount, per-item/per-question order) are dropped — use
     -KeepRaw to also save the untouched API response.
+
+    masteryLevel IS emitted when KATA returns one: this unit's metadata carries it per
+    component and send-metadata.ps1 pushes it, so dropping it here would make a
+    retrieve -> overwrite cycle silently lose the value.
 
     Runtime: PowerShell 7+ and curl.exe (bundled with Windows 10/11).
 
@@ -384,7 +388,7 @@ function New-ComponentFileBody {
         New-ItemFileBody $it $compId
     }
 
-    return [ordered]@{
+    $out = [ordered]@{
         id                     = $compId
         title                  = $Comp.title
         learningUnitId         = $UnitId
@@ -404,6 +408,17 @@ function New-ComponentFileBody {
         updatedAt              = $Comp.updatedAt
         subContent             = (ConvertTo-JsonArray $items)
     }
+    # Insert masteryLevel where the hand-authored files keep it (after relativeDifficulty), so a
+    # metadata/ vs metadata-from/ diff stays clean rather than showing a key-order change.
+    if ($null -ne $Comp.masteryLevel -and "$($Comp.masteryLevel)".Trim() -ne '') {
+        $reordered = [ordered]@{}
+        foreach ($k in $out.Keys) {
+            $reordered[$k] = $out[$k]
+            if ($k -eq 'relativeDifficulty') { $reordered['masteryLevel'] = $Comp.masteryLevel }
+        }
+        return $reordered
+    }
+    return $out
 }
 
 # ---- Main -------------------------------------------------------------------
