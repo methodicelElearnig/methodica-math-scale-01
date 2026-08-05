@@ -1,5 +1,18 @@
 ﻿'use strict';
 
+/* ═══════════════════ xAPI (720) — identity ═══════════════════
+   Canonical id prefix for this unit. Every id the lomda reports is built from it and must match
+   metadata/*.json byte-for-byte, INCLUDING the trailing slashes that convention carries. */
+var XAPI_ID_PREFIX = 'https://lomdot.education.gov.il/metodica/720active/math/scale/01/';
+/* The unit id is the prefix PLUS the unit slug — it must equal metadata unit id exactly.
+   (The prefix alone is only the folder; keying the unit on that resolved to "01".) */
+window.XAPI_UNIT_ID = XAPI_ID_PREFIX + 'methodica-math-scale-01/';   // resume State document key
+/* Last path segment of a canonical id — the short slug the bug-report form records. */
+function shortId(u){ return String(u || '').replace(/\/+$/, '').split('/').pop(); }
+/* Resume (KATA State API) ships gated off. Flipping this to true also switches the library to
+   xapi-720-j.js, which carries the State transport. See the RESUME block near the end of file. */
+var RESUME_ENABLED = false;
+
 function announce(msg) {
   var el = document.getElementById('a11y-announcer');
   if (!el || !msg) return;
@@ -79,6 +92,16 @@ function s4OnPlayerError(e) {
 }
 
 function s4OnPlayerStateChange(e) {
+  /* xAPI video: YouTube drives this screen, so played/paused come from the player state rather
+     than xapiWireVideos() (which only sees HTML5 <video>). Guarded on XAPI_USING_G like every
+     other item-level call, and never allowed to break playback. */
+  try {
+    if (window.XAPI_USING_G && typeof sendStatement720 === 'function' && s4YTPlayer) {
+      var _t = (typeof s4YTPlayer.getCurrentTime === 'function') ? s4YTPlayer.getCurrentTime() : 0;
+      if (e.data === YT.PlayerState.PLAYING)     sendStatement720('played', 'question', null, { time: _t });
+      else if (e.data === YT.PlayerState.PAUSED) sendStatement720('paused', 'question', null, { time: _t });
+    }
+  } catch (err) {}
   if (e.data === YT.PlayerState.ENDED) {
     s4Playing = false;
     s4VideoEnded = true;
@@ -117,6 +140,7 @@ function goTo(n) {
   const nextScreen = document.querySelector(`[data-screen="${n}"]`);
   nextScreen.classList.add('active');
   currentScreen = n;
+  try { xapiOnScreen(n); } catch (e) {}
   resetScreenState(n);
   nextScreen.focus();
   var heading = nextScreen.querySelector('h1, h2');
@@ -284,6 +308,15 @@ function selectDesign(cardEl) {
 
 function advanceFromS2() {
   if (!window.lomdaState.selectedDesign) return;
+  /* xAPI: the learner picked how to learn the concept — video (screen 4) or flip cards (screen 3).
+     Reported as 'selected' under the learning-type category, not as a graded answer.
+     (The screen-0 avatar choice stays unreported: it is decoration, not a learning preference.) */
+  try {
+    var _card = document.querySelector('[data-screen="2"] .option-card.selected');
+    sendStatement720('selected', 'onlinelesson',
+      { response: xapiAnswerText(_card) || String(window.lomdaState.selectedDesign) },
+      { category: 'learning-type' });
+  } catch (e) { console.error('[xAPI] selected learning-type', e); }
   goTo(window.lomdaState.selectedDesign === 'video' ? 4 : 3);
 }
 
@@ -806,6 +839,14 @@ function sqSubmit() {
   var feedback = document.getElementById(p + 'inline-feedback');
   feedback.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
+  /* xAPI: item 002 / q1. Single attempt (sqSubmitted latches), so always the last answer.
+     Served from screen 3 (cards path) and screen 4 (video path) alike — same metadata item. */
+  try {
+    sendStatement720('answered.last', 'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [xapiAnswerText(opts[sqSelected])] } },
+      xapiQ('002', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 002/q1', e); }
   sqCheckBothDone();
 }
 
@@ -847,6 +888,9 @@ function sqQ2Submit() {
   sqQ2Submitted = true;
   var p = 's' + sqScreen + 'q-';
   document.getElementById(p + 'q2-check').disabled = true;
+  /* xAPI: capture the learner's four dropdown values BEFORE the loop below overwrites every
+     dd-val with the correct answer. Read from state, not the DOM, for exactly that reason. */
+  var _q2Answer = sqQ2Selections.join(' | ');
   var allCorrect = true;
   sqQ2Selections.forEach(function(val, i) {
     var dd = document.querySelector('[data-screen="' + sqScreen + '"] .sq-dropdown[data-row="' + i + '"]');
@@ -867,6 +911,13 @@ function sqQ2Submit() {
   var feedback = document.getElementById(p + 'q2-inline-feedback');
   feedback.classList.add(allCorrect ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
+  /* xAPI: item 002 / q2 — the 4-row unit-conversion matching. Single attempt. */
+  try {
+    sendStatement720('answered.last', 'question',
+      { success: !!allCorrect, score: { scaled: allCorrect ? 1 : 0 },
+        extensions: { student_answer: [_q2Answer] } },
+      xapiQ('002', 'q2'));
+  } catch (e) { console.error('[xAPI] answered 002/q2', e); }
   sqCheckBothDone();
 }
 
@@ -921,7 +972,11 @@ function s16Select(idx) {
 
 function s16ToggleHint() {
   var popup = document.getElementById('s16-hint-popup');
-  if (popup) { popup.hidden = false; announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = false;
+    announce('רמז נפתח');
+    try { sendStatement720('requested.1', 'question', null, xapiQ('004', 'q1')); } catch (e) {}
+  }
 }
 
 function s16CloseHint() {
@@ -1089,7 +1144,11 @@ function s18CheckInput() {
 
 function s18ToggleHint() {
   var popup = document.getElementById('s18-hint-popup');
-  if (popup) { popup.hidden = false; announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = false;
+    announce('רמז נפתח');
+    try { sendStatement720('requested.1', 'question', null, xapiQ('005', 'q1')); } catch (e) {}
+  }
 }
 
 function s18CloseHint() {
@@ -1105,6 +1164,17 @@ function s18Submit() {
   var correct = (answer === '24');
 
   s18Attempts++;
+
+  /* xAPI: item 005 / q1 (quiz exercise 1). Two attempts allowed — the first wrong answer is an
+     interim 'answered'; a correct answer or the second wrong one closes the question. Only
+     'answered.last' feeds the component score denominator. */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s18Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [answer] } },
+      xapiQ('005', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 005/q1', e); }
 
   var feedback  = document.getElementById('s18-feedback');
   var fbBold    = document.getElementById('s18-fb-bold');
@@ -1196,7 +1266,11 @@ function s19CheckInput() {
 
 function s19ToggleHint() {
   var popup = document.getElementById('s19-hint-popup');
-  if (popup) { popup.hidden = false; announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = false;
+    announce('רמז נפתח');
+    try { sendStatement720('requested.1', 'question', null, xapiQ('006', 'q1')); } catch (e) {}
+  }
 }
 
 function s19CloseHint() {
@@ -1212,6 +1286,15 @@ function s19Submit() {
   var correct = (answer === '20');
 
   s19Attempts++;
+
+  /* xAPI: item 006 / q1 (quiz exercise 2, part א). */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s19Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [answer] } },
+      xapiQ('006', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 006/q1', e); }
 
   var feedback    = document.getElementById('s19-feedback');
   var fbBold      = document.getElementById('s19-fb-bold');
@@ -1296,7 +1379,9 @@ function s20Select(idx) {
   if (continueBtn) continueBtn.disabled = false;
 }
 
-function s20ToggleHint() { var p = document.getElementById('s20-hint-popup'); if (p) { p.hidden = false; announce('רמז נפתח'); } }
+function s20ToggleHint() { var p = document.getElementById('s20-hint-popup'); if (p) { p.hidden = false; announce('רמז נפתח');
+    try { sendStatement720('requested.1', 'question', null, xapiQ('006', 'q2')); } catch (e) {}
+  } }
 function s20CloseHint()  { var p = document.getElementById('s20-hint-popup'); if (p) { p.hidden = true; announce('רמז נסגר'); } }
 
 function s20Submit() {
@@ -1304,6 +1389,15 @@ function s20Submit() {
   if (s20Selected === null) return;
   var correct = (s20Selected === S20_CORRECT);
   s20Attempts++;
+  /* xAPI: item 006 / q2 (quiz exercise 2, part ב). Reported before the wrong-answer branch below
+     clears s20Selected, which would otherwise lose the learner's answer text. */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s20Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="20"] .s5-opt')[s20Selected])] } },
+      xapiQ('006', 'q2'));
+  } catch (e) { console.error('[xAPI] answered 006/q2', e); }
   var feedback    = document.getElementById('s20-feedback');
   var fbBold      = document.getElementById('s20-fb-bold');
   var fbRegular   = document.getElementById('s20-fb-regular');
@@ -1372,7 +1466,9 @@ function s21CheckInput() {
   if (continueBtn) continueBtn.disabled = !(input && input.value.trim().length > 0);
 }
 
-function s21ToggleHint() { var p = document.getElementById('s21-hint-popup'); if (p) { p.hidden = false; announce('רמז נפתח'); } }
+function s21ToggleHint() { var p = document.getElementById('s21-hint-popup'); if (p) { p.hidden = false; announce('רמז נפתח');
+    try { sendStatement720('requested.1', 'question', null, xapiQ('007', 'q1')); } catch (e) {}
+  } }
 function s21CloseHint()  { var p = document.getElementById('s21-hint-popup'); if (p) { p.hidden = true; announce('רמז נסגר'); } }
 
 function s21Submit() {
@@ -1381,6 +1477,14 @@ function s21Submit() {
   var answer = input ? input.value : '';
   var correct = checkRatio(answer, 1, 25000);
   s21Attempts++;
+  /* xAPI: item 007 / q1 (quiz exercise 3). */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s21Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [String(answer).trim()] } },
+      xapiQ('007', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 007/q1', e); }
   var feedback    = document.getElementById('s21-feedback');
   var fbBold      = document.getElementById('s21-fb-bold');
   var fbRegular   = document.getElementById('s21-fb-regular');
@@ -1457,7 +1561,11 @@ function s22ToggleHelp() {
 
 function s22ToggleHint() {
   var popup = document.getElementById('s22-hint-popup');
-  if (popup) { popup.hidden = false; announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = false;
+    announce('רמז נפתח');
+    try { sendStatement720('requested.1', 'question', null, xapiQ('008', 'q1')); } catch (e) {}
+  }
 }
 
 function s22CloseHint() {
@@ -1471,6 +1579,15 @@ function s22Submit() {
 
   var correct = (s22Selected === S22_CORRECT);
   s22Attempts++;
+
+  /* xAPI: item 008 / q1 (quiz exercise 4). */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s22Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="22"] .s5-opt')[s22Selected])] } },
+      xapiQ('008', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 008/q1', e); }
 
   var feedback    = document.getElementById('s22-feedback');
   var fbBold      = document.getElementById('s22-fb-bold');
@@ -1546,6 +1663,14 @@ function s16Submit() {
   var feedback = document.getElementById('s16-inline-feedback');
   feedback.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
+
+  /* xAPI: item 004 / q1 — the true/false warm-up. Single attempt. */
+  try {
+    sendStatement720('answered.last', 'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [xapiAnswerText(opts[s16Selected])] } },
+      xapiQ('004', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 004/q1', e); }
 
   var contBtn = document.getElementById('s16-continue');
   if (contBtn) {
@@ -1862,7 +1987,11 @@ function s23Select(idx) {
 
 function s23ToggleHint() {
   var popup = document.getElementById('s23-hint-popup');
-  if (popup) { popup.hidden = false; announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = false;
+    announce('רמז נפתח');
+    try { sendStatement720('requested.1', 'question', null, xapiQ('009', 'q1')); } catch (e) {}
+  }
 }
 
 function s23CloseHint() {
@@ -1876,6 +2005,15 @@ function s23Submit() {
 
   var correct = (s23Selected === S23_CORRECT);
   s23Attempts++;
+
+  /* xAPI: item 009 / q1 (quiz exercise 5, the last one before routing). */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s23Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="23"] .s5-opt')[s23Selected])] } },
+      xapiQ('009', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 009/q1', e); }
 
   var feedback    = document.getElementById('s23-feedback');
   var fbBold      = document.getElementById('s23-fb-bold');
@@ -1951,10 +2089,23 @@ function getQuizScore() {
 
 // ≥4 נכון → תרגול כיתה (03) | <4 → תרגול בסיסי (02)
 function routeAfterQuiz() {
+  /* xAPI: close the open content item, then report the component result. The denominator is the
+     5 quiz exercises the learner was told about ("4 מתוך 5"), not the number of metadata
+     questions — s19+s20 together are one exercise. Supplying the result explicitly overrides the
+     library's all-correct aggregation, which would report success:false at 4/5. */
+  try { xapiFinishItems(); } catch (e) {}
+  try {
+    var _n = getQuizScore();
+    sendStatement720('completed', 'onlinelesson',
+      { success: _n >= 4, score: { scaled: _n / 5 } });
+  } catch (e) { console.error('[xAPI] completed component 01', e); }
+  /* Carry ?slxapi (and ?registration) into the next component — without this the LRS
+     configuration is lost and every later part reports nothing. */
+  var _q = window.location.search;
   if (getQuizScore() >= 4) {
-    window.location.href = '../methodica-math-scale-01-03/index.html';
+    window.location.href = '../methodica-math-scale-01-03/index.html' + _q;
   } else {
-    window.location.href = '../methodica-math-scale-01-02/index.html';
+    window.location.href = '../methodica-math-scale-01-02/index.html' + _q;
   }
 }
 
@@ -2049,9 +2200,130 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
+/* ═══════════════════ xAPI (720) — item scope + question ids ═══════════════════
+   Everything below is generic across the five components except SCREEN_TO_SUBCONTENT,
+   XAPI_COMP_SLUG and XAPI_EVAL_ITEMS. */
+
+/* Screen (data-screen index) -> [subContent suffix, page-in-item]; null = no catalog item.
+   Read by xapiOnScreen (element 0) and by submitReport (both elements).
+   Screens 3 and 4 are the two learning paths — cards vs video — over the SAME item 002.
+   Screens 5 and 13 do not exist in this component. */
+var SCREEN_TO_SUBCONTENT = {
+  0: null,            // avatar choice
+  1: ['001', 1],      // hook: drone-vs-reality widget (no question in the catalog)
+  2: null,            // how-to-learn choice -> reported as 'selected'
+  3: ['002', 1],      // concept via flip cards + q1/q2
+  4: ['002', 1],      // concept via video + q1/q2 (same item, other path)
+  6: null,            // transition
+  7:  ['003', 1], 8:  ['003', 2], 9:  ['003', 3], 10: ['003', 4],
+  11: ['003', 5], 12: ['003', 6], 14: ['003', 7],   // guided worked example (not graded)
+  15: null,           // transition
+  16: ['004', 1],     // warm-up true/false
+  17: null,           // transition
+  18: ['005', 1],     // quiz 1
+  19: ['006', 1], 20: ['006', 2],                   // quiz 2 (א + ב)
+  21: ['007', 1],     // quiz 3
+  22: ['008', 1],     // quiz 4
+  23: ['009', 1]      // quiz 5
+};
+
+var XAPI_COMP_SLUG = 'methodica-math-scale-01-01';
+/* Component and item ids must match metadata/*.json byte-for-byte — that convention keeps a
+   TRAILING SLASH on unit, component and item ids (but not on question ids). */
+var XAPI_COMP_ID   = XAPI_ID_PREFIX + XAPI_COMP_SLUG + '/';
+function xapiItemId(suffix){ return XAPI_COMP_ID + XAPI_COMP_SLUG + '-' + suffix + '/'; }
+function _xapiTrim(u){ return String(u == null ? '' : u).replace(/\/+$/, ''); }
+
+/* Visible answer text for result.response. Clones first so the live DOM is untouched, and drops
+   the ⓘ tooltip nodes that textContent would otherwise splice into the middle of a label. */
+function xapiAnswerText(el){
+  if (!el) return '';
+  var c = el.cloneNode(true);
+  var drop = c.querySelectorAll('.scq-info, .scq-tooltip, .s5-opt-info, .opt-tooltip');
+  for (var i = 0; i < drop.length; i++) { drop[i].remove(); }
+  return c.textContent.replace(/\s+/g, ' ').trim();
+}
+
+/* Question context. metadata/<component>.json is the single source of truth for question ids:
+   look up subContent[<suffix>].questions[<qKey>] and return that questionId as-is when it is
+   already absolute. Item matching is by '-NNN' suffix with trailing slashes normalised away, so
+   re-syncing metadata from Kata can change the URL prefix without touching code. */
+function xapiQ(suffix, qKey){
+  var itemId = xapiItemId(suffix);
+  var qid = null;
+  try {
+    var sc = (window.METADATA && window.METADATA.subContent) || [];
+    for (var i = 0; i < sc.length; i++) {
+      if (_xapiTrim(sc[i].id).slice(-(suffix.length + 1)) !== '-' + suffix) continue;
+      var qs = sc[i].questions || [];
+      for (var j = 0; j < qs.length; j++) {            // match the key, bare or in URL form
+        var v = _xapiTrim(qs[j].questionId);
+        if (v === qKey || v.slice(-(qKey.length + 1)) === '/' + qKey) { qid = qs[j].questionId; break; }
+      }
+      if (qid == null) {                               // fallback: positional, 'q3' -> index 2
+        var n = parseInt(String(qKey).replace(/\D/g, ''), 10);
+        if (n >= 1 && n <= qs.length) qid = qs[n - 1].questionId;
+      }
+      break;
+    }
+  } catch (e) {}
+  if (qid == null) { console.warn('[xAPI] no metadata question', suffix, qKey); qid = qKey; }
+  return { questionId: /^https?:\/\//.test(qid) ? qid : itemId + qid, parentId: itemId };
+}
+
+/* Items that carry a graded question IN CODE. 001 is the hook and 003 the Socratic worked
+   example — both are walked through, neither is answered, so they are absent here. */
+var XAPI_EVAL_ITEMS = { '002': 1, '004': 1, '005': 1, '006': 1, '007': 1, '008': 1, '009': 1 };
+var xapiCurrentItem = null;
+
+/* Item-level initialized/completed pairs, driven from goTo(). Paging inside one item emits
+   nothing; the item closes when the learner enters a screen belonging to a different item. */
+function xapiOnScreen(screen){
+  if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
+  var map = (typeof SCREEN_TO_SUBCONTENT !== 'undefined') ? SCREEN_TO_SUBCONTENT[screen] : null;
+  var item = map ? map[0] : null;
+  if (item === xapiCurrentItem) return;
+  if (xapiCurrentItem) {
+    try { sendStatement720('completed', 'question', null, { objectId: xapiItemId(xapiCurrentItem), expectsAnswer: !!XAPI_EVAL_ITEMS[xapiCurrentItem] }); } catch (e) {}
+  }
+  xapiCurrentItem = item;
+  if (item) {
+    try { sendStatement720('initialized', 'question', null, { objectId: xapiItemId(item), isEvaluationItem: !!XAPI_EVAL_ITEMS[item] }); } catch (e) {}
+  }
+}
+/* Close the last open item — called immediately before every component 'completed'. */
+function xapiFinishItems(){
+  if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
+  if (xapiCurrentItem) {
+    try { sendStatement720('completed', 'question', null, { objectId: xapiItemId(xapiCurrentItem), expectsAnswer: !!XAPI_EVAL_ITEMS[xapiCurrentItem] }); } catch (e) {}
+    xapiCurrentItem = null;
+  }
+}
+/* HTML5 <video> played/paused. This component's media is YouTube, handled in
+   s4OnPlayerStateChange instead; kept for symmetry and any <video> added later. */
+function xapiWireVideos(){
+  if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
+  document.querySelectorAll('video').forEach(function(v){
+    if (v.__xapiWired) return; v.__xapiWired = true;
+    var pausedOnce = false;
+    v.addEventListener('pause', function(){ if (v.ended || v.currentTime === 0) return; pausedOnce = true; try { sendStatement720('paused', 'question', null, { time: v.currentTime }); } catch (e) {} });
+    v.addEventListener('play',  function(){ if (!pausedOnce) return; try { sendStatement720('played', 'question', null, { time: v.currentTime }); } catch (e) {} });
+  });
+}
+
 // ============================================================
 //  REPORT MODAL
 // ============================================================
+/* Google Form that collects learner problem reports for THIS unit (math-scale-01). */
+var REPORT_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSfFq5XFtH1pPpLgV5RWT4m3NanYPW5GKremqTvkp6zKjEGqcw/formResponse';
+/* Problem-type labels. Module scope because both the custom select and submitReport need them —
+   the form records the human-readable label, not the internal key. */
+var REPORT_TYPE_LABELS = {
+  'technical': 'תקלה טכנית או שמשהו לא עובד',
+  'unclear':   'משהו לא ברור לי',
+  'other':     'אחר'
+};
+
 function openReportModal() {
   resetReportForm();
   document.getElementById('report-modal').removeAttribute('hidden');
@@ -2084,15 +2356,57 @@ function backToReportForm() {
   }, 40);
 }
 
+function showReportThanks() {
+  document.getElementById('report-modal').setAttribute('hidden', '');
+  document.getElementById('report-confirm-modal').setAttribute('hidden', '');
+  var thanks = document.getElementById('report-thanks-modal');
+  if (thanks) {
+    thanks.removeAttribute('hidden');
+    announce('הדיווח נשלח, תודה');
+    var btn = thanks.querySelector('.report-submit-btn');
+    if (btn) setTimeout(function(){ btn.focus(); }, 40);
+  }
+  resetReportForm();
+}
+
+function closeReportThanks() {
+  var thanks = document.getElementById('report-thanks-modal');
+  if (thanks) thanks.setAttribute('hidden', '');
+}
+
 function submitReport() {
-  var report = {
-    type:      document.getElementById('report-type').value || '(לא נבחר)',
-    text:      document.getElementById('report-text').value.trim() || '(ללא תיאור)',
-    screen:    currentScreen,
-    timestamp: new Date().toISOString()
-  };
-  console.log('[Report Issue]', report);
-  forceCloseReportModal();
+  var typeKey = document.getElementById('report-type').value;
+  var textVal = document.getElementById('report-text').value.trim();
+  /* The submit button is already gated by reportCheckSubmit(); this is the belt-and-braces path
+     for keyboard/programmatic submits. */
+  if (!typeKey || !textVal) { reportCheckSubmit(); return; }
+
+  var now  = new Date();
+  var meta = window.METADATA || {};
+  var body = new URLSearchParams();
+  body.append('entry.301404029_year',    now.getFullYear());
+  body.append('entry.301404029_month',   now.getMonth() + 1);
+  body.append('entry.301404029_day',     now.getDate());
+  body.append('entry.2066097581_hour',   now.getHours());
+  body.append('entry.2066097581_minute', now.getMinutes());
+  body.append('entry.1933069481', shortId(meta.learningUnitId));   // unit slug
+  body.append('entry.2070680092', shortId(meta.id));               // component slug
+  /* Item + page-in-item come from the same screen map the xAPI item scope uses, so a report and
+     a statement always name the same place. Unmapped screens report the raw screen number. */
+  var mapEntry = SCREEN_TO_SUBCONTENT[currentScreen];
+  var itemId   = mapEntry ? shortId(meta.id) + '-' + mapEntry[0] : '';
+  var itemPage = mapEntry ? String(mapEntry[1]) : String(currentScreen);
+  body.append('entry.1555704258', itemId);
+  body.append('entry.1671046914', itemPage);
+  body.append('entry.1179822443', REPORT_TYPE_LABELS[typeKey] || typeKey);
+  body.append('entry.806447525',  textVal);
+
+  /* no-cors: Google Forms accepts the POST but returns an opaque response. A failure must never
+     block the learner, so the modal closes either way. */
+  fetch(REPORT_FORM_ACTION, { method: 'POST', mode: 'no-cors', body: body })
+    .catch(function (e) { console.error('[Report] send failed', e); });
+  console.log('[Report Issue] sent');
+  showReportThanks();
 }
 
 function reportCheckSubmit() {
@@ -2104,11 +2418,7 @@ function reportCheckSubmit() {
 
 /* Custom select for report-type */
 (function() {
-  var LABELS = {
-    'technical': 'תקלה טכנית או שמשהו לא עובד',
-    'unclear':   'משהו לא ברור לי',
-    'other':     'אחר'
-  };
+  var LABELS = REPORT_TYPE_LABELS;   // hoisted to module scope so submitReport() can read it too
   var PLACEHOLDER = 'בחרו סוג בעיה';
   var wrapper = document.getElementById('report-type-wrapper');
   if (!wrapper) return;
@@ -2394,3 +2704,177 @@ function closeImgZoom(overlayId) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeImgZoom();
 });
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESUME — save / restore execution state to KATA (xAPI State API)
+   One State document per unit, keyed by window.XAPI_UNIT_ID.
+
+   SHIPPED GATED OFF (RESUME_ENABLED = false at the top of this file), so none of this runs
+   today: _resumeReady stays false, which also neutralises the beforeunload flush.
+   Before enabling:
+     - flip RESUME_ENABLED to true (that also loads xapi-720-j.js, which carries the State
+       transport that -i lacks),
+     - verify restore on every screen of every component, and
+     - re-check that applyExecutionState() suppresses statements while replaying (it does —
+       see the sendStatement720 stub below), or resuming will re-report answers.
+   Restore leans on this component's own design: resetScreenState(n) calls each sNNEnter()/
+   sqRestoreUI(), which already rebuild their screen from the state variables. So restoring the
+   variables and calling goTo() is enough for the visuals to follow.
+   ═══════════════════════════════════════════════════════════════════ */
+var RESUME_STATE_ID    = 'execution-state';
+var _resumeReady       = false;
+var _restoring         = false;
+var _leavingToNextPart = false;
+
+function currentPartSlug() {
+  var p = window.location.pathname.replace(/\/index\.html.*$/, '').replace(/\/+$/, '');
+  return p.split('/').pop() || '';
+}
+
+function captureExecutionState() {
+  return {
+    v: 1,
+    part: currentPartSlug(),
+    currentScreen: currentScreen,
+    lomdaState: { selectedCharacter: window.lomdaState.selectedCharacter,
+                  selectedDesign:    window.lomdaState.selectedDesign },
+    frc:  { revealed: frcRevealed.slice(), done: frcDone },
+    s4:   { videoEnded: s4VideoEnded },
+    sq:   { screen: (typeof sqScreen !== 'undefined' ? sqScreen : null),
+            selected: sqSelected, submitted: sqSubmitted,
+            q2: sqQ2Selections.slice(), q2Submitted: sqQ2Submitted },
+    s16:  { selected: s16Selected, submitted: s16Submitted },
+    quiz: {
+      results: (typeof s18QuizResults !== 'undefined') ? s18QuizResults.slice() : null,
+      s18: { a: s18Attempts, solved: s18Solved, correct: s18Correct },
+      s19: { a: s19Attempts, solved: s19Solved, correct: s19Correct },
+      s20: { a: s20Attempts, solved: s20Solved, correct: s20Correct, sel: s20Selected },
+      s21: { a: s21Attempts, solved: s21Solved, correct: s21Correct },
+      s22: { a: s22Attempts, solved: s22Solved, correct: s22Correct, sel: s22Selected },
+      s23: { a: s23Attempts, solved: s23Solved, correct: s23Correct, sel: s23Selected }
+    }
+  };
+}
+
+function applyExecutionState(state) {
+  if (!state) return;
+  _restoring = true;
+  /* Replaying answers must not re-report them. */
+  var _origSend = window.sendStatement720;
+  window.sendStatement720 = function () {};
+  try {
+    if (state.lomdaState) {
+      window.lomdaState.selectedCharacter = state.lomdaState.selectedCharacter;
+      window.lomdaState.selectedDesign    = state.lomdaState.selectedDesign;
+    }
+    if (state.frc) { frcRevealed = state.frc.revealed || frcRevealed; frcDone = !!state.frc.done; }
+    if (state.s4)  { s4VideoEnded = !!state.s4.videoEnded; }
+    if (state.sq) {
+      if (state.sq.screen != null) sqScreen = state.sq.screen;
+      sqSelected     = state.sq.selected;
+      sqSubmitted    = !!state.sq.submitted;
+      sqQ2Selections = state.sq.q2 || sqQ2Selections;
+      sqQ2Submitted  = !!state.sq.q2Submitted;
+    }
+    if (state.s16) { s16Selected = state.s16.selected; s16Submitted = !!state.s16.submitted; }
+    var q = state.quiz || {};
+    if (q.results) s18QuizResults = q.results;
+    if (q.s18) { s18Attempts = q.s18.a; s18Solved = q.s18.solved; s18Correct = q.s18.correct; }
+    if (q.s19) { s19Attempts = q.s19.a; s19Solved = q.s19.solved; s19Correct = q.s19.correct; }
+    if (q.s20) { s20Attempts = q.s20.a; s20Solved = q.s20.solved; s20Correct = q.s20.correct; s20Selected = q.s20.sel; }
+    if (q.s21) { s21Attempts = q.s21.a; s21Solved = q.s21.solved; s21Correct = q.s21.correct; }
+    if (q.s22) { s22Attempts = q.s22.a; s22Solved = q.s22.solved; s22Correct = q.s22.correct; s22Selected = q.s22.sel; }
+    if (q.s23) { s23Attempts = q.s23.a; s23Solved = q.s23.solved; s23Correct = q.s23.correct; s23Selected = q.s23.sel; }
+  } finally {
+    window.sendStatement720 = _origSend;
+    _restoring = false;
+  }
+  goTo((typeof state.currentScreen === 'number') ? state.currentScreen : 0);
+}
+
+function scheduleResumeSave() {
+  if (!RESUME_ENABLED || !_resumeReady || _restoring) return;
+  if (typeof window.saveState720Debounced !== 'function') return;
+  try { window.saveState720Debounced(RESUME_STATE_ID, captureExecutionState()); } catch (e) {}
+}
+function flushResumeSave() {
+  if (!RESUME_ENABLED || !_resumeReady || _restoring) return;
+  if (typeof window.saveState720 !== 'function') return;
+  try { window.saveState720(RESUME_STATE_ID, captureExecutionState()); } catch (e) {}
+}
+
+window.addEventListener('beforeunload', function () {
+  if (_leavingToNextPart) return;
+  flushResumeSave();
+});
+
+
+/* ═══════════════════ xAPI — loader / init ═══════════════════ */
+(function initXAPI() {
+  var CDN = 'https://lomdot.education.gov.il/metodica/720active/common/';
+  var METADATA_FILE = '../metadata/methodica-math-scale-01-01.json';
+
+  function loadScript(src, cb) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = cb;
+    s.onerror = function () { console.error('[xAPI] failed to load', src); cb(); };
+    document.head.appendChild(s);
+  }
+  function pollMetadataReady(cb) {
+    if (window.jsXAPI_MetadataReady) { cb(); }
+    else { setTimeout(function () { pollMetadataReady(cb); }, 200); }
+  }
+  /* -i is the production build (720 guidelines v2.4); -j is -i plus the State API transport that
+     only resume uses, so -i is loaded while RESUME_ENABLED is false. On localhost only,
+     ?xapiLib=<same-origin path> may override it to test a local build.
+     window.XAPI_USING_G tells this component whether item-level statements are available — the
+     regex must list every library letter that supports them, or xapiOnScreen and the video
+     reporting go silent with no error. */
+  var LIB720 = CDN + (RESUME_ENABLED ? 'xapi-720-j.js' : 'xapi-720-i.js');
+  try {
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+      var _ovr = new URLSearchParams(location.search).get('xapiLib');
+      if (_ovr && /^(\.\.?\/|\/)[^:]*$/.test(_ovr)) LIB720 = _ovr;   // same-origin relative only
+    }
+  } catch (e) {}
+  window.XAPI_USING_G = /xapi-720-[ghij]\.js/.test(LIB720);
+
+  loadScript(CDN + 'xapiwrapper.min.js', function () {
+    loadScript(LIB720, function () {
+      try {
+        getXAPIParameters(METADATA_FILE);
+        pollMetadataReady(function () {
+          try {
+            try { ADL.XAPIWrapper.changeConfig({ endpoint: window.slxapi.endpoint, auth: window.slxapi.auth }); } catch (e) {}
+            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
+            try { xapiWireVideos(); } catch (e) {}
+            /* Resume: gated off, so _resumeReady stays false and nothing is written. */
+            var _resumed = false;
+            if (RESUME_ENABLED) {
+              try {
+                var _saved = (typeof window.loadState720 === 'function')
+                  ? window.loadState720(RESUME_STATE_ID) : null;
+                if (_saved && _saved.part && _saved.part !== currentPartSlug()) {
+                  // Learner stopped in another component — hop there, carrying slxapi+registration.
+                  window.location.replace('../' + _saved.part + '/index.html' + window.location.search);
+                  return;
+                }
+                _resumeReady = true;
+                if (_saved) { applyExecutionState(_saved); _resumed = true; }
+              } catch (e) { console.error('[resume] init', e); _resumeReady = true; }
+            }
+            /* Item-level init for the landing screen. applyExecutionState's goTo already reported
+               the resumed screen, so only emit here on a fresh start. */
+            if (!_resumed) { try { xapiOnScreen(currentScreen); } catch (e) {} }
+            /* This is the entry component, so it also opens the unit. */
+            loadUnitMetadata('../metadata/methodica-math-scale-01_unit.json', function () {
+              try { sendStatement720('initialized', 'onlinelesson', null, { scope: 'unit' }); } catch (e) {}
+            });
+          } catch (e) { console.error('[xAPI] init', e); }
+        });
+      } catch (e) { console.error('[xAPI] load', e); }
+    });
+  });
+})();

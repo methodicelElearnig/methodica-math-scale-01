@@ -1,0 +1,166 @@
+{
+  "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/",
+  "title": "תרגול בסיסי + תרגול סטנדרטי ב",
+  "learningUnitId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01/",
+  "componentPurpose": "practice",
+  "isAssessment": false,
+  "manufacture": "methodica",
+  "recommendedAfterFail": [
+    "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/"
+  ],
+  "isRequired": false,
+  "relativeDifficulty": 2,
+  "masteryLevel": "basic",
+  "order": 2,
+  "depthLevel": "core-curriculum-basic",
+  "cognitiveLevel": "algorithmic-thinking",
+  "languages": ["Hebrew"],
+  "skills": [],
+  "estimatedTimeInMinutes": 14,
+  "createdAt": "2026-06-24T00:00:00.000Z",
+  "updatedAt": "2026-07-29T00:00:00.000Z",
+  "subContent": [
+    {
+      "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-001/",
+      "title": "בסיסי 1: אורך שביל לפי קנה מידה 1,000:1",
+      "informationToBot": "מטרת הפריט: תרגול בסיסי של שימוש בקנה מידה לחישוב אורך במציאות מתוך אורך במפה. מה התלמיד אמור להבין/לתרגל: בקנה מידה 1,000:1, אורך במציאות מתקבל מכפל האורך במפה ב-1,000. כיווני חשיבה ואסטרטגיות: זיהוי אורך השביל במפה (5 ס\"מ), הכפלה בקנה המידה (1,000), וקבלת התוצאה (5,000 ס\"מ במציאות). טעויות נפוצות: חילוק במקום כפל, בלבול בין איברי המשוואה. מידע נוסף: תרגיל מובנה כהשלמת משוואת כפל משלוש תיבות בחירה (מספר · מספר = תוצאה). רמז זמין. צילום מסך: לא צורף.",
+      "contentType": "practice",
+      "mediaFormat": "interactive-content",
+      "questions": [
+        {
+          "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-001/q1",
+          "questionType": "matching",
+          "questionText": "קנה המידה של המפה שלפניכם הוא 1,000 : 1. אורך השביל הירוק המסומן במפה הוא 5 ס\"מ. מהו אורך השביל המסומן במציאות? בחרו את המספרים המתאימים בכל תיבה כדי להשלים את התרגיל: __ · __ = __",
+          "answers": {
+            "source": ["המספר הראשון (אורך במפה, ס\"מ)", "המספר השני (קנה המידה)", "התוצאה (אורך במציאות, ס\"מ)"],
+            "target": ["5", "1,000", "5,000"]
+          },
+          "correctAnswers": [
+            {"source": "המספר הראשון (אורך במפה, ס\"מ)", "target": "5"},
+            {"source": "המספר השני (קנה המידה)", "target": "1,000"},
+            {"source": "התוצאה (אורך במציאות, ס\"מ)", "target": "5,000"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-002/",
+      "title": "בסיסי 2: לונה פארק — מרחק בין רכבות ההרים",
+      "informationToBot": "מטרת הפריט: תרגול דו-שלבי — חישוב מרחק במציאות מתוך צילום וקנה מידה, ואז המרה מס\"מ למטרים. מה התלמיד אמור להבין/לתרגל: יש לכפול את המרחק בתמונה (7 ס\"מ) בקנה המידה (5,000) לקבלת מרחק במציאות בס\"מ (35,000), ואז לחלק ב-100 להמרה למטרים (350). כיווני חשיבה ואסטרטגיות: זיהוי סדר הפעולות — כפל תחילה, המרת יחידות אחר כך. טעויות נפוצות: המרה למטרים לפני הכפל בקנה המידה, שכחת שלב ההמרה. מידע נוסף: תרגיל מובנה כהשלמת משפט משתי תיבות בחירה. רמז זמין. צילום מסך: לא צורף.",
+      "contentType": "practice",
+      "mediaFormat": "interactive-content",
+      "questions": [
+        {
+          "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-002/q1",
+          "questionType": "matching",
+          "questionText": "לפניכם צילום רחפן של לונה פארק. קנה המידה של הצילום הוא 5,000 : 1. המרחק בין שתי רכבות ההרים בתמונה הוא 7 ס\"מ. מהו המרחק ביניהן במציאות? בחרו את המספרים המתאימים בכל תיבה כדי להשלים את המשפט: המרחק במציאות הוא __ ס\"מ, שהם __ מטרים.",
+          "answers": {
+            "source": ["המרחק במציאות (ס\"מ)", "המרחק במציאות (מטרים)"],
+            "target": ["35,000", "350"]
+          },
+          "correctAnswers": [
+            {"source": "המרחק במציאות (ס\"מ)", "target": "35,000"},
+            {"source": "המרחק במציאות (מטרים)", "target": "350"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-003/",
+      "title": "בסיסי 3: חצר מתקן כושר בקנה מידה 50:1",
+      "informationToBot": "מטרת הפריט: תרגול בדיקת נכונות מספר טענות המבוססות על אותו קנה מידה, כולל זיהוי טעות ביחידות מידה. מה התלמיד אמור להבין/לתרגל: קנה מידה 50:1 פירושו שכל 1 ס\"מ בתרשים מייצג 50 ס\"מ (לא מטרים) במציאות; יש לבדוק כל טענה בנפרד תוך שימת לב ליחידות. כיווני חשיבה ואסטרטגיות: הכפלת כל מספר בתרשים ב-50 ובדיקה מול הטענה, תוך תשומת לב מיוחדת לבלבול ס\"מ/מטרים. טעויות נפוצות: התעלמות מהבדל בין ס\"מ למטרים, בחירת חלק מהתשובות הנכונות בלבד. מידע נוסף: שאלת בחירה מרובה (יותר מתשובה נכונה אחת). רמז זמין. צילום מסך: לא צורף.",
+      "contentType": "practice",
+      "mediaFormat": "interactive-content",
+      "questions": [
+        {
+          "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-003/q1",
+          "questionType": "choice",
+          "questionText": "רועי וההורים שלו מתכננים לבנות מתקן כושר בחצר הבית, ורוצים לתכנן היכן למקם אותו. לפניכם תמונה של החצר, בקנה מידה של 50 : 1. סמנו את כל המשפטים הנכונים לתרשים של רועי.",
+          "answers": [
+            "א. 4 ס\"מ בתרשים הם 200 ס\"מ במציאות",
+            "ב. 10 ס\"מ בתרשים הם 500 ס\"מ במציאות",
+            "ג. 1 ס\"מ בתרשים הם 50 מטרים במציאות",
+            "ד. 50 ס\"מ בתרשים הם 25 מטרים במציאות"
+          ],
+          "correctAnswers": [
+            "א. 4 ס\"מ בתרשים הם 200 ס\"מ במציאות",
+            "ב. 10 ס\"מ בתרשים הם 500 ס\"מ במציאות",
+            "ד. 50 ס\"מ בתרשים הם 25 מטרים במציאות"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-004/",
+      "title": "בסיסי 4: תכנית סלון בקנה מידה 200:1",
+      "informationToBot": "מטרת הפריט: תרגול מעבר מתכנית מוקטנת למציאות, כולל המרת יחידות לתוצאה הסופית. מה התלמיד אמור להבין/לתרגל: יש להכפיל את האורך בתכנית (2 ס\"מ) בקנה המידה (200) לקבלת 400 ס\"מ במציאות, ואז להמיר למטרים (4). כיווני חשיבה ואסטרטגיות: כפל ואז המרת יחידות מס\"מ למטרים. טעויות נפוצות: שכחת המרת התוצאה למטרים, חילוק במקום כפל. מידע נוסף: יחידת התשובה (מטרים) מוצגת קבועה ליד שדה ההקלדה. רמז זמין. צילום מסך: לא צורף.",
+      "contentType": "practice",
+      "mediaFormat": "interactive-content",
+      "questions": [
+        {
+          "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-004/q1",
+          "questionType": "numeric",
+          "questionText": "דפנה היא מעצבת פנים, המתכננת ריהוט סלון בבית חדש. לשם כך, היא משתמשת בתכנית הבנייה של הבית, בקנה מידה 200 : 1. אורך אחד הקירות בסלון בתכנית הוא 2 ס\"מ. א. מהו אורך אותו קיר במטרים במציאות?",
+          "answers": [],
+          "correctAnswers": [4]
+        }
+      ]
+    },
+    {
+      "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-005/",
+      "title": "בסיסי 5: מרפסת — מעבר מהמציאות לתכנית",
+      "informationToBot": "מטרת הפריט: תרגול הכיוון ההפוך — מעבר מאורך במציאות לאורך בתכנית מוקטנת, תוך זיהוי הפעולה הנכונה (חילוק ולא כפל). מה התלמיד אמור להבין/לתרגל: כשעוברים מהמציאות (גדול) לתרשים (קטן) יש לחלק בקנה המידה, בניגוד לכיוון ההפוך שדורש כפל. כיווני חשיבה ואסטרטגיות: המרת 6 מטרים ל-600 ס\"מ, זיהוי שיש לחלק (ולא לכפול) כי עוברים מגדול לקטן, וחלוקה ב-200 לקבלת 3 ס\"מ. טעויות נפוצות: שימוש בכפל במקום חילוק, שכחת המרת היחידות לס\"מ. מידע נוסף: תרגיל מודרך המפורק לשלבי פתרון נפרדים (המרה → זיהוי פעולה → חילוק → תוצאה), כל שלב נבחר מרשימה נפרדת. רמז זמין. צילום מסך: לא צורף.",
+      "contentType": "practice",
+      "mediaFormat": "interactive-content",
+      "questions": [
+        {
+          "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-005/q1",
+          "questionType": "matching",
+          "questionText": "אחרי שסיימה לתכנן את ריהוט הסלון, דפנה עברה לתכנן את הריהוט במרפסת, בעזרת אותה תכנית בנייה בקנה מידה 200 : 1. אורך קיר המרפסת במציאות הוא 6 מטרים. ב. מהו אורך אותו קיר בתכנית? השלימו את החסר כדי לתאר את שלבי הפתרון: נמיר 6 מטרים ל-__ סנטימטרים. מכיוון שאורך הקיר בסרטוט קטן מאורכו במציאות נשתמש בפעולת __. נחלק את האורך במציאות בס\"מ לפי קנה המידה ב-__. אורך הקיר בתכנית הוא __ ס\"מ.",
+          "answers": {
+            "source": ["המרה למ\"ס (6 מטרים)", "הפעולה הנדרשת", "המספר לחלוקה (קנה המידה)", "התוצאה (אורך בתכנית, ס\"מ)"],
+            "target": ["600", "חילוק", "200", "3"]
+          },
+          "correctAnswers": [
+            {"source": "המרה למ\"ס (6 מטרים)", "target": "600"},
+            {"source": "הפעולה הנדרשת", "target": "חילוק"},
+            {"source": "המספר לחלוקה (קנה המידה)", "target": "200"},
+            {"source": "התוצאה (אורך בתכנית, ס\"מ)", "target": "3"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-006/",
+      "title": "סטנדרטי ב 1: הדפסת דגם מכונית בקנה מידה 1:18",
+      "informationToBot": "מטרת הפריט: תרגול חישוב אורך דגם מוקטן מתוך אורך במציאות וקנה מידה, כולל המרת יחידות ראשונית. מה התלמיד אמור להבין/לתרגל: יש להמיר 4.5 מטרים ל-450 ס\"מ, ואז לחלק ב-18 (קנה המידה) לקבלת 25 ס\"מ. כיווני חשיבה ואסטרטגיות: המרת יחידות תחילה, ואז חילוק לפי קנה המידה. טעויות נפוצות: שכחת המרת המטרים לס\"מ, כפל במקום חילוק. מידע נוסף: יחידת התשובה (ס\"מ) מוצגת קבועה ליד שדה ההקלדה. רמז זמין. צילום מסך: לא צורף.",
+      "contentType": "practice",
+      "mediaFormat": "interactive-content",
+      "questions": [
+        {
+          "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-006/q1",
+          "questionType": "numeric",
+          "questionText": "דניאל מתכנן להדפיס במדפסת תלת-ממד דגם מוקטן של מכונית חשמלית. אורכה של המכונית במציאות הוא 4.5 מטרים. דניאל רוצה שהדגם יודפס בקנה מידה של 1:18. מה יהיה אורכו של הדגם המודפס (בס\"מ)?",
+          "answers": [],
+          "correctAnswers": [25]
+        }
+      ]
+    },
+    {
+      "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-007/",
+      "title": "סטנדרטי ב 2: קנה מידה של תוכנית בריכת שחייה",
+      "informationToBot": "מטרת הפריט: תרגול חישוב קנה מידה מנתוני אורך במציאות ובתכנית, ביחידות שונות. מה התלמיד אמור להבין/לתרגל: המרת 25 מטרים ל-2,500 ס\"מ, בניית היחס 2,500:5, וצמצום לקנה מידה 500:1. כיווני חשיבה ואסטרטגיות: המרת יחידות, בניית היחס, וצמצומו למספר שלם פשוט. טעויות נפוצות: היפוך סדר האיברים ביחס (1:500 במקום 500:1), אי-המרת יחידות לפני בניית היחס. מידע נוסף: 4 אפשרויות בחירה, שתיים מהן היפוך של הנכונה. רמז זמין. צילום מסך: לא צורף.",
+      "contentType": "practice",
+      "mediaFormat": "interactive-content",
+      "questions": [
+        {
+          "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-02/methodica-math-scale-01-02-007/q1",
+          "questionType": "choice",
+          "questionText": "אדריכל העיר \"קריית חלום\" מציג לראשת העיר תוכנית לבניית בריכת שחייה עירונית חדשה. אורכה של הבריכה במציאות יהיה 25 מטרים (חצי אולימפית). בתוכנית אורכה של הבריכה הוא 5 ס\"מ. מהו קנה המידה של התוכנית?",
+          "answers": ["50 : 1", "1 : 50", "500 : 1", "1 : 500"],
+          "correctAnswers": ["500 : 1"]
+        }
+      ]
+    }
+  ]
+}

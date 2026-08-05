@@ -1,0 +1,30 @@
+{
+  "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-03/",
+  "title": "משימת כיתה",
+  "learningUnitId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01/",
+  "componentPurpose": "practice",
+  "isAssessment": false,
+  "manufacture": "methodica",
+  "recommendedAfterFail": [],
+  "isRequired": true,
+  "relativeDifficulty": 3,
+  "masteryLevel": "intermediate",
+  "order": 3,
+  "depthLevel": "core-curriculum-basic",
+  "cognitiveLevel": "process-thinking",
+  "languages": ["Hebrew"],
+  "skills": [],
+  "estimatedTimeInMinutes": 1,
+  "createdAt": "2026-06-24T00:00:00.000Z",
+  "updatedAt": "2026-07-29T00:00:00.000Z",
+  "subContent": [
+    {
+      "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-03/methodica-math-scale-01-03-001/",
+      "title": "משימת כיתה — חישוב קנה מידה של מסלול צעדים",
+      "informationToBot": "מטרת הפריט: יישום מציאותי של קנה מידה — מדידת אורך צעד, ביצוע מסלול אמיתי בשטח, וחישוב קנה המידה המתאים לשרטוט המסלול על דף A4. מה התלמיד אמור להבין/לתרגל: מדידת אורך צעד בסרגל, ספירת צעדים במסלול (לפחות 100), הכפלת מספר הצעדים באורך הצעד לקבלת אורך המסלול במציאות, ובחירת קנה מידה שמאפשר לשרטט את המסלול במלואו על דף A4. כיווני חשיבה ואסטרטגיות: עבודה שלב-אחר-שלב לפי ההוראות (מדידה → הליכה ומדידת מסלול → חישוב אורך במציאות → בחירת קנה מידה מתאים → שרטוט המסלול ורישום קנה המידה). טעויות נפוצות: אין הערכה אוטומטית של תשובה מספרית ספציפית — המשימה תלויה בביצוע פיזי של כל תלמיד/קבוצה בנפרד. מידע נוסף: משימת חקר פיזית בשטח/כיתה, ללא מחשב, עם עזרים נדרשים (סרגל, דף A4, כלי כתיבה). מתבצעת בזוגות או לבד. השדה בסיום (\"הקלידו את קנה המידה שלכם כאן\") הוא הזנה חופשית לצורך רפלקציה בלבד ואינו נאסף כתשובה מוערכת. צילום מסך: לא צורף.",
+      "contentType": "project-or-inquiry-task",
+      "mediaFormat": "text",
+      "questions": []
+    }
+  ]
+}
