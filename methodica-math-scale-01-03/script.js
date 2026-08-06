@@ -11,7 +11,7 @@ window.XAPI_UNIT_ID = XAPI_ID_PREFIX + 'methodica-math-scale-01/';   // resume S
 function shortId(u){ return String(u || '').replace(/\/+$/, '').split('/').pop(); }
 /* Resume (KATA State API) ships gated off. Flipping this to true also switches the library to
    xapi-720-j.js, which carries the State transport. See the RESUME block near the end of file. */
-var RESUME_ENABLED = false;
+var RESUME_ENABLED = true;
 
 
 function announce(msg) {
@@ -78,6 +78,9 @@ function goTo(n) {
   nextScreen.focus();
   var heading = nextScreen.querySelector('h1, h2');
   if (heading) announce(heading.textContent.trim());
+  /* Resume: the screen change is the choke point that bounds how much a learner can lose.
+     Debounced, and suppressed while restoring. */
+  scheduleResumeSave();
 }
 
 function resetScreenState(n) {
@@ -171,6 +174,8 @@ function goToAdvanced() {
      grade, only to finish. */
   try { xapiFinishItems(); } catch (e) {}
   try { sendStatement720('completed', 'onlinelesson', { success: true }); } catch (e) { console.error('[xAPI] completed component 03', e); }
+  /* Resume: point the state document at the component being entered, before navigating. */
+  if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-04');
   window.location.href = '../methodica-math-scale-01-04/index.html' + window.location.search;
 }
 
@@ -664,32 +669,34 @@ document.addEventListener('keydown', function(e) {
 /* ═══════════════════════════════════════════════════════════════════
    RESUME — save / restore execution state to KATA (xAPI State API)
    One State document per unit, keyed by window.XAPI_UNIT_ID.
-   The off-computer class task: one drag-and-drop plus a free-text scale the learner types.
+   The off-computer class task. Its only stateful screen is 2, the free-text scale the learner
+   types — the DDQ block further up this file is dead copied code (resetScreenState dispatches
+   three screens and there is no ddqCheck anywhere), so nothing about it is captured.
 
-   SHIPPED GATED OFF (RESUME_ENABLED = false at the top of this file), so none of this
-   runs today: _resumeReady stays false, which also neutralises the beforeunload flush.
-   Before enabling: flip RESUME_ENABLED (that also loads xapi-720-j.js, which carries the
-   State transport -i lacks), then verify restore on every screen of every component.
-   Restore leans on this component's own design — resetScreenState(n) calls each
-   sNNEnter(), which rebuilds its screen from these variables — so restoring the
-   variables and calling goTo() is enough for the visuals to follow.
+   Enabled by RESUME_ENABLED at the top of this file, which also switches the loader to
+   xapi-720-j.js (the State transport -i lacks).
+
+   Restore is a two-pass job, matching the other components: goTo() runs s35Enter(), which blanks
+   the very input just restored, so the value is written again afterwards and restoreScreenUI()
+   re-derives the widget and the continue button from it.
    ═══════════════════════════════════════════════════════════════════ */
-var RESUME_STATE_ID    = 'execution-state';
-var _resumeReady       = false;
-var _restoring         = false;
-var _leavingToNextPart = false;
+var RESUME_STATE_VERSION = 2;
+var RESUME_STATE_ID      = 'execution-state';
+var _resumeReady         = false;
+var _restoring           = false;
+var _leavingToNextPart   = false;
 
 function currentPartSlug() {
   var p = window.location.pathname.replace(/\/index\.html.*$/, '').replace(/\/+$/, '');
   return p.split('/').pop() || '';
 }
 
-/* Variables copied verbatim in both directions. */
-var RESUME_PLAIN_VARS = ['ddqDone', 'ddqAttempts'];
+/* Nothing in this component keeps answer state in a variable. */
+var RESUME_PLAIN_VARS = [];
 
 function captureExecutionState() {
   var st = {
-    v: 1,
+    v: RESUME_STATE_VERSION,
     part: currentPartSlug(),
     currentScreen: currentScreen,
     scaleInput: (document.getElementById('s35-input') || {}).value || '',
@@ -703,26 +710,69 @@ function captureExecutionState() {
   return st;
 }
 
+/* Both restore passes run through here, so they can never drift apart. The parameter must stay
+   named `st` — the eval below assigns through that name. */
+function applyResumeVars(st) {
+  if (st.vars) {
+    Object.keys(st.vars).forEach(function (k) {
+      if (RESUME_PLAIN_VARS.indexOf(k) === -1) return;   // never assign an unlisted name
+      try { eval(k + ' = st.vars[k];'); } catch (e) {}
+    });
+  }
+}
+
+function applyResumeDom(st) {
+  var input = document.getElementById('s35-input');
+  if (input && typeof st.scaleInput === 'string') input.value = st.scaleInput;
+}
+
 function applyExecutionState(st) {
   if (!st) return;
   _restoring = true;
-  /* Replaying answers must not re-report them. */
+  /* Replaying answers must not re-report them, and the stub is held across goTo() as well so
+     nothing a screen emits on entry can leak out during a replay. */
   var _origSend = window.sendStatement720;
   window.sendStatement720 = function () {};
   try {
-    var _in = document.getElementById('s35-input');
-    if (_in && st.scaleInput != null) _in.value = st.scaleInput;
-    if (st.vars) {
-      Object.keys(st.vars).forEach(function (k) {
-        if (RESUME_PLAIN_VARS.indexOf(k) === -1) return;   // never assign an unlisted name
-        try { eval(k + ' = st.vars[k];'); } catch (e) {}
-      });
-    }
+    applyResumeVars(st);
+    goTo((typeof st.currentScreen === 'number') ? st.currentScreen : 0);
+    applyResumeVars(st);
+    applyResumeDom(st);       // s35Enter() just blanked the input
+    restoreScreenUI(currentScreen);
+  } catch (e) {
+    console.error('[resume] apply', e);
   } finally {
     window.sendStatement720 = _origSend;
     _restoring = false;
   }
-  goTo((typeof st.currentScreen === 'number') ? st.currentScreen : 0);
+  /* xapiOnScreen() latched xapiCurrentItem during the stubbed goTo without emitting anything.
+     Clearing the latch is what lets the resumed screen report its item 'initialized' exactly
+     once — and there is no prior item to close on a fresh page load. */
+  xapiCurrentItem = null;
+  try { xapiOnScreen(currentScreen); } catch (e) {}
+}
+
+/* Writes the state document for the component the learner is about to enter, so the next launch
+   resumes forward instead of back into the part they just finished. Re-arming the debounced save
+   first replaces any payload still pending for THIS part — the page stays alive while the next
+   document loads, long enough for a stale timer to fire and clobber this write. */
+function writeForwardState(destSlug) {
+  var blob = { v: RESUME_STATE_VERSION, part: destSlug, currentScreen: 0 };
+  try {
+    if (typeof window.saveState720Debounced === 'function') window.saveState720Debounced(RESUME_STATE_ID, blob);
+    if (typeof window.saveState720 === 'function') window.saveState720(RESUME_STATE_ID, blob);
+  } catch (e) { console.error('[resume] forward', e); }
+  _leavingToNextPart = true;
+}
+
+/* ── Screen painters ────────────────────────────────────────────────
+   Screen 2 is the only screen with anything to restore. Its whole "answered" appearance is what
+   s35OnInput() derives from the input, so calling it is the faithful repaint — there is no
+   grading, no feedback element and no lock. */
+function restoreScreenUI(n) {
+  try {
+    if (n === 2) s35OnInput();
+  } catch (e) { console.error('[resume] restoreScreenUI', e); }
 }
 
 function scheduleResumeSave() {
@@ -736,9 +786,17 @@ function flushResumeSave() {
   try { window.saveState720(RESUME_STATE_ID, captureExecutionState()); } catch (e) {}
 }
 
-window.addEventListener('beforeunload', function () {
+/* beforeunload alone is not enough: it never fires when a mobile tab is backgrounded and then
+   killed, which is exactly how a learner leaves mid-lesson. pagehide and a hidden
+   visibilitychange cover that. */
+function flushResumeSaveOnLeave() {
   if (_leavingToNextPart) return;
   flushResumeSave();
+}
+window.addEventListener('beforeunload', flushResumeSaveOnLeave);
+window.addEventListener('pagehide', flushResumeSaveOnLeave);
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') flushResumeSaveOnLeave();
 });
 
 /* ═══════════════════ xAPI — loader / init ═══════════════════ */
@@ -779,14 +837,17 @@ window.addEventListener('beforeunload', function () {
         pollMetadataReady(function () {
           try {
             try { ADL.XAPIWrapper.changeConfig({ endpoint: window.slxapi.endpoint, auth: window.slxapi.auth }); } catch (e) {}
-            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
-            try { xapiWireVideos(); } catch (e) {}
-            /* Resume: gated off, so _resumeReady stays false and nothing is written. */
+            /* Resume runs BEFORE the component 'initialized': a session that turns out to belong
+               to another component hops away, and must not leave a statement behind for the part
+               it merely passed through. */
             var _resumed = false;
             if (RESUME_ENABLED) {
               try {
                 var _saved = (typeof window.loadState720 === 'function')
                   ? window.loadState720(RESUME_STATE_ID) : null;
+                /* A document from an older build has a different shape — discard it before the
+                   part comparison, so a stale blob can never redirect. */
+                if (_saved && _saved.v !== RESUME_STATE_VERSION) _saved = null;
                 if (_saved && _saved.part && _saved.part !== currentPartSlug()) {
                   // Learner stopped in another component — hop there, carrying slxapi+registration.
                   window.location.replace('../' + _saved.part + '/index.html' + window.location.search);
@@ -796,8 +857,10 @@ window.addEventListener('beforeunload', function () {
                 if (_saved) { applyExecutionState(_saved); _resumed = true; }
               } catch (e) { console.error('[resume] init', e); _resumeReady = true; }
             }
-            /* Item-level init for the landing screen. applyExecutionState's goTo already reported
-               the resumed screen, so only emit here on a fresh start. */
+            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
+            try { xapiWireVideos(); } catch (e) {}
+            /* Item-level init for the landing screen. On a resume, applyExecutionState already
+               emitted it for the restored screen. */
             if (!_resumed) { try { xapiOnScreen(currentScreen); } catch (e) {} }
           } catch (e) { console.error('[xAPI] init', e); }
         });

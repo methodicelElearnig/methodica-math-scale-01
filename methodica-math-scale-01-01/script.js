@@ -11,7 +11,7 @@ window.XAPI_UNIT_ID = XAPI_ID_PREFIX + 'methodica-math-scale-01/';   // resume S
 function shortId(u){ return String(u || '').replace(/\/+$/, '').split('/').pop(); }
 /* Resume (KATA State API) ships gated off. Flipping this to true also switches the library to
    xapi-720-j.js, which carries the State transport. See the RESUME block near the end of file. */
-var RESUME_ENABLED = false;
+var RESUME_ENABLED = true;
 
 function announce(msg) {
   var el = document.getElementById('a11y-announcer');
@@ -149,6 +149,9 @@ function goTo(n) {
   nextScreen.focus();
   var heading = nextScreen.querySelector('h1, h2');
   if (heading) announce(heading.textContent.trim());
+  /* Resume: the screen change is the choke point that bounds how much a learner can lose.
+     Debounced, and suppressed while restoring. */
+  scheduleResumeSave();
 }
 
 function resetScreenState(n) {
@@ -852,6 +855,7 @@ function sqSubmit() {
       xapiQ('002', 'q1'));
   } catch (e) { console.error('[xAPI] answered 002/q1', e); }
   sqCheckBothDone();
+  flushResumeSave();   // see s16Submit
 }
 
 function sqCheckBothDone() {
@@ -923,6 +927,7 @@ function sqQ2Submit() {
       xapiQ('002', 'q2'));
   } catch (e) { console.error('[xAPI] answered 002/q2', e); }
   sqCheckBothDone();
+  flushResumeSave();   // see s16Submit
 }
 
 /* ── Screen 16: שאלת חימום (duplicate of screen 5) ── */
@@ -1227,6 +1232,7 @@ function s18Submit() {
     continueBtn.disabled = false;
     announce('זו טעות, בואו נדייק');
   }
+  flushResumeSave();   // see s16Submit
 }
 
 /* ── Ratio helper ── */
@@ -1346,6 +1352,7 @@ function s19Submit() {
     continueBtn.disabled = false;
     announce('זו טעות, בואו נדייק');
   }
+  flushResumeSave();   // see s16Submit
 }
 
 /* ── Screen 20 ── */
@@ -1436,6 +1443,7 @@ function s20Submit() {
     continueBtn.disabled = false;
     announce('זו טעות, בואו נדייק');
   }
+  flushResumeSave();   // see s16Submit
 }
 
 /* ── Screen 21 ── */
@@ -1515,6 +1523,7 @@ function s21Submit() {
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false; input.disabled = true; continueBtn.textContent = 'שנמשיך?'; continueBtn.disabled = false;
     announce('זו טעות, בואו נדייק');
   }
+  flushResumeSave();   // see s16Submit
 }
 
 /* ── Screen 22 ── */
@@ -1648,6 +1657,7 @@ function s22Submit() {
     continueBtn.disabled = false;
     announce('זו טעות, בואו נדייק');
   }
+  flushResumeSave();   // see s16Submit
 }
 
 
@@ -1684,6 +1694,9 @@ function s16Submit() {
     contBtn.disabled = false;
     contBtn.onclick = function() { goTo(17); };
   }
+  /* Resume: commit the answer synchronously. A debounced save here could still be in flight when
+     the learner navigates, and land after the next screen's own write. */
+  flushResumeSave();
 }
 
 function s16CheckBothDone() {
@@ -2073,6 +2086,7 @@ function s23Submit() {
     continueBtn.disabled = false;
     announce('זו טעות, לא נורא – בואו נלמד ממנה');
   }
+  flushResumeSave();   // see s16Submit
 }
 
 
@@ -2108,9 +2122,13 @@ function routeAfterQuiz() {
   /* Carry ?slxapi (and ?registration) into the next component — without this the LRS
      configuration is lost and every later part reports nothing. */
   var _q = window.location.search;
+  /* Resume: point the state document at the component being entered — inside each branch, because
+     the destination differs. Without it the next launch would come back to this finished quiz. */
   if (getQuizScore() >= 4) {
+    if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-03');
     window.location.href = '../methodica-math-scale-01-03/index.html' + _q;
   } else {
+    if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-02');
     window.location.href = '../methodica-math-scale-01-02/index.html' + _q;
   }
 }
@@ -2716,31 +2734,42 @@ document.addEventListener('keydown', function(e) {
    RESUME — save / restore execution state to KATA (xAPI State API)
    One State document per unit, keyed by window.XAPI_UNIT_ID.
 
-   SHIPPED GATED OFF (RESUME_ENABLED = false at the top of this file), so none of this runs
-   today: _resumeReady stays false, which also neutralises the beforeunload flush.
-   Before enabling:
-     - flip RESUME_ENABLED to true (that also loads xapi-720-j.js, which carries the State
-       transport that -i lacks),
-     - verify restore on every screen of every component, and
-     - re-check that applyExecutionState() suppresses statements while replaying (it does —
-       see the sendStatement720 stub below), or resuming will re-report answers.
-   Restore leans on this component's own design: resetScreenState(n) calls each sNNEnter()/
-   sqRestoreUI(), which already rebuild their screen from the state variables. So restoring the
-   variables and calling goTo() is enough for the visuals to follow.
+   Enabled by RESUME_ENABLED at the top of this file, which also switches the loader to
+   xapi-720-j.js (the State transport -i lacks).
+
+   Restore is a two-pass job. goTo() runs the screen's sNNEnter(), and apart from frcEnter/s4Enter
+   (which already rebuild their screen through sqRestoreUI) every one of them is an INITIALISER
+   that resets the very variables just restored. So the variables are assigned, goTo() runs, the
+   variables are assigned AGAIN, and then restoreScreenUI() paints the answered look. goTo() and
+   the sNNEnter() functions are deliberately left untouched — the live answer path must not change.
    ═══════════════════════════════════════════════════════════════════ */
-var RESUME_STATE_ID    = 'execution-state';
-var _resumeReady       = false;
-var _restoring         = false;
-var _leavingToNextPart = false;
+var RESUME_STATE_VERSION = 2;
+var RESUME_STATE_ID      = 'execution-state';
+var _resumeReady         = false;
+var _restoring           = false;
+var _leavingToNextPart   = false;
 
 function currentPartSlug() {
   var p = window.location.pathname.replace(/\/index\.html.*$/, '').replace(/\/+$/, '');
   return p.split('/').pop() || '';
 }
 
+/* Typed answers live only in the DOM — no variable holds them — so they travel by element id.
+   Reading them at capture time is safe: no submit branch clears these inputs, only disables. */
+var RESUME_INPUT_IDS = ['s18-answer-input', 's19-answer-input', 's21-answer-input'];
+
+function captureResumeInputs() {
+  var out = {};
+  RESUME_INPUT_IDS.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) out[id] = el.value;
+  });
+  return out;
+}
+
 function captureExecutionState() {
   return {
-    v: 1,
+    v: RESUME_STATE_VERSION,
     part: currentPartSlug(),
     currentScreen: currentScreen,
     lomdaState: { selectedCharacter: window.lomdaState.selectedCharacter,
@@ -2751,8 +2780,12 @@ function captureExecutionState() {
             selected: sqSelected, submitted: sqSubmitted,
             q2: sqQ2Selections.slice(), q2Submitted: sqQ2Submitted },
     s16:  { selected: s16Selected, submitted: s16Submitted },
+    inputs: captureResumeInputs(),
     quiz: {
-      results: (typeof s18QuizResults !== 'undefined') ? s18QuizResults.slice() : null,
+      /* s18QuizResults is an OBJECT ({1:null,…}), not an array. This used to call .slice() on it,
+         which threw on every capture — and both callers swallow the error, so this component
+         silently never wrote a single state document. */
+      results: Object.assign({}, s18QuizResults),
       s18: { a: s18Attempts, solved: s18Solved, correct: s18Correct },
       s19: { a: s19Attempts, solved: s19Solved, correct: s19Correct },
       s20: { a: s20Attempts, solved: s20Solved, correct: s20Correct, sel: s20Selected },
@@ -2763,40 +2796,313 @@ function captureExecutionState() {
   };
 }
 
+/* Both restore passes run through here, so they can never drift apart. */
+function applyResumeVars(state) {
+  if (state.lomdaState) {
+    window.lomdaState.selectedCharacter = state.lomdaState.selectedCharacter;
+    window.lomdaState.selectedDesign    = state.lomdaState.selectedDesign;
+  }
+  if (state.frc) { frcRevealed = state.frc.revealed || frcRevealed; frcDone = !!state.frc.done; }
+  if (state.s4)  { s4VideoEnded = !!state.s4.videoEnded; }
+  if (state.sq) {
+    if (state.sq.screen != null) sqScreen = state.sq.screen;
+    sqSelected     = state.sq.selected;
+    sqSubmitted    = !!state.sq.submitted;
+    sqQ2Selections = state.sq.q2 || sqQ2Selections;
+    sqQ2Submitted  = !!state.sq.q2Submitted;
+  }
+  if (state.s16) { s16Selected = state.s16.selected; s16Submitted = !!state.s16.submitted; }
+  var q = state.quiz || {};
+  if (q.results) s18QuizResults = Object.assign({}, q.results);
+  if (q.s18) { s18Attempts = q.s18.a; s18Solved = q.s18.solved; s18Correct = q.s18.correct; }
+  if (q.s19) { s19Attempts = q.s19.a; s19Solved = q.s19.solved; s19Correct = q.s19.correct; }
+  if (q.s20) { s20Attempts = q.s20.a; s20Solved = q.s20.solved; s20Correct = q.s20.correct; s20Selected = q.s20.sel; }
+  if (q.s21) { s21Attempts = q.s21.a; s21Solved = q.s21.solved; s21Correct = q.s21.correct; }
+  if (q.s22) { s22Attempts = q.s22.a; s22Solved = q.s22.solved; s22Correct = q.s22.correct; s22Selected = q.s22.sel; }
+  if (q.s23) { s23Attempts = q.s23.a; s23Solved = q.s23.solved; s23Correct = q.s23.correct; s23Selected = q.s23.sel; }
+}
+
+function applyResumeInputs(map) {
+  if (!map) return;
+  RESUME_INPUT_IDS.forEach(function (id) {
+    if (typeof map[id] !== 'string') return;
+    var el = document.getElementById(id);
+    if (el) el.value = map[id];
+  });
+}
+
 function applyExecutionState(state) {
   if (!state) return;
   _restoring = true;
-  /* Replaying answers must not re-report them. */
+  /* Replaying answers must not re-report them, and the stub is held across goTo() as well so
+     nothing a screen emits on entry can leak out during a replay. */
   var _origSend = window.sendStatement720;
   window.sendStatement720 = function () {};
   try {
-    if (state.lomdaState) {
-      window.lomdaState.selectedCharacter = state.lomdaState.selectedCharacter;
-      window.lomdaState.selectedDesign    = state.lomdaState.selectedDesign;
-    }
-    if (state.frc) { frcRevealed = state.frc.revealed || frcRevealed; frcDone = !!state.frc.done; }
-    if (state.s4)  { s4VideoEnded = !!state.s4.videoEnded; }
-    if (state.sq) {
-      if (state.sq.screen != null) sqScreen = state.sq.screen;
-      sqSelected     = state.sq.selected;
-      sqSubmitted    = !!state.sq.submitted;
-      sqQ2Selections = state.sq.q2 || sqQ2Selections;
-      sqQ2Submitted  = !!state.sq.q2Submitted;
-    }
-    if (state.s16) { s16Selected = state.s16.selected; s16Submitted = !!state.s16.submitted; }
-    var q = state.quiz || {};
-    if (q.results) s18QuizResults = q.results;
-    if (q.s18) { s18Attempts = q.s18.a; s18Solved = q.s18.solved; s18Correct = q.s18.correct; }
-    if (q.s19) { s19Attempts = q.s19.a; s19Solved = q.s19.solved; s19Correct = q.s19.correct; }
-    if (q.s20) { s20Attempts = q.s20.a; s20Solved = q.s20.solved; s20Correct = q.s20.correct; s20Selected = q.s20.sel; }
-    if (q.s21) { s21Attempts = q.s21.a; s21Solved = q.s21.solved; s21Correct = q.s21.correct; }
-    if (q.s22) { s22Attempts = q.s22.a; s22Solved = q.s22.solved; s22Correct = q.s22.correct; s22Selected = q.s22.sel; }
-    if (q.s23) { s23Attempts = q.s23.a; s23Solved = q.s23.solved; s23Correct = q.s23.correct; s23Selected = q.s23.sel; }
+    applyResumeVars(state);
+    goTo((typeof state.currentScreen === 'number') ? state.currentScreen : 0);
+    applyResumeVars(state);            // undo the reset that this screen's sNNEnter() just did
+    applyResumeInputs(state.inputs);   // before the painter, which locks the inputs
+    restoreScreenUI(currentScreen);
+  } catch (e) {
+    console.error('[resume] apply', e);
   } finally {
     window.sendStatement720 = _origSend;
     _restoring = false;
   }
-  goTo((typeof state.currentScreen === 'number') ? state.currentScreen : 0);
+  /* xapiOnScreen() latched xapiCurrentItem during the stubbed goTo without emitting anything.
+     Clearing the latch is what lets the resumed screen report its item 'initialized' exactly
+     once — and there is no prior item to close on a fresh page load. */
+  xapiCurrentItem = null;
+  try { xapiOnScreen(currentScreen); } catch (e) {}
+}
+
+/* Writes the state document for the component the learner is about to enter, so the next launch
+   resumes forward instead of back into the part they just finished. Re-arming the debounced save
+   first replaces any payload still pending for THIS part — the page stays alive while the next
+   document loads, long enough for a stale timer to fire and clobber this write. */
+function writeForwardState(destSlug) {
+  var blob = { v: RESUME_STATE_VERSION, part: destSlug, currentScreen: 0 };
+  try {
+    if (typeof window.saveState720Debounced === 'function') window.saveState720Debounced(RESUME_STATE_ID, blob);
+    if (typeof window.saveState720 === 'function') window.saveState720(RESUME_STATE_ID, blob);
+  } catch (e) { console.error('[resume] forward', e); }
+  _leavingToNextPart = true;
+}
+
+/* ── Screen painters ────────────────────────────────────────────────
+   Question screens only (the agreed first step). Screens 3 and 4 need no painter — frcEnter() and
+   s4Enter() call sqRestoreUI(), which genuinely renders from state and is the model these follow.
+   Screens 7–14 (the guided worked example) keep no JS state at all, so they land un-answered and
+   the learner re-clicks; the same goes for screen 1's scroll gate and screen 7's timer.
+   Each painter mirrors the DOM writes of its sNNSubmit branches and NOTHING else — no state
+   mutation, no statements, no announce(), and never s18QuizResults. The quiz nav dots need no
+   painting: sNNEnter() calls s18UpdateNav()/s23UpdateNav(), which build them from s18QuizResults,
+   restored by the second assignment pass. */
+function restoreScreenUI(n) {
+  try {
+    if (n === 16) s16RestoreUI();
+    if (n === 18) s18RestoreUI();
+    if (n === 19) s19RestoreUI();
+    if (n === 20) s20RestoreUI();
+    if (n === 21) s21RestoreUI();
+    if (n === 22) s22RestoreUI();
+    if (n === 23) s23RestoreUI();
+  } catch (e) { console.error('[resume] restoreScreenUI', e); }
+}
+
+/* Explanation bodies, copied from the branches they mirror. */
+var S16_RESTORE_EXPLANATION = 'קנה מידה נקרא משמאל לימין:​ המספר השמאלי מייצג את הגודל בסרטוט, והמספר הימני מייצג את הגודל המתאים במציאות. ​';
+var S18_RESTORE_EXPLANATION = 'לפי קנה המידה הנתון, אורך הנעל במציאות גדול פי 6 מאורך הנעל בתמונה. ​<br>' +
+                              'ראינו שאורך הנעל בתמונה הוא 4 ס"מ, נכפול אותו ב-6 ונקבל:​<br>' +
+                              ' 24 ס"מ = 6 · 4​<br>' +
+                              'מכאן שאורך הנעל במציאות הוא 24 ס"מ.​';
+var S19_RESTORE_EXPLANATION = '1.4 מטרים שווים ל-140 ס"מ,​ ולכן היחס בין האורכים הוא 140 : 7 .​<br>' +
+                              'נצמצם את היחס ב-7 ​ונקבל שקנה המידה הוא 20 : 1 .​';
+var S20_RESTORE_EXPLANATION = 'נמיר את מידות השטיח במציאות לסנטימטרים: 180 ס"מ ו-240 ס"מ. ​<br>' +
+                              'מכיוון שקנה המידה הוא 20 : 1 (הקטנה פי 20 של מידות השטיח בתרשים), נחלק כל מידה ב-20 ונקבל שרוחב השטיח בתרשים הוא 9 ס"מ ואורכו 12 ס"מ.​';
+var S21_RESTORE_EXPLANATION = '2 ק"מ הם 200,000 ס"מ .<br>' +
+                              'מכאן שהיחס בין אורך כל קטע במפה לבין אורך כל קטע במציאות הוא 200,000 : 8 .<br>' +
+                              'נצמצם ב-8, ונקבל את קנה המידה: 25,000 : 1';
+var S22_RESTORE_EXPLANATION = 'לפי קנה המידה כל ס"מ על המפה מייצג 100,000,000 ס"מ במציאות. ​<br>' +
+                              'נתון שהמרחק על המפה הוא 7 ס"מ, ולכן המרחק במציאות הוא 700,000,000 ס"מ, שהם 7,000 ק"מ.​';
+var S23_RESTORE_EXPLANATION = 'קנה מידה מייצג את היחס בין האורך במפה לאורך המתאים במציאות. ​<br>' +
+                              'המסלול במציאות זהה. אם קנה המידה היה זהה, גם אורך המסלול בשתי המפות היה צריך להיות זהה. לכן נסיק שקני המידה שונים.  ​';
+
+/* Screen 16 — the true/false warm-up. Mirrors s16Submit.
+   The onclick rebind is NOT cosmetic: s16Submit has no solved-guard that forwards, and the markup
+   calls it directly, so a restored s16Submitted would leave a continue button that does nothing.
+   There is no s16Correct variable, so correctness comes from the recorded selection. */
+function s16RestoreUI() {
+  var fb      = document.getElementById('s16-inline-feedback');
+  var fbBold  = document.getElementById('s16-fb-bold');
+  var fbReg   = document.getElementById('s16-fb-regular');
+  var contBtn = document.getElementById('s16-continue');
+  var opts    = Array.prototype.slice.call(document.querySelectorAll('[data-screen="16"] .s5-opt'));
+  if (!fb || !fbBold || !fbReg || !contBtn) return;
+
+  if (!s16Submitted) {
+    if (s16Selected !== null && s16Selected !== undefined) {
+      opts.forEach(function (o, i) { o.classList.toggle('is-selected', i === s16Selected); });
+      contBtn.disabled = false;
+    }
+    return;
+  }
+
+  var correct = (s16Selected === S16_CORRECT);
+  if (opts[s16Selected]) {
+    opts[s16Selected].classList.remove('is-selected');
+    opts[s16Selected].classList.add(correct ? 'is-correct' : 'is-incorrect');
+  }
+  opts.forEach(function (o) { o.disabled = true; });
+  fbBold.textContent = correct ? 'נכון!' : 'זו טעות, אבל חשוב שניסית!';
+  fbReg.innerHTML    = S16_RESTORE_EXPLANATION;
+  fb.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
+  fb.hidden = false;
+  contBtn.textContent = 'שנמשיך?';
+  contBtn.disabled    = false;
+  contBtn.onclick     = function () { goTo(17); };
+}
+
+/* Screens 18, 19 and 21 — value inputs. Mirror s18Submit / s19Submit / s21Submit. */
+function restoreValueScreenUI(cfg) {
+  var fb      = document.getElementById(cfg.prefix + '-feedback');
+  var fbBold  = document.getElementById(cfg.prefix + '-fb-bold');
+  var fbReg   = document.getElementById(cfg.prefix + '-fb-regular');
+  var cont    = document.getElementById(cfg.prefix + '-continue');
+  var hintBtn = document.getElementById(cfg.prefix + '-hint-btn');
+  var input   = document.getElementById(cfg.prefix + '-answer-input');
+  if (!fb || !fbBold || !fbReg || !cont) return;
+
+  if (cfg.solved) {
+    if (input) input.disabled = true;
+    fbBold.textContent = cfg.correct ? cfg.boldCorrect : cfg.boldWrong;
+    fbReg.innerHTML    = cfg.explanation;
+    fb.classList.add(cfg.correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden        = false;
+    cont.textContent = 'שנמשיך?';
+    cont.disabled    = false;
+    return;
+  }
+
+  if (cfg.attempts >= 1) {
+    fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
+    fbReg.innerHTML    = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+  cont.disabled = !(input && input.value.trim().length > 0);   // the live predicate
+}
+
+function s18RestoreUI() {
+  restoreValueScreenUI({
+    prefix: 's18', solved: s18Solved, correct: s18Correct, attempts: s18Attempts,
+    boldCorrect: 'יפה מאוד!​', boldWrong: 'זו טעות, בואו נדייק​',
+    explanation: S18_RESTORE_EXPLANATION
+  });
+}
+
+function s19RestoreUI() {
+  restoreValueScreenUI({
+    prefix: 's19', solved: s19Solved, correct: s19Correct, attempts: s19Attempts,
+    boldCorrect: 'יפה מאוד!​', boldWrong: 'זו טעות, בואו נדייק​',
+    explanation: S19_RESTORE_EXPLANATION
+  });
+}
+
+function s21RestoreUI() {
+  restoreValueScreenUI({
+    prefix: 's21', solved: s21Solved, correct: s21Correct, attempts: s21Attempts,
+    boldCorrect: 'יפה מאוד!', boldWrong: 'זו טעות, בואו נדייק',
+    explanation: S21_RESTORE_EXPLANATION
+  });
+}
+
+/* Screen 20 — single choice. Mirrors s20Submit, which keeps is-selected on the picked option in
+   both terminal branches (it only toggles is-correct / is-incorrect on top). */
+function s20RestoreUI() {
+  var fb      = document.getElementById('s20-feedback');
+  var fbBold  = document.getElementById('s20-fb-bold');
+  var fbReg   = document.getElementById('s20-fb-regular');
+  var cont    = document.getElementById('s20-continue');
+  var hintBtn = document.getElementById('s20-hint-btn');
+  var opts    = Array.prototype.slice.call(document.querySelectorAll('[data-screen="20"] .s5-opt'));
+  if (!fb || !fbBold || !fbReg || !cont) return;
+
+  if (s20Solved) {
+    opts.forEach(function (o, i) {
+      o.disabled = true;
+      o.classList.toggle('is-selected', i === s20Selected);
+      o.classList.toggle('is-correct', i === S20_CORRECT);
+      if (!s20Correct) o.classList.toggle('is-incorrect', i === s20Selected && i !== S20_CORRECT);
+    });
+    fbBold.textContent = s20Correct ? 'יפה!​' : 'זו טעות, בואו נדייק​';
+    fbReg.innerHTML    = S20_RESTORE_EXPLANATION;
+    fb.classList.add(s20Correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden        = false;
+    cont.textContent = 'שנמשיך?';
+    cont.disabled    = false;
+    return;
+  }
+
+  if (s20Selected !== null && s20Selected !== undefined) {
+    opts.forEach(function (o, i) { o.classList.toggle('is-selected', i === s20Selected); });
+    cont.disabled = false;
+  }
+  if (s20Attempts >= 1) {
+    fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
+    fbReg.innerHTML    = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+}
+
+/* Screens 22 and 23 — single choice, same shape. Mirror s22Submit / s23Submit. */
+function restoreChoiceScreenUI(cfg) {
+  var fb      = document.getElementById(cfg.prefix + '-feedback');
+  var fbBold  = document.getElementById(cfg.prefix + '-fb-bold');
+  var fbReg   = document.getElementById(cfg.prefix + '-fb-regular');
+  var cont    = document.getElementById(cfg.prefix + '-continue');
+  var hintBtn = document.getElementById(cfg.prefix + '-hint-btn');
+  var opts    = Array.prototype.slice.call(document.querySelectorAll('[data-screen="' + cfg.screen + '"] .s5-opt'));
+  if (!fb || !fbBold || !fbReg || !cont) return;
+
+  if (cfg.solved) {
+    opts.forEach(function (o, i) {
+      o.disabled = true;
+      o.classList.remove('is-selected');
+      if (cfg.correct) {
+        if (i === cfg.selected) o.classList.add('is-correct');
+      } else if (i === cfg.correctIndex) {
+        o.classList.add('is-correct');
+      } else if (i === cfg.selected) {
+        o.classList.add('is-incorrect');
+      }
+    });
+    fbBold.textContent = cfg.correct ? cfg.boldCorrect : cfg.boldWrong;
+    fbReg.innerHTML    = cfg.explanation;
+    fb.classList.add(cfg.correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    if (cfg.finalClass) fb.classList.add(cfg.finalClass);
+    fb.hidden        = false;
+    cont.textContent = 'שנמשיך?';
+    cont.disabled    = false;
+    return;
+  }
+
+  if (cfg.selected !== null && cfg.selected !== undefined) {
+    opts.forEach(function (o, i) { o.classList.toggle('is-selected', i === cfg.selected); });
+    cont.disabled = false;
+  }
+  if (cfg.attempts >= 1) {
+    fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
+    fbReg.innerHTML    = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+}
+
+function s22RestoreUI() {
+  restoreChoiceScreenUI({
+    prefix: 's22', screen: 22,
+    solved: s22Solved, correct: s22Correct, selected: s22Selected, attempts: s22Attempts,
+    correctIndex: S22_CORRECT,
+    boldCorrect: 'יפה!​', boldWrong: 'זו טעות, בואו נדייק​',
+    explanation: S22_RESTORE_EXPLANATION
+  });
+}
+
+function s23RestoreUI() {
+  restoreChoiceScreenUI({
+    prefix: 's23', screen: 23,
+    solved: s23Solved, correct: s23Correct, selected: s23Selected, attempts: s23Attempts,
+    correctIndex: S23_CORRECT,
+    boldCorrect: 'טוב מאוד!', boldWrong: 'זו טעות, לא נורא – בואו נלמד ממנה:​',
+    explanation: S23_RESTORE_EXPLANATION,
+    finalClass: 's23-fb--final'
+  });
 }
 
 function scheduleResumeSave() {
@@ -2810,9 +3116,17 @@ function flushResumeSave() {
   try { window.saveState720(RESUME_STATE_ID, captureExecutionState()); } catch (e) {}
 }
 
-window.addEventListener('beforeunload', function () {
+/* beforeunload alone is not enough: it never fires when a mobile tab is backgrounded and then
+   killed, which is exactly how a learner leaves mid-lesson. pagehide and a hidden
+   visibilitychange cover that. */
+function flushResumeSaveOnLeave() {
   if (_leavingToNextPart) return;
   flushResumeSave();
+}
+window.addEventListener('beforeunload', flushResumeSaveOnLeave);
+window.addEventListener('pagehide', flushResumeSaveOnLeave);
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') flushResumeSaveOnLeave();
 });
 
 
@@ -2854,14 +3168,17 @@ window.addEventListener('beforeunload', function () {
         pollMetadataReady(function () {
           try {
             try { ADL.XAPIWrapper.changeConfig({ endpoint: window.slxapi.endpoint, auth: window.slxapi.auth }); } catch (e) {}
-            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
-            try { xapiWireVideos(); } catch (e) {}
-            /* Resume: gated off, so _resumeReady stays false and nothing is written. */
+            /* Resume runs BEFORE the component 'initialized' and before the unit is opened below:
+               this is the entry component every launch passes through, so a session that belongs
+               to another part hops away without leaving statements behind for this one. */
             var _resumed = false;
             if (RESUME_ENABLED) {
               try {
                 var _saved = (typeof window.loadState720 === 'function')
                   ? window.loadState720(RESUME_STATE_ID) : null;
+                /* A document from an older build has a different shape — discard it before the
+                   part comparison, so a stale blob can never redirect. */
+                if (_saved && _saved.v !== RESUME_STATE_VERSION) _saved = null;
                 if (_saved && _saved.part && _saved.part !== currentPartSlug()) {
                   // Learner stopped in another component — hop there, carrying slxapi+registration.
                   window.location.replace('../' + _saved.part + '/index.html' + window.location.search);
@@ -2871,8 +3188,10 @@ window.addEventListener('beforeunload', function () {
                 if (_saved) { applyExecutionState(_saved); _resumed = true; }
               } catch (e) { console.error('[resume] init', e); _resumeReady = true; }
             }
-            /* Item-level init for the landing screen. applyExecutionState's goTo already reported
-               the resumed screen, so only emit here on a fresh start. */
+            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
+            try { xapiWireVideos(); } catch (e) {}
+            /* Item-level init for the landing screen. On a resume, applyExecutionState already
+               emitted it for the restored screen. */
             if (!_resumed) { try { xapiOnScreen(currentScreen); } catch (e) {} }
             /* This is the entry component, so it also opens the unit. */
             loadUnitMetadata('../metadata/methodica-math-scale-01_unit.json', function () {

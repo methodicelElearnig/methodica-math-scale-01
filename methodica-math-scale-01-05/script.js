@@ -11,7 +11,7 @@ window.XAPI_UNIT_ID = XAPI_ID_PREFIX + 'methodica-math-scale-01/';   // resume S
 function shortId(u){ return String(u || '').replace(/\/+$/, '').split('/').pop(); }
 /* Resume (KATA State API) ships gated off. Flipping this to true also switches the library to
    xapi-720-j.js, which carries the State transport. See the RESUME block near the end of file. */
-var RESUME_ENABLED = false;
+var RESUME_ENABLED = true;
 
 
 function announce(msg) {
@@ -80,6 +80,9 @@ function goTo(n) {
   nextScreen.focus();
   var heading = nextScreen.querySelector('h1, h2');
   if (heading) announce(heading.textContent.trim());
+  /* Resume: the screen change is the choke point that bounds how much a learner can lose.
+     Debounced, and suppressed while restoring. */
+  scheduleResumeSave();
 }
 
 function resetScreenState(n) {
@@ -111,7 +114,9 @@ var s45Done     = false;
 
 function s45Enter() {
   if (s45Done) return;
-  finalAssessmentScore.correct = 0;
+  /* finalAssessmentScore is not zeroed here. It is write-only in this component — peakResult()
+     scores from XAPI_Q_RESULTS — and zeroing it on every unguarded entry to this screen would
+     discard the running tally the moment restored state puts the learner back here. */
   s45Attempts = 0;
   var input = document.getElementById('s45-answer-input');
   if (input) { input.value = ''; input.disabled = false; }
@@ -195,6 +200,9 @@ function s45Check() {
     btn.textContent = 'שנמשיך?';
     btn.onclick     = function() { goTo(3); };
   }
+  /* Resume: commit the answer synchronously. A debounced save here could still be in flight
+     when the learner navigates, and land after the next screen's own write. */
+  flushResumeSave();
 }
 
 function s14ToggleHelp() {
@@ -349,6 +357,7 @@ function s47Check() {
     btn.textContent = 'שנמשיך?';
     btn.onclick     = function() { goTo(5); };
   }
+  flushResumeSave();   // see s45Check
 }
 
 function s47ToggleHint() {
@@ -496,6 +505,7 @@ function s49Submit() {
     cont.textContent = 'שנמשיך?';
     cont.onclick     = function() { goTo(7); };
   }
+  flushResumeSave();   // see s45Check
 }
 
 /* ════════════════════════════════════════════
@@ -627,6 +637,7 @@ function s51Submit() {
     cont.textContent = 'שנמשיך?';
     cont.onclick     = function() { goTo(9); };
   }
+  flushResumeSave();   // see s45Check
 }
 
 /* ════════════════════════════════════════════
@@ -1201,18 +1212,21 @@ document.addEventListener('DOMContentLoaded', function() {
    One State document per unit, keyed by window.XAPI_UNIT_ID.
    One four-part peak question; s47 keeps its selection in a Set, which JSON cannot hold.
 
-   SHIPPED GATED OFF (RESUME_ENABLED = false at the top of this file), so none of this
-   runs today: _resumeReady stays false, which also neutralises the beforeunload flush.
-   Before enabling: flip RESUME_ENABLED (that also loads xapi-720-j.js, which carries the
-   State transport -i lacks), then verify restore on every screen of every component.
-   Restore leans on this component's own design — resetScreenState(n) calls each
-   sNNEnter(), which rebuilds its screen from these variables — so restoring the
-   variables and calling goTo() is enough for the visuals to follow.
+   Enabled by RESUME_ENABLED at the top of this file, which also switches the loader to
+   xapi-720-j.js (the State transport -i lacks).
+
+   Restore is a two-pass job. goTo() runs the screen's sNNEnter(), and every one of them is
+   an INITIALISER, not a restorer: s45/s47/s49/s51 early-return on their solved flag, so on
+   a fresh page load they leave the pristine markup on screen. So the variables are assigned,
+   goTo() runs, the variables are assigned AGAIN (undoing the enter's reset), and then
+   restoreScreenUI() paints the answered look. goTo() and the sNNEnter() functions are
+   deliberately left untouched — the live answer path must not change.
    ═══════════════════════════════════════════════════════════════════ */
-var RESUME_STATE_ID    = 'execution-state';
-var _resumeReady       = false;
-var _restoring         = false;
-var _leavingToNextPart = false;
+var RESUME_STATE_VERSION = 2;
+var RESUME_STATE_ID      = 'execution-state';
+var _resumeReady         = false;
+var _restoring           = false;
+var _leavingToNextPart   = false;
 
 function currentPartSlug() {
   var p = window.location.pathname.replace(/\/index\.html.*$/, '').replace(/\/+$/, '');
@@ -1222,13 +1236,28 @@ function currentPartSlug() {
 /* Variables copied verbatim in both directions. */
 var RESUME_PLAIN_VARS = ['s45Attempts', 's45Done', 's47Attempts', 's47Solved', 's49Selected', 's49Attempts', 's49Solved', 's51Selected', 's51Attempts', 's51Solved'];
 
+/* Typed answers live only in the DOM — no variable holds them — so they travel by element
+   id. Reading them at capture time is safe: no submit branch clears these inputs, it only
+   disables them. */
+var RESUME_INPUT_IDS = ['s45-answer-input'];
+
+function captureResumeInputs() {
+  var out = {};
+  RESUME_INPUT_IDS.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) out[id] = el.value;
+  });
+  return out;
+}
+
 function captureExecutionState() {
   var st = {
-    v: 1,
+    v: RESUME_STATE_VERSION,
     part: currentPartSlug(),
     currentScreen: currentScreen,
     qResults: Object.assign({}, XAPI_Q_RESULTS),
     s47Selected: Array.from(s47Selected),
+    inputs: captureResumeInputs(),
     vars: {}
   };
   /* eval keeps this list-driven: these are file-scope `var`/`let` bindings, so they are
@@ -1239,26 +1268,224 @@ function captureExecutionState() {
   return st;
 }
 
+/* Both restore passes run through here, so they can never drift apart. The parameter must
+   stay named `st` — the eval below assigns through that name. */
+function applyResumeVars(st) {
+  if (st.qResults) XAPI_Q_RESULTS = Object.assign({}, st.qResults);
+  if (st.s47Selected) s47Selected = new Set(st.s47Selected);
+  if (st.vars) {
+    Object.keys(st.vars).forEach(function (k) {
+      if (RESUME_PLAIN_VARS.indexOf(k) === -1) return;   // never assign an unlisted name
+      try { eval(k + ' = st.vars[k];'); } catch (e) {}
+    });
+  }
+}
+
+function applyResumeInputs(map) {
+  if (!map) return;
+  RESUME_INPUT_IDS.forEach(function (id) {
+    if (typeof map[id] !== 'string') return;
+    var el = document.getElementById(id);
+    if (el) el.value = map[id];
+  });
+}
+
 function applyExecutionState(st) {
   if (!st) return;
   _restoring = true;
-  /* Replaying answers must not re-report them. */
+  /* Replaying answers must not re-report them. The stub is held across goTo() too, which is
+     what keeps s53Enter() from re-emitting the item, component and unit 'completed' when the
+     learner resumes onto the finale — the library's one-per-page-load rule cannot help across
+     a page load. */
   var _origSend = window.sendStatement720;
   window.sendStatement720 = function () {};
   try {
-    if (st.qResults) XAPI_Q_RESULTS = Object.assign({}, st.qResults);
-    if (st.s47Selected) s47Selected = new Set(st.s47Selected);
-    if (st.vars) {
-      Object.keys(st.vars).forEach(function (k) {
-        if (RESUME_PLAIN_VARS.indexOf(k) === -1) return;   // never assign an unlisted name
-        try { eval(k + ' = st.vars[k];'); } catch (e) {}
-      });
-    }
+    applyResumeVars(st);
+    goTo((typeof st.currentScreen === 'number') ? st.currentScreen : 0);
+    applyResumeVars(st);            // undo the reset that this screen's sNNEnter() just did
+    applyResumeInputs(st.inputs);   // before the painter, which disables the inputs
+    restoreScreenUI(currentScreen);
+  } catch (e) {
+    console.error('[resume] apply', e);
   } finally {
     window.sendStatement720 = _origSend;
     _restoring = false;
   }
-  goTo((typeof st.currentScreen === 'number') ? st.currentScreen : 0);
+  /* xapiOnScreen() latched xapiCurrentItem during the stubbed goTo without emitting anything.
+     Clearing the latch is what lets the resumed screen report its item 'initialized' exactly
+     once — and there is no prior item to close on a fresh page load. */
+  xapiCurrentItem = null;
+  try { xapiOnScreen(currentScreen); } catch (e) {}
+}
+
+/* ── Screen painters ────────────────────────────────────────────────
+   Question screens only (the agreed first step); narrative screens land at their start.
+   Each painter mirrors the DOM writes of its sNNCheck/sNNSubmit branches and NOTHING else —
+   no state mutation, no statements, no announce(), and never finalAssessmentScore. Two axes,
+   not four branches: solved picks the terminal look, otherwise an attempt already spent shows
+   the interim feedback AND the current selection is repainted, because those co-occur.
+   Correctness comes from XAPI_Q_RESULTS — this component declares no sNNCorrect variables,
+   and the attempt count must never be used to infer it. */
+function restoreScreenUI(n) {
+  try {
+    if (n === 2)  s45RestoreUI();
+    if (n === 4)  s47RestoreUI();
+    if (n === 6)  s49RestoreUI();
+    if (n === 8)  s51RestoreUI();
+  } catch (e) { console.error('[resume] restoreScreenUI', e); }
+}
+
+/* Explanation bodies, copied from the sNNCheck branches they mirror. */
+var S45_RESTORE_EXPLANATION = 'המרחק במציאות הוא 2 ק"מ, שהם 2,000 מטרים, שהם 200,000 ס"מ, ואורך המסלול על המסך הוא 8 ס"מ. ​<br>לכן, היחס בין אורך המסלול במפה לאורך המסלול במציאות הוא 200,000 : 8 .​<br>נצמצם ב-8, ונקבל שקנה המידה הוא 25,000 : 1 .​';
+var S47_RESTORE_EXPLANATION = 'אורך הכבלים הכולל הוא 1,050 מטרים. מרחק הפריסה הנדרש הוא 1 ק"מ (שהם 1,000 מטרים), ולכן האפשרות הראשונה נכונה.​<br>קנה המידה הוא 25,000 : 1 . כלומר, כל 1 ס"מ במפה מייצג 250 מטרים במציאות.​<br>המרחק בין האוהל לאגם הוא 1 ק"מ, שהם 1,000 מטרים. ​<br>אם 250 מטרים במציאות הם 1 ס"מ במפה, ​<br>1,000 מטרים במציאות הם 4 ס"מ במפה.​';
+var S49_RESTORE_EXPLANATION = 'זום הגדלה עובד הפוך מהאינטואיציה: ​<br>אם התמונה גדלה פי 4, המספר בקנה המידה המייצג את המציאות קטן פי 4. ​<br> במקום קנה מידה של 25,000 : 1 נקבל קנה מידה של <br>6,250 : 1 (6,250 = 4 : 25,000)';
+var S51_RESTORE_EXPLANATION = 'רחפן א: ס"מ אחד בצילום מייצג 6,250 ס"מ במציאות, שהם 62.5 מטרים. ​<br>רחפן ב: ס"מ אחד בצילום מייצג 2,000 ס"מ במציאות, ולכן ​2 ס"מ בצילום מייצגים 4,000 ס"מ במציאות, שהם 40 מטרים. ​<br>האורך של קרחת היער שצילם רחפן א גדול מ-50  מטרים, ולכן היא זו שמתאימה להנחתה.​';
+
+/* Screen 2 — value input. Mirrors s45Check. */
+function s45RestoreUI() {
+  var fb      = document.getElementById('s45-feedback');
+  var fbBold  = document.getElementById('s45-fb-bold');
+  var fbReg   = document.getElementById('s45-fb-regular');
+  var btn     = document.getElementById('s45-check');
+  var hintBtn = document.getElementById('s45-hint-btn');
+  var input   = document.getElementById('s45-answer-input');
+  if (!fb || !fbBold || !fbReg || !btn) return;
+
+  if (s45Done) {
+    var correct = (XAPI_Q_RESULTS['001/q1'] === true);
+    if (input) input.disabled = true;
+    fbBold.textContent = correct ? 'תשובה יפה!​' : 'זו טעות, אבל זה בסדר גמור, כך בדיוק לומדים!​';
+    fbReg.innerHTML    = S45_RESTORE_EXPLANATION;
+    fb.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden = false;
+    btn.disabled    = false;
+    btn.textContent = 'שנמשיך?';
+    btn.onclick     = function () { goTo(3); };
+    return;
+  }
+
+  if (s45Attempts >= 1) {
+    fbBold.textContent = 'לא מדויק, ננסה שוב?';
+    fbReg.textContent  = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+  s45OnInput();   // the live predicate for the check button
+}
+
+/* Screen 4 — multi-select checkboxes. Mirrors s47Check. */
+function s47RestoreUI() {
+  var fb      = document.getElementById('s47-feedback');
+  var fbBold  = document.getElementById('s47-fb-bold');
+  var fbReg   = document.getElementById('s47-fb-regular');
+  var btn     = document.getElementById('s47-check');
+  var hintBtn = document.getElementById('s47-hint-btn');
+  var boxes   = Array.prototype.slice.call(document.querySelectorAll('[data-screen="4"] .s47-checkbox'));
+  if (!fb || !fbBold || !fbReg || !btn) return;
+
+  if (s47Solved) {
+    var correct = (XAPI_Q_RESULTS['001/q2'] === true);
+    boxes.forEach(function (cb) {
+      var idx   = parseInt(cb.getAttribute('data-index'), 10);
+      var label = cb.closest('.s47-option');
+      if (correct) {
+        cb.checked = s47Selected.has(idx);          // the learner's own ticks, which were right
+      } else if (S47_CORRECT.has(idx)) {
+        cb.checked = true;
+        if (label) label.classList.add('is-correct');
+      } else if (s47Selected.has(idx)) {
+        cb.checked = false;
+        if (label) label.classList.add('is-incorrect');
+      }
+      cb.disabled = true;
+    });
+    fbBold.textContent = correct ? 'מצוין!​' : 'זה לא מדויק. נסביר:​';
+    fbReg.innerHTML    = S47_RESTORE_EXPLANATION;
+    fb.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden = false;
+    btn.disabled    = false;
+    btn.textContent = 'שנמשיך?';
+    btn.onclick     = function () { goTo(5); };
+    return;
+  }
+
+  boxes.forEach(function (cb) {
+    cb.checked = s47Selected.has(parseInt(cb.getAttribute('data-index'), 10));
+  });
+  if (s47Attempts >= 1) {
+    fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
+    fbReg.textContent  = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+  s47UpdateCheckBtn();
+}
+
+/* Screens 6 and 8 — single-choice. Mirror s49Submit / s51Submit, which are the same shape. */
+function sqRestoreChoiceUI(cfg) {
+  var fb      = document.getElementById(cfg.prefix + '-feedback');
+  var fbBold  = document.getElementById(cfg.prefix + '-fb-bold');
+  var fbReg   = document.getElementById(cfg.prefix + '-fb-regular');
+  var cont    = document.getElementById(cfg.prefix + '-continue');
+  var hintBtn = document.getElementById(cfg.prefix + '-hint-btn');
+  var opts    = Array.prototype.slice.call(document.querySelectorAll('[data-screen="' + cfg.screen + '"] .s5-opt'));
+  if (!fb || !fbBold || !fbReg || !cont) return;
+
+  if (cfg.solved) {
+    var correct = (XAPI_Q_RESULTS[cfg.qKey] === true);
+    opts.forEach(function (o, i) {
+      if (correct) {
+        if (i === cfg.selected) { o.classList.remove('is-selected'); o.classList.add('is-correct'); }
+      } else if (i === cfg.correctIndex) {
+        o.classList.add('is-correct');
+      } else if (i === cfg.selected) {
+        o.classList.add('is-incorrect');
+      }
+      o.disabled = true;
+    });
+    fbBold.textContent = correct ? cfg.boldCorrect : cfg.boldWrong;
+    fbReg.innerHTML    = cfg.explanation;
+    fb.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden = false;
+    cont.disabled    = false;
+    cont.textContent = 'שנמשיך?';
+    cont.onclick     = function () { goTo(cfg.next); };
+    return;
+  }
+
+  if (cfg.selected !== null && cfg.selected !== undefined) {
+    opts.forEach(function (o, i) { o.classList.toggle('is-selected', i === cfg.selected); });
+    cont.disabled = false;
+  }
+  if (cfg.attempts >= 1) {
+    fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
+    fbReg.textContent  = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+}
+
+function s49RestoreUI() {
+  sqRestoreChoiceUI({
+    prefix: 's49', screen: 6, next: 7, qKey: '001/q3',
+    solved: s49Solved, selected: s49Selected, attempts: s49Attempts,
+    correctIndex: S49_CORRECT,
+    boldCorrect: 'זה נכון מאוד!​', boldWrong: 'זה לא מדויק. נסביר:​',
+    explanation: S49_RESTORE_EXPLANATION
+  });
+}
+
+function s51RestoreUI() {
+  sqRestoreChoiceUI({
+    prefix: 's51', screen: 8, next: 9, qKey: '001/q4',
+    solved: s51Solved, selected: s51Selected, attempts: s51Attempts,
+    correctIndex: S51_CORRECT,
+    boldCorrect: 'בדיוק!​', boldWrong: 'זה לא מדויק. בואו נראה למה:​',
+    explanation: S51_RESTORE_EXPLANATION
+  });
 }
 
 function scheduleResumeSave() {
@@ -1272,9 +1499,17 @@ function flushResumeSave() {
   try { window.saveState720(RESUME_STATE_ID, captureExecutionState()); } catch (e) {}
 }
 
-window.addEventListener('beforeunload', function () {
+/* beforeunload alone is not enough: it never fires when a mobile tab is backgrounded and then
+   killed, which is exactly how a learner leaves mid-lesson. pagehide and a hidden
+   visibilitychange cover that. */
+function flushResumeSaveOnLeave() {
   if (_leavingToNextPart) return;
   flushResumeSave();
+}
+window.addEventListener('beforeunload', flushResumeSaveOnLeave);
+window.addEventListener('pagehide', flushResumeSaveOnLeave);
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') flushResumeSaveOnLeave();
 });
 
 /* ═══════════════════ xAPI — loader / init ═══════════════════ */
@@ -1315,14 +1550,17 @@ window.addEventListener('beforeunload', function () {
         pollMetadataReady(function () {
           try {
             try { ADL.XAPIWrapper.changeConfig({ endpoint: window.slxapi.endpoint, auth: window.slxapi.auth }); } catch (e) {}
-            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
-            try { xapiWireVideos(); } catch (e) {}
-            /* Resume: gated off, so _resumeReady stays false and nothing is written. */
+            /* Resume runs BEFORE the component 'initialized': a session that turns out to belong
+               to another component hops away, and must not leave a statement behind for the part
+               it merely passed through. */
             var _resumed = false;
             if (RESUME_ENABLED) {
               try {
                 var _saved = (typeof window.loadState720 === 'function')
                   ? window.loadState720(RESUME_STATE_ID) : null;
+                /* A document from an older build has a different shape — discard it before the
+                   part comparison, so a stale blob can never redirect. */
+                if (_saved && _saved.v !== RESUME_STATE_VERSION) _saved = null;
                 if (_saved && _saved.part && _saved.part !== currentPartSlug()) {
                   // Learner stopped in another component — hop there, carrying slxapi+registration.
                   window.location.replace('../' + _saved.part + '/index.html' + window.location.search);
@@ -1332,8 +1570,10 @@ window.addEventListener('beforeunload', function () {
                 if (_saved) { applyExecutionState(_saved); _resumed = true; }
               } catch (e) { console.error('[resume] init', e); _resumeReady = true; }
             }
-            /* Item-level init for the landing screen. applyExecutionState's goTo already reported
-               the resumed screen, so only emit here on a fresh start. */
+            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
+            try { xapiWireVideos(); } catch (e) {}
+            /* Item-level init for the landing screen. On a resume, applyExecutionState already
+               emitted it for the restored screen. */
             if (!_resumed) { try { xapiOnScreen(currentScreen); } catch (e) {} }
             /* Terminal component: load the unit metadata so the unit 'completed' can
                resolve its object id when the learner reaches the finale. */

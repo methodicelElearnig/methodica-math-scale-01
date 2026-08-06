@@ -11,7 +11,7 @@ window.XAPI_UNIT_ID = XAPI_ID_PREFIX + 'methodica-math-scale-01/';   // resume S
 function shortId(u){ return String(u || '').replace(/\/+$/, '').split('/').pop(); }
 /* Resume (KATA State API) ships gated off. Flipping this to true also switches the library to
    xapi-720-j.js, which carries the State transport. See the RESUME block near the end of file. */
-var RESUME_ENABLED = false;
+var RESUME_ENABLED = true;
 
 
 function announce(msg) {
@@ -70,6 +70,10 @@ let ddqAttempts    = 0;
 let ddqDragActive  = null;
 let ddqDropHandled = false;
 let ddqKeySelected = null;
+/* Which targets the learner had right on the closing attempt. ddqRevealCorrect() overwrites
+   ddqPlacement with the correct map, so the ✓/✗ badges cannot be recomputed after the fact —
+   ddqCheck records them here so resume can repaint them. */
+let ddqTargetResults = {};
 
 /* ── Viewport scaling ──
    Width is locked to the 1280px design grid (screens anchor content to BOTH edges);
@@ -142,6 +146,8 @@ function goToNextModule() {
     var _n = xapiCorrectCount();
     sendStatement720('completed', 'onlinelesson', { success: _n >= 4, score: { scaled: _n / 5 } });
   } catch (e) { console.error('[xAPI] completed component 04', e); }
+  /* Resume: point the state document at the component being entered, before navigating. */
+  if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-05');
   window.location.href = '../methodica-math-scale-01-05/index.html' + window.location.search;
 }
 
@@ -157,6 +163,9 @@ function goTo(n) {
   nextScreen.focus();
   var heading = nextScreen.querySelector('h1, h2');
   if (heading) announce(heading.textContent.trim());
+  /* Resume: the screen change is the choke point that bounds how much a learner can lose.
+     Debounced, and suppressed while restoring. */
+  scheduleResumeSave();
 }
 
 function resetScreenState(n) {
@@ -305,6 +314,7 @@ function s38Submit() {
     cont.disabled = false;
     cont.onclick  = function() { goTo(3); };
   }
+  flushResumeSave();   // see s37Submit
 }
 
 
@@ -434,6 +444,9 @@ function s37Submit() {
     cont.disabled = false;
     cont.onclick  = function() { goTo(2); };
   }
+  /* Resume: commit the answer synchronously. A debounced save here could still be in flight when
+     the learner navigates, and land after the next screen's own write. */
+  flushResumeSave();
 }
 
 
@@ -759,6 +772,7 @@ function ddqCheck() {
       });
       targetResults[tId] = (placed === DDQ.correctMap[tId]);
     });
+    ddqTargetResults = targetResults;   // resume repaints the badges from this
 
     ddqChecked = true;
     ddqDone    = true;
@@ -786,6 +800,7 @@ function ddqCheck() {
     btn.onclick     = function() { goTo(4); };
     s39ShowFeedbackGated();
   }
+  flushResumeSave();   // see s37Submit
 }
 
 function ddqRevealCorrect() {
@@ -916,6 +931,7 @@ function s40Check() {
     btn.textContent = 'שנמשיך?';
     btn.onclick     = function() { goTo(5); };
   }
+  flushResumeSave();   // see s37Submit
 }
 
 function s40ToggleHint() {
@@ -1076,6 +1092,7 @@ function s41Submit() {
     cont.textContent = 'המשך';
     cont.onclick  = function() { goToNextModule(); };
   }
+  flushResumeSave();   // see s37Submit
 }
 
 function s41RulerDown(e) {
@@ -1813,18 +1830,21 @@ document.addEventListener('keydown', function(e) {
    One State document per unit, keyed by window.XAPI_UNIT_ID.
    Three advanced questions; question 2 part ב is a drag-and-drop placement map.
 
-   SHIPPED GATED OFF (RESUME_ENABLED = false at the top of this file), so none of this
-   runs today: _resumeReady stays false, which also neutralises the beforeunload flush.
-   Before enabling: flip RESUME_ENABLED (that also loads xapi-720-j.js, which carries the
-   State transport -i lacks), then verify restore on every screen of every component.
-   Restore leans on this component's own design — resetScreenState(n) calls each
-   sNNEnter(), which rebuilds its screen from these variables — so restoring the
-   variables and calling goTo() is enough for the visuals to follow.
+   Enabled by RESUME_ENABLED at the top of this file, which also switches the loader to
+   xapi-720-j.js (the State transport -i lacks).
+
+   Restore is a two-pass job. goTo() runs the screen's sNNEnter(), and every one of them is an
+   INITIALISER, not a restorer: s37/s38 reset the very variables just restored, and s39/s40/s41
+   early-return on their solved flag, so on a fresh page load they leave the pristine markup on
+   screen. So the variables are assigned, goTo() runs, the variables are assigned AGAIN, and then
+   restoreScreenUI() paints the answered look. goTo() and the sNNEnter() functions are
+   deliberately left untouched — the live answer path must not change.
    ═══════════════════════════════════════════════════════════════════ */
-var RESUME_STATE_ID    = 'execution-state';
-var _resumeReady       = false;
-var _restoring         = false;
-var _leavingToNextPart = false;
+var RESUME_STATE_VERSION = 2;
+var RESUME_STATE_ID      = 'execution-state';
+var _resumeReady         = false;
+var _restoring           = false;
+var _leavingToNextPart   = false;
 
 function currentPartSlug() {
   var p = window.location.pathname.replace(/\/index\.html.*$/, '').replace(/\/+$/, '');
@@ -1834,13 +1854,28 @@ function currentPartSlug() {
 /* Variables copied verbatim in both directions. */
 var RESUME_PLAIN_VARS = ['s37Selected', 's37Attempts', 's37Solved', 's37Correct', 's38Selected', 's38Attempts', 's38Solved', 's38Correct', 'ddqDone', 'ddqAttempts', 'ddqChecked', 's40Attempts', 's40Done', 's41Selected', 's41Attempts', 's41Solved'];
 
+/* Typed answers live only in the DOM — no variable holds them — so they travel by element id.
+   Reading them at capture time is safe: no submit branch clears these inputs, only disables. */
+var RESUME_INPUT_IDS = ['s40-answer-input'];
+
+function captureResumeInputs() {
+  var out = {};
+  RESUME_INPUT_IDS.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) out[id] = el.value;
+  });
+  return out;
+}
+
 function captureExecutionState() {
   var st = {
-    v: 1,
+    v: RESUME_STATE_VERSION,
     part: currentPartSlug(),
     currentScreen: currentScreen,
     qResults: Object.assign({}, XAPI_Q_RESULTS),
     ddqPlacement: Object.assign({}, ddqPlacement),
+    ddqTargetResults: Object.assign({}, ddqTargetResults),
+    inputs: captureResumeInputs(),
     vars: {}
   };
   /* eval keeps this list-driven: these are file-scope `var`/`let` bindings, so they are
@@ -1851,26 +1886,256 @@ function captureExecutionState() {
   return st;
 }
 
+/* Both restore passes run through here, so they can never drift apart. The parameter must stay
+   named `st` — the eval below assigns through that name. */
+function applyResumeVars(st) {
+  if (st.qResults) XAPI_Q_RESULTS = Object.assign({}, st.qResults);
+  if (st.ddqPlacement) { Object.keys(st.ddqPlacement).forEach(function(k){ ddqPlacement[k] = st.ddqPlacement[k]; }); }
+  if (st.ddqTargetResults) ddqTargetResults = Object.assign({}, st.ddqTargetResults);
+  if (st.vars) {
+    Object.keys(st.vars).forEach(function (k) {
+      if (RESUME_PLAIN_VARS.indexOf(k) === -1) return;   // never assign an unlisted name
+      try { eval(k + ' = st.vars[k];'); } catch (e) {}
+    });
+  }
+}
+
+function applyResumeInputs(map) {
+  if (!map) return;
+  RESUME_INPUT_IDS.forEach(function (id) {
+    if (typeof map[id] !== 'string') return;
+    var el = document.getElementById(id);
+    if (el) el.value = map[id];
+  });
+}
+
 function applyExecutionState(st) {
   if (!st) return;
   _restoring = true;
-  /* Replaying answers must not re-report them. */
+  /* Replaying answers must not re-report them, and the stub is held across goTo() as well so
+     nothing a screen emits on entry can leak out during a replay. */
   var _origSend = window.sendStatement720;
   window.sendStatement720 = function () {};
   try {
-    if (st.qResults) XAPI_Q_RESULTS = Object.assign({}, st.qResults);
-    if (st.ddqPlacement) { Object.keys(st.ddqPlacement).forEach(function(k){ ddqPlacement[k] = st.ddqPlacement[k]; }); }
-    if (st.vars) {
-      Object.keys(st.vars).forEach(function (k) {
-        if (RESUME_PLAIN_VARS.indexOf(k) === -1) return;   // never assign an unlisted name
-        try { eval(k + ' = st.vars[k];'); } catch (e) {}
-      });
-    }
+    applyResumeVars(st);
+    goTo((typeof st.currentScreen === 'number') ? st.currentScreen : 0);
+    applyResumeVars(st);            // undo the reset that this screen's sNNEnter() just did
+    applyResumeInputs(st.inputs);   // before the painter, which disables the inputs
+    restoreScreenUI(currentScreen);
+  } catch (e) {
+    console.error('[resume] apply', e);
   } finally {
     window.sendStatement720 = _origSend;
     _restoring = false;
   }
-  goTo((typeof st.currentScreen === 'number') ? st.currentScreen : 0);
+  /* xapiOnScreen() latched xapiCurrentItem during the stubbed goTo without emitting anything.
+     Clearing the latch is what lets the resumed screen report its item 'initialized' exactly
+     once — and there is no prior item to close on a fresh page load. */
+  xapiCurrentItem = null;
+  try { xapiOnScreen(currentScreen); } catch (e) {}
+}
+
+/* Writes the state document for the component the learner is about to enter, so the next launch
+   resumes forward instead of back into the part they just finished. Re-arming the debounced save
+   first replaces any payload still pending for THIS part — the page stays alive while the next
+   document loads, long enough for a stale timer to fire and clobber this write. */
+function writeForwardState(destSlug) {
+  var blob = { v: RESUME_STATE_VERSION, part: destSlug, currentScreen: 0 };
+  try {
+    if (typeof window.saveState720Debounced === 'function') window.saveState720Debounced(RESUME_STATE_ID, blob);
+    if (typeof window.saveState720 === 'function') window.saveState720(RESUME_STATE_ID, blob);
+  } catch (e) { console.error('[resume] forward', e); }
+  _leavingToNextPart = true;
+}
+
+/* ── Screen painters ────────────────────────────────────────────────
+   Question screens only (the agreed first step); narrative screens land at their start.
+   Each painter mirrors the DOM writes of its submit/check branches and NOTHING else — no state
+   mutation, no statements, no announce(). Two axes, not four branches: solved picks the terminal
+   look, otherwise an attempt already spent shows the interim feedback AND the current selection
+   is repainted, because those co-occur. Correctness comes from sNNCorrect where the variable
+   exists and from XAPI_Q_RESULTS where it does not (s39/s40/s41) — never from the attempt count,
+   which counts differently from part 02's. */
+function restoreScreenUI(n) {
+  try {
+    if (n === 1) s37RestoreUI();
+    if (n === 2) s38RestoreUI();
+    if (n === 3) s39RestoreUI();
+    if (n === 4) s40RestoreUI();
+    if (n === 5) s41RestoreUI();
+  } catch (e) { console.error('[resume] restoreScreenUI', e); }
+}
+
+/* Explanation bodies, copied from the branches they mirror. */
+var S37_RESTORE_EXPLANATION = 'גובה המגדל במציאות הוא 828.8 מטרים, שהם 82,880 ס"מ. נחלק את הגובה ב-3,000, ונקבל שרטוט באורך של קצת יותר מ-27.6 ס"מ, ש"נכנס" בשלמותו בתוך 29.7 הסנטימטרים של הדף. ​';
+var S38_RESTORE_EXPLANATION = 'יובל הגדיל את התמונה פי 2 ואז הגדיל את התמונה החדשה פי 3. ​\nלכן, שתי הלחיצות על כפתור הזום הגדילו את התמונה פי 6, ומכאן שקנה המידה לאחר ההגדלה הוא 50 : 1 (50 = 6 ÷ 300). ​';
+var S39_RESTORE_EXPLANATION = 'נמיר את המידות במציאות לסנטימטרים ונקבל אורך 1,200 ס"מ וגובה 600 ס"מ. ​<br>בתמונה של יובל (קנה מידה 50 : 1) נחלק את המידות ב-50 ונקבל: אורך 24 ס"מ, גובה 12 ס"מ.​<br>בתמונה של ליאור (קנה מידה 20 : 1) נחלק את המידות ב-20 ונקבל: אורך 60 ס"מ, גובה 30 ס"מ.​';
+var S40_RESTORE_EXPLANATION = 'קנה המידה הוא 200 : 1, לכן 12 ס״מ בתמונה מייצגים  2,400 ס"מ שהם 24 מטרים במציאות. העמדה צריכה להיות ברבע הדרך, ולכן נחשב <sup>1</sup>/<sub>4</sub> מ-24 מטרים, ונקבל 6 מטרים.​';
+var S41_RESTORE_EXPLANATION = 'אורך צלע המתחם בתמונה הוא 8 ס”מ, וקנה המידה הוא 200 : 1 .​\n לכן, אורך צלע המתחם במציאות הוא 1,600 ס”מ שהם 16 מטרים. ​\nכעת, נחשב את שטח הריבוע:  256 מ”ר =  16 · 16​';
+
+/* Screens 1, 2 and 5 — single-choice, same shape. Mirrors s37Submit / s38Submit / s41Submit. */
+function restoreChoiceScreenUI(cfg) {
+  var fb      = document.getElementById(cfg.prefix + '-feedback');
+  var fbBold  = document.getElementById(cfg.prefix + '-fb-bold');
+  var fbReg   = document.getElementById(cfg.prefix + '-fb-regular');
+  var cont    = document.getElementById(cfg.prefix + '-continue');
+  var hintBtn = document.getElementById(cfg.prefix + '-hint-btn');
+  var opts    = Array.prototype.slice.call(document.querySelectorAll('[data-screen="' + cfg.screen + '"] .s5-opt'));
+  if (!fb || !fbBold || !fbReg || !cont) return;
+
+  if (cfg.solved) {
+    opts.forEach(function (o, i) {
+      o.disabled = true;
+      if (cfg.correct) {
+        if (i === cfg.selected) { o.classList.remove('is-selected'); o.classList.add('is-correct'); }
+      } else {
+        o.classList.remove('is-selected');
+        if (i === cfg.correctIndex)   o.classList.add('is-correct');
+        else if (i === cfg.selected)  o.classList.add('is-incorrect');
+      }
+    });
+    fbBold.textContent = cfg.correct ? cfg.boldCorrect : cfg.boldWrong;
+    fbReg.innerHTML    = cfg.explanation;
+    fb.classList.add(cfg.correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden     = false;
+    cont.disabled = false;
+    if (cfg.contText) cont.textContent = cfg.contText;
+    cont.onclick  = cfg.onContinue;
+    return;
+  }
+
+  if (cfg.selected !== null && cfg.selected !== undefined) {
+    opts.forEach(function (o, i) { o.classList.toggle('is-selected', i === cfg.selected); });
+    cont.disabled = false;
+  }
+  if (cfg.attempts >= 1) {
+    fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
+    fbReg.textContent  = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+}
+
+function s37RestoreUI() {
+  restoreChoiceScreenUI({
+    prefix: 's37', screen: 1,
+    solved: s37Solved, correct: s37Correct, selected: s37Selected, attempts: s37Attempts,
+    correctIndex: S37_CORRECT,
+    boldCorrect: 'יופי של תשובה! ​', boldWrong: 'זו טעות, לא נורא – בואו נלמד ממנה:​',
+    explanation: S37_RESTORE_EXPLANATION,
+    onContinue: function () { goTo(2); }
+  });
+}
+
+function s38RestoreUI() {
+  restoreChoiceScreenUI({
+    prefix: 's38', screen: 2,
+    solved: s38Solved, correct: s38Correct, selected: s38Selected, attempts: s38Attempts,
+    correctIndex: S38_CORRECT,
+    boldCorrect: 'נכון מאוד!​', boldWrong: 'זו טעות – בואו נבין למה:​',
+    explanation: S38_RESTORE_EXPLANATION,
+    onContinue: function () { goTo(3); }
+  });
+}
+
+function s41RestoreUI() {
+  restoreChoiceScreenUI({
+    prefix: 's41', screen: 5,
+    solved: s41Solved, correct: (XAPI_Q_RESULTS['003/q2'] === true),
+    selected: s41Selected, attempts: s41Attempts,
+    correctIndex: S41_CORRECT,
+    boldCorrect: 'יופי!​', boldWrong: 'לא מדויק, בואו נבין למה:​',
+    explanation: S41_RESTORE_EXPLANATION,
+    contText: 'המשך',
+    onContinue: function () { goToNextModule(); }
+  });
+}
+
+/* Screen 4 — value input. Mirrors s40Check. */
+function s40RestoreUI() {
+  var fb      = document.getElementById('s40-feedback');
+  var fbBold  = document.getElementById('s40-fb-bold');
+  var fbReg   = document.getElementById('s40-fb-regular');
+  var btn     = document.getElementById('s40-check');
+  var hintBtn = document.getElementById('s40-hint-btn');
+  var input   = document.getElementById('s40-answer-input');
+  if (!fb || !fbBold || !fbReg || !btn) return;
+
+  if (s40Done) {
+    var correct = (XAPI_Q_RESULTS['003/q1'] === true);
+    if (input) input.disabled = true;
+    fbBold.textContent = correct ? 'נכון מאוד!​' : 'לא מדויק, בואו נבין למה:​';
+    fbReg.innerHTML    = S40_RESTORE_EXPLANATION;
+    fb.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden = false;
+    btn.disabled    = false;
+    btn.textContent = 'שנמשיך?';
+    btn.onclick     = function () { goTo(5); };
+    return;
+  }
+
+  if (s40Attempts >= 1) {
+    fbBold.textContent = 'לא מדויק, ננסה שוב?';
+    fbReg.textContent  = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+  s40OnInput();   // the live predicate for the check button
+}
+
+/* Screen 3 — drag-and-drop. Mirrors ddqCheck. ddqRender() is the replay primitive: it rebuilds
+   the placed chips from ddqPlacement and locks them when ddqChecked, so the board comes back
+   whether the learner was mid-placement or finished.
+   The feedback is shown WITHOUT s39ShowFeedbackGated(): that gate makes the learner scroll the
+   explanation before they may continue, and they already passed it in the previous session —
+   re-imposing it can also strand them if scrollHeight is mismeasured before webfonts settle. */
+function s39RestoreUI() {
+  var fb       = document.getElementById('s39-feedback');
+  var fbBold   = document.getElementById('s39-fb-bold');
+  var fbReg    = document.getElementById('s39-fb-regular');
+  var btn      = document.getElementById('ddq-check');
+  var hintBtn  = document.getElementById('s39-hint-btn');
+  var closeBtn = document.getElementById('s39-fb-close');
+  if (!fb || !fbBold || !fbReg || !btn) return;
+
+  ddqRender();
+
+  if (!ddqDone) {
+    if (ddqAttempts >= 1) {
+      fbBold.textContent = 'לא מדויק, ננסה שוב?';
+      fbReg.textContent  = '';
+      fb.classList.add('s5-fb--incorrect', 's5-fb--try-again');
+      fb.hidden = false;
+      if (hintBtn) hintBtn.hidden = false;
+    }
+    return;   // ddqRender already set the check button from the live all-filled predicate
+  }
+
+  var correct = (XAPI_Q_RESULTS['002/q2'] === true);
+  Object.keys(DDQ.correctMap).forEach(function (tId) {
+    var t = document.getElementById(tId);
+    if (!t) return;
+    t.classList.add('s39-correct');
+    if (correct) return;
+    var badge = document.createElement('div');
+    badge.className = ddqTargetResults[tId] ? 'ddq-badge ddq-badge--correct' : 'ddq-badge ddq-badge--wrong';
+    var badgeSvgOk  = '<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var badgeSvgErr = '<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    badge.innerHTML = ddqTargetResults[tId] ? badgeSvgOk : badgeSvgErr;
+    t.appendChild(badge);
+  });
+
+  fbBold.textContent = correct ? 'נכון מאוד!​' : 'לא מדויק, בואו נבין למה:​';
+  fbReg.innerHTML    = S39_RESTORE_EXPLANATION;
+  fb.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect', 'is-scroll');
+  fb.hidden = false;
+  s39GateSatisfied = true;
+  if (closeBtn) closeBtn.disabled = false;
+  btn.disabled    = false;
+  btn.textContent = 'שנמשיך?';
+  btn.onclick     = function () { goTo(4); };
 }
 
 function scheduleResumeSave() {
@@ -1884,9 +2149,17 @@ function flushResumeSave() {
   try { window.saveState720(RESUME_STATE_ID, captureExecutionState()); } catch (e) {}
 }
 
-window.addEventListener('beforeunload', function () {
+/* beforeunload alone is not enough: it never fires when a mobile tab is backgrounded and then
+   killed, which is exactly how a learner leaves mid-lesson. pagehide and a hidden
+   visibilitychange cover that. */
+function flushResumeSaveOnLeave() {
   if (_leavingToNextPart) return;
   flushResumeSave();
+}
+window.addEventListener('beforeunload', flushResumeSaveOnLeave);
+window.addEventListener('pagehide', flushResumeSaveOnLeave);
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') flushResumeSaveOnLeave();
 });
 
 /* ═══════════════════ xAPI — loader / init ═══════════════════ */
@@ -1927,14 +2200,17 @@ window.addEventListener('beforeunload', function () {
         pollMetadataReady(function () {
           try {
             try { ADL.XAPIWrapper.changeConfig({ endpoint: window.slxapi.endpoint, auth: window.slxapi.auth }); } catch (e) {}
-            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
-            try { xapiWireVideos(); } catch (e) {}
-            /* Resume: gated off, so _resumeReady stays false and nothing is written. */
+            /* Resume runs BEFORE the component 'initialized': a session that turns out to belong
+               to another component hops away, and must not leave a statement behind for the part
+               it merely passed through. */
             var _resumed = false;
             if (RESUME_ENABLED) {
               try {
                 var _saved = (typeof window.loadState720 === 'function')
                   ? window.loadState720(RESUME_STATE_ID) : null;
+                /* A document from an older build has a different shape — discard it before the
+                   part comparison, so a stale blob can never redirect. */
+                if (_saved && _saved.v !== RESUME_STATE_VERSION) _saved = null;
                 if (_saved && _saved.part && _saved.part !== currentPartSlug()) {
                   // Learner stopped in another component — hop there, carrying slxapi+registration.
                   window.location.replace('../' + _saved.part + '/index.html' + window.location.search);
@@ -1944,8 +2220,10 @@ window.addEventListener('beforeunload', function () {
                 if (_saved) { applyExecutionState(_saved); _resumed = true; }
               } catch (e) { console.error('[resume] init', e); _resumeReady = true; }
             }
-            /* Item-level init for the landing screen. applyExecutionState's goTo already reported
-               the resumed screen, so only emit here on a fresh start. */
+            try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
+            try { xapiWireVideos(); } catch (e) {}
+            /* Item-level init for the landing screen. On a resume, applyExecutionState already
+               emitted it for the restored screen. */
             if (!_resumed) { try { xapiOnScreen(currentScreen); } catch (e) {} }
           } catch (e) { console.error('[xAPI] init', e); }
         });
