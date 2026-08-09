@@ -1,11 +1,29 @@
 # Resume — how the mechanism works
 
 Resume ("המשך מהמקום שבו הפסקת") is **enabled** in all five components as of 2026-08-06.
-`RESUME_ENABLED = true` at line 14 of every `script.js`; that flag is also what switches the loader
-from `xapi-720-i.js` to `xapi-720-j.js`, the build that carries the State API transport.
+`RESUME_ENABLED = true` in `unit-js/10-identity.js`; that flag is also what switches the loader from
+`xapi-720-i.js` to `xapi-720-j.js`, the build that carries the State API transport.
 
 This document describes the mechanism as built. §9 lists what is deliberately *not* restored, §10
 records the verification performed, and §11 is the changelog of the defects fixed on the way here.
+
+> **Where the code lives (since 2026-08-09).** The mechanism used to be copied into all five
+> `script.js`. It now has one copy in [`unit-js/`](unit-js/README.md):
+>
+> | Piece | File |
+> |---|---|
+> | the v3 document, the ledger, cross-part back, save/flush | `unit-js/40-resume.js` |
+> | `goTo()` and `applyExecutionState()` — the replay | `unit-js/30-nav.js` |
+> | the restore *trigger* and the cross-part hop | `unit-js/50-loader.js` |
+> | `initResumeLeaveHandlers()` registration | `unit-js/90-boot.js` |
+>
+> What stays **per component**, because it is genuinely different in each, is the payload contract:
+> `RESUME_PLAIN_VARS`, `RESUME_INPUT_IDS`, `RESUME_TEXT_IDS`, `capturePartPayload()`,
+> `applyResumeVars(st)`, `applyResumeDom(st)` and `restoreScreenUI(n)`.
+>
+> ⚠️ **`applyResumeVars`'s parameter must stay named `st`** — it runs `eval(k + ' = st.vars[k];')`,
+> which resolves `st` lexically. Renaming it fails *silently*: the assignment throws, the enclosing
+> `try/catch` swallows it, and the learner's answers vanish with nothing in the console.
 
 ---
 
@@ -53,7 +71,7 @@ API block; nothing else differs. Three functions on `window`:
    [script.js:9](methodica-math-scale-01-01/script.js:9):
    `https://…/math/scale/01/methodica-math-scale-01/`. Kata never sees it; it only keys the
    `localStorage` fallback below. The trailing slash still matters for *reporting*
-   ([REPORTING-ADDING.md §1](REPORTING-ADDING.md)).
+   ([REPORT-XAPI.md §1](REPORT-XAPI.md)).
 3. **State id** — `RESUME_STATE_ID = 'execution-state'`. Also fallback-only, for the same reason.
 
 > **Depends on a single launch of component 01.** Kata's registration is documented as stable per
@@ -526,8 +544,9 @@ Two adjacent bugs were fixed at the same time, both in scope by agreement:
 
 ## 12. Reference
 
-- [REPORTING-ADDING.md](REPORTING-ADDING.md) — §2 scaffolding, §4 query-string propagation, §8
-  known content/code gaps.
+- [REPORT-XAPI.md](REPORT-XAPI.md) — §2 scaffolding, §6 query-string propagation, §9 known
+  content/code gaps. §7 points back here for the `completed` ledger.
+- [REPORT-ISSUE.md](REPORT-ISSUE.md) — the learner problem-report feature, independent of resume.
 - [METADATA-FIXES.md](METADATA-FIXES.md) — the unit-id correction the state key depends on.
 - [deployments/2026-08-05/DEPLOY.md](../../deployments/2026-08-05/DEPLOY.md) — why no library copy
   ships with a release. `-j` is a **shared** file: deploying it affects every 720 lomda that loads

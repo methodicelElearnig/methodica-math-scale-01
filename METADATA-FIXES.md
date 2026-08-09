@@ -138,7 +138,7 @@ Validator result: **0 errors, 1 warning.**
 The single warning is part 04's item numbering gap `-003` → `-005`. That is not a spelling problem:
 metadata item `005` ("מסך חיזוק לאחר ניסיון לא מוצלח") describes a reinforcement screen that
 **does not exist in the code**, and part 05's metadata says a failed peak question should route to
-it. Left as-is — see `REPORTING-ADDING.md` §8.1. Nothing validates `order` contiguity.
+it. Left as-is — see [REPORT-XAPI.md](REPORT-XAPI.md) §9.1. Nothing validates `order` contiguity.
 
 `send-metadata.ps1 -DryRun` now completes clean: **28 payloads** (1 unit + 5 components + 22
 items), exit code 0.
