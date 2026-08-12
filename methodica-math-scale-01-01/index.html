@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>קנה מידה — לומדה</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <main id="app">
@@ -1823,6 +1823,21 @@
     <!-- ═══════════════════════════════════════
          REPORT CONFIRM-CLOSE MODAL
     ════════════════════════════════════════ -->
+    <div id="report-thanks-modal"
+         class="report-modal-overlay"
+         hidden
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="thanks-modal-title">
+      <div class="report-modal-box report-confirm-box">
+        <h2 class="report-modal-title" id="thanks-modal-title">הדיווח נשלח, תודה!</h2>
+        <p class="report-modal-body">קיבלנו את הדיווח שלכם ונטפל בו בהקדם.</p>
+        <div class="report-actions">
+          <button class="report-submit-btn" onclick="closeReportThanks()">סגירה</button>
+        </div>
+      </div>
+    </div>
+
     <div id="report-confirm-modal"
          class="report-modal-overlay"
          hidden
@@ -1955,7 +1970,17 @@
   </main>
   <div id="a11y-announcer" role="status" aria-live="polite" aria-atomic="true"
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
+  <script src="../unit-js/10-identity.js?v=1"></script>
+  <script src="../unit-js/15-ui.js?v=1"></script>
+  <script src="../unit-js/20-xapi.js?v=1"></script>
+  <script src="../unit-js/25-report.js?v=1"></script>
+  <script src="../unit-js/28-feedback-drag.js?v=1"></script>
+  <script src="../unit-js/30-nav.js?v=1"></script>
+  <script src="../unit-js/40-resume.js?v=1"></script>
+  <script src="../unit-js/50-loader.js?v=1"></script>
+  <script src="../unit-js/60-devbridge.js?v=1"></script>
+  <script src="script.js?v=12"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="script.js?v=2"></script>
+  <script src="../unit-js/90-boot.js?v=1"></script>
 </body>
 </html>

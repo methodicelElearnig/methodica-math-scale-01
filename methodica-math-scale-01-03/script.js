@@ -1,23 +1,17 @@
 ﻿'use strict';
 
-function announce(msg) {
-  var el = document.getElementById('a11y-announcer');
-  if (!el || !msg) return;
-  el.textContent = '';
-  setTimeout(function () { el.textContent = msg; }, 50);
-}
+/* ═══════════════════════════════════════════════════════════════════
+   COMPONENT 03 — off-computer class task.
 
-const TOTAL_SCREENS = 3;
-let currentScreen = 0;
+   Identity, viewport scaling, the report modal, the resume core, the xAPI helpers and the loader
+   all live in ../unit-js/, loaded by index.html BEFORE this file. See unit-js/README.md for the
+   hook contract; what remains below is this component's own configuration and screen logic.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var TOTAL_SCREENS = 3;
 window.lomdaState = { selectedCharacter: null, selectedDesign: null };
 const _savedChar = localStorage.getItem('lomdaCharacter');
 if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
-
-(function preloadCharacterImages() {
-  ['Character1', 'Character2'].forEach(function(c) {
-    var img = new Image(); img.src = './assets/images/' + c + '.png';
-  });
-})();
 
 /* Final assessment tracking (screens 43-52) */
 let finalAssessmentScore = { correct: 0 };
@@ -32,34 +26,6 @@ let s4Timer = null;
 let s7Timer = null;
 let s8Timer = null;
 
-/* ── Viewport scaling ── */
-function scaleApp() {
-  const scaleX = window.innerWidth / 1280;
-  const scaleY = window.innerHeight / 720;
-  const scale = Math.min(scaleX, scaleY);
-  const left = (window.innerWidth - 1280 * scale) / 2;
-  const top = (window.innerHeight - 720 * scale) / 2;
-  const el = document.getElementById('app');
-  el.style.transform = `scale(${scale})`;
-  el.style.left = left + 'px';
-  el.style.top = top + 'px';
-}
-
-window.addEventListener('resize', scaleApp);
-scaleApp();
-
-/* ── Navigation ── */
-function goTo(n) {
-  if (n < 0 || n >= TOTAL_SCREENS) return;
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const nextScreen = document.querySelector(`[data-screen="${n}"]`);
-  nextScreen.classList.add('active');
-  currentScreen = n;
-  resetScreenState(n);
-  nextScreen.focus();
-  var heading = nextScreen.querySelector('h1, h2');
-  if (heading) announce(heading.textContent.trim());
-}
 
 function resetScreenState(n) {
   if (n === 0) { s24Enter(); }
@@ -147,21 +113,25 @@ var ddqAttempts    = 0;
 
 /* ── Cross-folder navigation ── */
 function goToAdvanced() {
-  window.location.href = '../methodica-math-scale-01-04/index.html';
+  /* xAPI: this component is the off-computer class task — the catalog gives it no questions
+     (isAssessment: false), so 'completed' carries success but no score: there is nothing to
+     grade, only to finish. */
+  try { xapiFinishItems(); } catch (e) {}
+  try { sendCompletedOnce('done', currentPartSlug(), 'onlinelesson', { success: true }); } catch (e) { console.error('[xAPI] completed component 03', e); }
+  /* Resume: point the state document at the component being entered, before navigating. */
+  if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-04');
+  window.location.href = '../methodica-math-scale-01-04/index.html' + window.location.search;
 }
 
-/* ── Dev tool bridge (index_dev.html postMessage) ── */
-window.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'DEV_GOTO') { goTo(e.data.screen); }
-});
-window.addEventListener('load', function() {
-  if (window.parent !== window) {
-    window.parent.postMessage({ type: 'DEV_READY', total: TOTAL_SCREENS }, '*');
-  }
-});
+/* ── Per-part boot hook ──
+   Called by ../unit-js/90-boot.js, which is the single place side effects are started from.
+   Everything here used to run from top-level statements and DOMContentLoaded handlers. */
+function partBoot() {
+  ['Character1', 'Character2'].forEach(function(c) {
+    var img = new Image(); img.src = './assets/images/' + c + '.png';
+  });
 
-/* ── Keyboard accessibility ── */
-document.addEventListener('DOMContentLoaded', function () {
+  /* ── Keyboard accessibility ── */
   document.querySelectorAll('.option-card').forEach(card => {
     card.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -199,298 +169,113 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
   });
-});
-
-
-
-// ============================================================
-//  REPORT MODAL
-// ============================================================
-function openReportModal() {
-  resetReportForm();
-  document.getElementById('report-modal').removeAttribute('hidden');
 }
 
-function tryCloseReportModal() {
-  var typeVal = document.getElementById('report-type').value;
-  var textVal = document.getElementById('report-text').value.trim();
 
-  if (typeVal || textVal) {
-    document.getElementById('report-modal').setAttribute('hidden', '');
-    document.getElementById('report-confirm-modal').removeAttribute('hidden');
-  } else {
-    forceCloseReportModal();
-  }
-}
 
-function forceCloseReportModal() {
-  document.getElementById('report-modal').setAttribute('hidden', '');
-  document.getElementById('report-confirm-modal').setAttribute('hidden', '');
-  resetReportForm();
-}
+/* ═══════════════════ xAPI (720) — item scope + question ids ═══════════════════
+   Everything below is generic across the five components except SCREEN_TO_SUBCONTENT,
+   XAPI_COMP_SLUG and XAPI_EVAL_ITEMS. */
 
-function backToReportForm() {
-  document.getElementById('report-confirm-modal').setAttribute('hidden', '');
-  document.getElementById('report-modal').removeAttribute('hidden');
-  setTimeout(function() {
-    var el = document.getElementById('report-type');
-    if (el) el.focus();
-  }, 40);
-}
+/* Screen (data-screen index) -> [subContent suffix, page-in-item]; null = no catalog item.
+   Read by xapiOnScreen (element 0) and by submitReport (both elements). */
+var SCREEN_TO_SUBCONTENT = {
+  0: null,            // congratulations / transition
+  1: ['001', 1],      // class task: instructions
+  2: ['001', 2]       // class task: type your scale (self-reported, not graded)
+};
 
-function submitReport() {
-  var report = {
-    type:      document.getElementById('report-type').value || '(לא נבחר)',
-    text:      document.getElementById('report-text').value.trim() || '(ללא תיאור)',
-    screen:    currentScreen,
-    timestamp: new Date().toISOString()
+var XAPI_COMP_SLUG = 'methodica-math-scale-01-03';
+/* Component and item ids must match metadata/*.json byte-for-byte — that convention keeps a
+   TRAILING SLASH on unit, component and item ids (but not on question ids). */
+var XAPI_COMP_ID   = XAPI_ID_PREFIX + XAPI_COMP_SLUG + '/';
+
+
+
+/* Items that carry a graded question IN CODE. */
+var XAPI_EVAL_ITEMS = {};
+
+
+/* Report modal, draggable feedback, a11y wiring and image zoom: ../unit-js/ */
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESUME — save / restore execution state to KATA (xAPI State API)
+   One State document per unit, keyed by window.XAPI_UNIT_ID.
+   The off-computer class task. Its only stateful screen is 2, the free-text scale the learner
+   types — the DDQ block further up this file is dead copied code (resetScreenState dispatches
+   three screens and there is no ddqCheck anywhere), so nothing about it is captured.
+
+   Enabled by RESUME_ENABLED at the top of this file, which also switches the loader to
+   xapi-720-j.js (the State transport -i lacks).
+
+
+
+
+
+
+
+
+
+
+
+/* ── The 'completed' ledger ──────────────────────────────────────────
+   One 'completed' per component, per item, per unit attempt — the back button makes every finished
+   screen re-reachable, and the library's dedupe only spans a single page load. `initialized` is
+   deliberately NOT guarded: the platform asks for it on every entry.
+
+
+
+
+
+/* Nothing in this component keeps answer state in a variable. */
+var RESUME_PLAIN_VARS = [];
+
+/* This part's payload only. `v` and `part` live on the enclosing v3 document, not in here. */
+function capturePartPayload() {
+  var st = {
+    currentScreen: currentScreen,
+    scaleInput: (document.getElementById('s35-input') || {}).value || '',
+    vars: {}
   };
-  console.log('[Report Issue]', report);
-  forceCloseReportModal();
+  /* eval keeps this list-driven: these are file-scope `var`/`let` bindings, so they are
+     not reachable as window properties. */
+  RESUME_PLAIN_VARS.forEach(function (k) {
+    try { st.vars[k] = eval(k); } catch (e) {}
+  });
+  return st;
 }
 
-function reportCheckSubmit() {
-  var typeVal = document.getElementById('report-type').value;
-  var textVal = document.getElementById('report-text').value.trim();
-  var btn = document.querySelector('.report-submit-btn');
-  if (btn) btn.disabled = !(typeVal && textVal);
-}
-
-/* Custom select for report-type */
-(function() {
-  var LABELS = {
-    'technical': 'תקלה טכנית או שמשהו לא עובד',
-    'unclear':   'משהו לא ברור לי',
-    'other':     'אחר'
-  };
-  var PLACEHOLDER = 'בחרו סוג בעיה';
-  var wrapper = document.getElementById('report-type-wrapper');
-  if (!wrapper) return;
-  var btn        = wrapper.querySelector('.report-select-btn');
-  var list       = wrapper.querySelector('.report-select-list');
-  var hidden     = document.getElementById('report-type');
-  var valSpan    = wrapper.querySelector('.report-select-value');
-  var errEl      = document.getElementById('report-type-error');
-  var wasOpened  = false;
-  var pickingOpt = false;
-
-  function showError() {
-    btn.classList.add('has-error');
-    if (errEl) errEl.style.display = 'block';
-  }
-  function clearError() {
-    btn.classList.remove('has-error');
-    if (errEl) errEl.style.display = 'none';
-  }
-  function closeList() {
-    list.hidden = true;
-    btn.setAttribute('aria-expanded', 'false');
-  }
-
-  btn.addEventListener('click', function() {
-    var opening = list.hidden;
-    list.hidden = !opening;
-    btn.setAttribute('aria-expanded', String(opening));
-    if (opening) {
-      wasOpened = true;
-    } else {
-      if (!hidden.value) showError();
-    }
-  });
-
-  list.addEventListener('mousedown', function() { pickingOpt = true; });
-  list.addEventListener('mouseup',   function() { pickingOpt = false; });
-
-  btn.addEventListener('blur', function() {
-    if (!pickingOpt && wasOpened && !hidden.value) showError();
-  });
-
-  wrapper.querySelectorAll('.report-select-option').forEach(function(opt) {
-    opt.addEventListener('click', function() {
-      hidden.value = opt.getAttribute('data-value');
-      valSpan.textContent = LABELS[hidden.value] || PLACEHOLDER;
-      btn.classList.remove('is-placeholder');
-      clearError();
-      wasOpened = false;
-      closeList();
-      wrapper.querySelectorAll('.report-select-option').forEach(function(o) { o.classList.remove('is-selected'); });
-      opt.classList.add('is-selected');
-      hidden.dispatchEvent(new Event('change'));
-    });
-  });
-
-  document.addEventListener('click', function(e) {
-    if (!wrapper.contains(e.target)) {
-      if (wasOpened && !hidden.value) showError();
-      closeList();
-    }
-  });
-
-  wrapper._resetSelect = function() {
-    wasOpened = false;
-    hidden.value = '';
-    valSpan.textContent = PLACEHOLDER;
-    btn.classList.add('is-placeholder');
-    btn.classList.remove('has-error');
-    btn.setAttribute('aria-expanded', 'false');
-    if (errEl) errEl.style.display = 'none';
-    closeList();
-    wrapper.querySelectorAll('.report-select-option').forEach(function(o) { o.classList.remove('is-selected'); });
-  };
-})();
-function resetReportForm() {
-  var wrapper = document.getElementById('report-type-wrapper');
-  if (wrapper && wrapper._resetSelect) wrapper._resetSelect();
-  document.getElementById('report-text').value = '';
-  document.getElementById('report-char-count').textContent = '0 / 250';
-  reportCheckSubmit();
-}
-
-// Character counter for report textarea
-var reportTextarea = document.getElementById('report-text');
-var reportCounter  = document.getElementById('report-char-count');
-if (reportTextarea && reportCounter) {
-  reportTextarea.addEventListener('input', function() {
-    reportCounter.textContent = reportTextarea.value.length + ' / 250';
-    reportCheckSubmit();
-  });
-}
-
-var reportSelect = document.getElementById('report-type');
-if (reportSelect) {
-  reportSelect.addEventListener('change', function() {
-    reportCheckSubmit();
-    var field = document.querySelector('.report-field');
-    var star = field ? field.querySelector('.required-star') : null;
-    if (star) star.classList.toggle('is-error', !reportSelect.value);
-  });
-}
-
-if (reportTextarea) {
-  reportTextarea.addEventListener('blur', function() {
-    var star = reportTextarea.closest('.report-field').querySelector('.required-star');
-    if (star) star.classList.toggle('is-error', !reportTextarea.value.trim());
-  });
-  reportTextarea.addEventListener('input', function() {
-    if (reportTextarea.value.trim()) {
-      var star = reportTextarea.closest('.report-field').querySelector('.required-star');
-      if (star) star.classList.remove('is-error');
-    }
-  });
-}
-
-// Escape key closes report modals
-document.addEventListener('keydown', function(event) {
-  if (event.key !== 'Escape') return;
-  var confirmModal = document.getElementById('report-confirm-modal');
-  var reportModal  = document.getElementById('report-modal');
-  if (!confirmModal.hasAttribute('hidden')) { forceCloseReportModal(); return; }
-  if (!reportModal.hasAttribute('hidden'))  { tryCloseReportModal();   return; }
-});
-
-/* ── Draggable inline feedback elements ── */
-(function () {
-  function liftFeedback(el) {
-    if (el.dataset.lifted) return;
-    el.dataset.lifted = '1';
-    var w    = el.offsetWidth;
-    var rect = el.getBoundingClientRect();
-    el.style.width    = w + 'px';
-    el.style.position = 'fixed';
-    el.style.left     = rect.left  + 'px';
-    el.style.top      = rect.top   + 'px';
-    el.style.bottom   = 'auto';
-    el.style.height   = 'auto';
-    el.style.zIndex   = '9999';
-    el.style.margin   = '0';
-  }
-
-  function attachDrag(el) {
-    if (el.dataset.dragAttached) return;
-    el.dataset.dragAttached = '1';
-    el.addEventListener('mousedown', function (e) {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-      e.preventDefault();
-      if (!el.dataset.lifted) liftFeedback(el);
-      var startX   = e.clientX;
-      var startY   = e.clientY;
-      var baseLeft = parseFloat(el.style.left)  || 0;
-      var baseTop  = parseFloat(el.style.top)   || 0;
-      el.style.cursor = 'grabbing';
-      function onMove(e) {
-        el.style.left = (baseLeft + e.clientX - startX) + 'px';
-        el.style.top  = (baseTop  + e.clientY - startY) + 'px';
-      }
-      function onUp() {
-        el.style.cursor = 'grab';
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup',   onUp);
-      }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup',   onUp);
-    });
-  }
-
-  function initAll() {
-    document.querySelectorAll('.s5-inline-feedback').forEach(attachDrag);
-  }
-
-  function resetFeedbacks() {
-    document.querySelectorAll('.s5-inline-feedback[data-lifted]').forEach(function (el) {
-      el.removeAttribute('data-lifted');
-      el.style.position = '';
-      el.style.left     = '';
-      el.style.top      = '';
-      el.style.width    = '';
-      el.style.zIndex   = '';
-      el.style.margin   = '';
-      el.style.cursor   = '';
-      el.style.height   = '';
-      el.style.bottom   = '';
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    initAll();
-    var _orig = window.goTo;
-    if (typeof _orig === 'function') {
-      window.goTo = function (n) {
-        resetFeedbacks();
-        _orig(n);
-        setTimeout(initAll, 150);
-      };
-    }
-  });
-})();
-
-// Accessibility: aria-live on feedback regions + tabindex on screens for focus routing
-document.querySelectorAll('.s5-inline-feedback').forEach(function(el) {
-  el.setAttribute('role', 'status');
-  el.setAttribute('aria-live', 'polite');
-});
-document.querySelectorAll('section.screen').forEach(function(s) {
-  s.setAttribute('tabindex', '-1');
-});
-
-function openImgZoom(overlayId) {
-  var overlay = document.getElementById(overlayId);
-  if (!overlay) return;
-  var activeScreen = document.querySelector('.screen.active');
-  if (activeScreen && overlay.parentElement !== activeScreen) {
-    activeScreen.appendChild(overlay);
-  }
-  overlay.removeAttribute('hidden');
-}
-function closeImgZoom(overlayId) {
-  if (overlayId) {
-    var overlay = document.getElementById(overlayId);
-    if (overlay) overlay.setAttribute('hidden', '');
-  } else {
-    document.querySelectorAll('.img-zoom-overlay').forEach(function(el) {
-      el.setAttribute('hidden', '');
+/* Both restore passes run through here, so they can never drift apart. The parameter must stay
+   named `st` — the eval below assigns through that name. */
+function applyResumeVars(st) {
+  if (st.vars) {
+    Object.keys(st.vars).forEach(function (k) {
+      if (RESUME_PLAIN_VARS.indexOf(k) === -1) return;   // never assign an unlisted name
+      try { eval(k + ' = st.vars[k];'); } catch (e) {}
     });
   }
 }
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeImgZoom();
-});
+
+function applyResumeDom(st) {
+  var input = document.getElementById('s35-input');
+  if (input && typeof st.scaleInput === 'string') input.value = st.scaleInput;
+}
+
+
+
+/* ── Screen painters ────────────────────────────────────────────────
+   Screen 2 is the only screen with anything to restore. Its whole "answered" appearance is what
+   s35OnInput() derives from the input, so calling it is the faithful repaint — there is no
+   grading, no feedback element and no lock. */
+function restoreScreenUI(n) {
+  try {
+    if (n === 2) s35OnInput();
+  } catch (e) { console.error('[resume] restoreScreenUI', e); }
+}
+
+
+
+/* xAPI loader: ../unit-js/50-loader.js. This component supplies its metadata file
+   and, where it needs one, an onXapiReady() hook. */
+var XAPI_METADATA_FILE = '../metadata/methodica-math-scale-01-03.json';

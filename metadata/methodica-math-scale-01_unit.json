@@ -1,0 +1,25 @@
+{
+  "id": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01/",
+  "title": "יחידות מידה לצורך יישום יחס",
+  "subTopic": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.SCALE",
+  "learningObjective": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.SCALE.UNIT-CONV",
+  "targetSector": [
+    "state-general",
+    "state-religious",
+    "orthodox",
+    "arab-sector",
+    "druze-sector",
+    "bedouin-sector",
+    "special-education"
+  ],
+  "targetAudience": [
+    "general",
+    "excellent",
+    "disadvantaged-populations",
+    "new-immigrants",
+    "students-with-special-needs",
+    "students-with-language-gaps",
+    "at-risk-students"
+  ],
+  "prerequisiteLearningObjective": []
+}

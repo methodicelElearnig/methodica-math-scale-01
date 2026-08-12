@@ -1,0 +1,30 @@
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# Node (if ever added)
+node_modules/
+
+# Build output (none currently, reserved for future)
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code session files (local only)
+.claude/
+
+# Logs
+*.log
+
+# The Kata API key — the ONLY place a live key may sit on disk. Never commit.
+kata-api-key.txt
+
+# Output of retrieve-metadata.ps1 — derived from the catalog, re-runnable on demand
+metadata-from/

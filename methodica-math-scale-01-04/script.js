@@ -1,25 +1,12 @@
 ﻿'use strict';
 
-function announce(msg) {
-  var el = document.getElementById('a11y-announcer');
-  if (!el || !msg) return;
-  el.textContent = '';
-  setTimeout(function () { el.textContent = msg; }, 50);
-}
 
-const TOTAL_SCREENS = 6;
-let currentScreen = 0;
+
+
+var TOTAL_SCREENS = 6;
 window.lomdaState = { selectedCharacter: null, selectedDesign: null };
 const _savedChar = localStorage.getItem('lomdaCharacter');
 if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
-
-(function preloadCharacterImages() {
-  var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
-  var other = char === 'Character1' ? 'Character2' : 'Character1';
-  [char, other].forEach(function(c) {
-    var img = new Image(); img.src = './assets/images/' + c + '.png';
-  });
-})();
 
 let frcRevealed = [false, false, false];
 let frcDone = false;
@@ -56,84 +43,25 @@ let ddqAttempts    = 0;
 let ddqDragActive  = null;
 let ddqDropHandled = false;
 let ddqKeySelected = null;
+/* Which targets the learner had right on the closing attempt. ddqRevealCorrect() overwrites
+   ddqPlacement with the correct map, so the ✓/✗ badges cannot be recomputed after the fact —
+   ddqCheck records them here so resume can repaint them. */
+let ddqTargetResults = {};
 
-/* ── Viewport scaling ── */
-function scaleApp() {
-  const scaleX = window.innerWidth / 1280;
-  const scaleY = window.innerHeight / 720;
-  const scale = Math.min(scaleX, scaleY);
-  const left = (window.innerWidth - 1280 * scale) / 2;
-  const top = (window.innerHeight - 720 * scale) / 2;
-  const el = document.getElementById('app');
-  el.style.transform = `scale(${scale})`;
-  el.style.left = left + 'px';
-  el.style.top = top + 'px';
-}
 
-window.addEventListener('resize', scaleApp);
-scaleApp();
-
-/* ── Nav bar helper ── */
-function updateNavBar(navEl, currentQ, results, screens) {
-  if (!navEl) return;
-  var items = navEl.querySelectorAll('.s18-nav-item');
-  var lines = navEl.querySelectorAll('.s18-nav-line');
-  items.forEach(function(item, i) {
-    var icon  = item.querySelector('.s18-nav-icon');
-    var label = item.querySelector('.s18-nav-label');
-    icon.className = 's18-nav-icon';
-    item.onclick = null;
-    item.style.cursor = '';
-    var result = results[i];
-    if (i + 1 === currentQ) {
-      icon.classList.add('s18-nav-icon--active');
-      label.className = 's18-nav-label s18-nav-label--on';
-    } else if (result === 'correct') {
-      icon.classList.add('s18-nav-icon--done');
-      label.className = 's18-nav-label s18-nav-label--on';
-      if (screens && screens[i] != null) {
-        (function(sc) { item.onclick = function() { goTo(sc); }; })(screens[i]);
-        item.style.cursor = 'pointer';
-      }
-    } else if (result === 'wrong') {
-      icon.classList.add('s18-nav-icon--wrong');
-      label.className = 's18-nav-label s18-nav-label--on';
-      if (screens && screens[i] != null) {
-        (function(sc) { item.onclick = function() { goTo(sc); }; })(screens[i]);
-        item.style.cursor = 'pointer';
-      }
-    } else {
-      icon.classList.add('s18-nav-icon--off');
-      label.className = 's18-nav-label s18-nav-label--off';
-    }
-  });
-  lines.forEach(function(line, i) {
-    var r = results[i];
-    if (r === 'correct' || r === 'wrong') {
-      line.classList.add('s18-nav-line--done');
-    } else {
-      line.classList.remove('s18-nav-line--done');
-    }
-  });
-}
 
 /* ── Navigation ── */
 function goToNextModule() {
-  window.location.href = '../methodica-math-scale-01-05/index.html';
+  try { xapiFinishItems(); } catch (e) {}
+  try {
+    var _n = xapiCorrectCount();
+    sendCompletedOnce('done', currentPartSlug(), 'onlinelesson', { success: _n >= 4, score: { scaled: _n / 5 } });
+  } catch (e) { console.error('[xAPI] completed component 04', e); }
+  /* Resume: point the state document at the component being entered, before navigating. */
+  if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-05');
+  window.location.href = '../methodica-math-scale-01-05/index.html' + window.location.search;
 }
 
-function goTo(n) {
-  if (n < 0 || n >= TOTAL_SCREENS) return;
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const nextScreen = document.querySelector(`[data-screen="${n}"]`);
-  if (!nextScreen) return;
-  nextScreen.classList.add('active');
-  currentScreen = n;
-  resetScreenState(n);
-  nextScreen.focus();
-  var heading = nextScreen.querySelector('h1, h2');
-  if (heading) announce(heading.textContent.trim());
-}
 
 function resetScreenState(n) {
   if (n === 0)  { s36Enter(); }
@@ -145,14 +73,6 @@ function resetScreenState(n) {
 }
 
 
-/* ── Ratio helper ── */
-function checkRatio(input, a, b) {
-  var s = input.replace(/\s/g, '').replace(/,/g, '');
-  var parts = s.split(':');
-  if (parts.length !== 2) return false;
-  return (parts[0] === String(a) && parts[1] === String(b)) ||
-         (parts[0] === String(b) && parts[1] === String(a));
-}
 
 
 /* ── Screen 38: תרגול מתקדם — שאלה 2א ── */
@@ -199,7 +119,13 @@ function s38Select(idx) {
 
 function s38ToggleHint() {
   var popup = document.getElementById('s38-hint-popup');
-  if (popup) { popup.hidden = !popup.hidden; if (!popup.hidden) announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = !popup.hidden;
+    if (!popup.hidden) {
+      announce('רמז נפתח');
+      try { sendStatement720('requested.1', 'question', null, xapiQ('002', 'q1')); } catch (e) {}
+    }
+  }
 }
 
 function s38CloseHint() {
@@ -213,6 +139,17 @@ function s38Submit() {
 
   var correct = (s38Selected === S38_CORRECT);
   s38Attempts++;
+  /* xAPI: item 002 / q1. Two attempts allowed — the first wrong answer is an interim
+     'answered'; a correct answer or the second wrong one closes the question. Only
+     'answered.last' feeds the component score denominator. */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s38Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="2"] .s5-opt')[s38Selected])] } },
+      xapiQ('002', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 002/q1', e); }
+  XAPI_Q_RESULTS['002/q1'] = !!correct;
 
   var fb      = document.getElementById('s38-feedback');
   var fbBold  = document.getElementById('s38-fb-bold');
@@ -264,6 +201,7 @@ function s38Submit() {
     cont.disabled = false;
     cont.onclick  = function() { goTo(3); };
   }
+  flushResumeSave();   // see s37Submit
 }
 
 
@@ -311,7 +249,13 @@ function s37Select(idx) {
 
 function s37ToggleHint() {
   var popup = document.getElementById('s37-hint-popup');
-  if (popup) { popup.hidden = !popup.hidden; if (!popup.hidden) announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = !popup.hidden;
+    if (!popup.hidden) {
+      announce('רמז נפתח');
+      try { sendStatement720('requested.1', 'question', null, xapiQ('001', 'q1')); } catch (e) {}
+    }
+  }
 }
 
 function s37CloseHint() {
@@ -325,6 +269,17 @@ function s37Submit() {
 
   var correct = (s37Selected === S37_CORRECT);
   s37Attempts++;
+  /* xAPI: item 001 / q1. Two attempts allowed — the first wrong answer is an interim
+     'answered'; a correct answer or the second wrong one closes the question. Only
+     'answered.last' feeds the component score denominator. */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s37Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="1"] .s5-opt')[s37Selected])] } },
+      xapiQ('001', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 001/q1', e); }
+  XAPI_Q_RESULTS['001/q1'] = !!correct;
 
   var fb      = document.getElementById('s37-feedback');
   var fbBold  = document.getElementById('s37-fb-bold');
@@ -376,6 +331,9 @@ function s37Submit() {
     cont.disabled = false;
     cont.onclick  = function() { goTo(2); };
   }
+  /* Resume: commit the answer synchronously. A debounced save here could still be in flight when
+     the learner navigates, and land after the next screen's own write. */
+  flushResumeSave();
 }
 
 
@@ -644,6 +602,17 @@ function ddqCheck() {
     });
     return placed === DDQ.correctMap[tId];
   });
+  /* xAPI: item 002 / q2. Two attempts allowed — the first wrong answer is an interim
+     'answered'; a correct answer or the second wrong one closes the question. Only
+     'answered.last' feeds the component score denominator. */
+  try {
+    sendStatement720(allCorrect ? 'answered.last' : (ddqAttempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!allCorrect, score: { scaled: allCorrect ? 1 : 0 },
+        extensions: { student_answer: [Object.keys(ddqPlacement).filter(function(k){ return ddqPlacement[k] !== 'source'; }).map(function(k){ return k + ' -> ' + ddqPlacement[k]; }).join(' | ')] } },
+      xapiQ('002', 'q2'));
+  } catch (e) { console.error('[xAPI] answered 002/q2', e); }
+  XAPI_Q_RESULTS['002/q2'] = !!allCorrect;
 
   var fb      = document.getElementById('s39-feedback');
   var fbBold  = document.getElementById('s39-fb-bold');
@@ -690,6 +659,7 @@ function ddqCheck() {
       });
       targetResults[tId] = (placed === DDQ.correctMap[tId]);
     });
+    ddqTargetResults = targetResults;   // resume repaints the badges from this
 
     ddqChecked = true;
     ddqDone    = true;
@@ -717,6 +687,7 @@ function ddqCheck() {
     btn.onclick     = function() { goTo(4); };
     s39ShowFeedbackGated();
   }
+  flushResumeSave();   // see s37Submit
 }
 
 function ddqRevealCorrect() {
@@ -731,7 +702,13 @@ function ddqRevealCorrect() {
 
 function ddqToggleHint() {
   var popup = document.getElementById('s39-hint-popup');
-  if (popup) { popup.hidden = !popup.hidden; if (!popup.hidden) announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = !popup.hidden;
+    if (!popup.hidden) {
+      announce('רמז נפתח');
+      try { sendStatement720('requested.1', 'question', null, xapiQ('002', 'q2')); } catch (e) {}
+    }
+  }
 }
 
 function ddqCloseHint() {
@@ -787,6 +764,17 @@ function s40Check() {
   var val     = parseFloat(input ? input.value : '');
   var correct = (val === 6);
   s40Attempts++;
+  /* xAPI: item 003 / q1. Two attempts allowed — the first wrong answer is an interim
+     'answered'; a correct answer or the second wrong one closes the question. Only
+     'answered.last' feeds the component score denominator. */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s40Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [String(val)] } },
+      xapiQ('003', 'q1'));
+  } catch (e) { console.error('[xAPI] answered 003/q1', e); }
+  XAPI_Q_RESULTS['003/q1'] = !!correct;
 
   var fb      = document.getElementById('s40-feedback');
   var fbBold  = document.getElementById('s40-fb-bold');
@@ -830,11 +818,18 @@ function s40Check() {
     btn.textContent = 'שנמשיך?';
     btn.onclick     = function() { goTo(5); };
   }
+  flushResumeSave();   // see s37Submit
 }
 
 function s40ToggleHint() {
   var popup = document.getElementById('s40-hint-popup');
-  if (popup) { popup.hidden = !popup.hidden; if (!popup.hidden) announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = !popup.hidden;
+    if (!popup.hidden) {
+      announce('רמז נפתח');
+      try { sendStatement720('requested.1', 'question', null, xapiQ('003', 'q1')); } catch (e) {}
+    }
+  }
 }
 
 function s40CloseHint() {
@@ -902,7 +897,13 @@ function s41Select(idx) {
 
 function s41ToggleHint() {
   var popup = document.getElementById('s41-hint-popup');
-  if (popup) { popup.hidden = !popup.hidden; if (!popup.hidden) announce('רמז נפתח'); }
+  if (popup) {
+    popup.hidden = !popup.hidden;
+    if (!popup.hidden) {
+      announce('רמז נפתח');
+      try { sendStatement720('requested.1', 'question', null, xapiQ('003', 'q2')); } catch (e) {}
+    }
+  }
 }
 
 function s41CloseHint() {
@@ -916,6 +917,17 @@ function s41Submit() {
 
   var correct = (s41Selected === S41_CORRECT);
   s41Attempts++;
+  /* xAPI: item 003 / q2. Two attempts allowed — the first wrong answer is an interim
+     'answered'; a correct answer or the second wrong one closes the question. Only
+     'answered.last' feeds the component score denominator. */
+  try {
+    sendStatement720(correct ? 'answered.last' : (s41Attempts >= 2 ? 'answered.last' : 'answered'),
+      'question',
+      { success: !!correct, score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="5"] .s5-opt')[s41Selected])] } },
+      xapiQ('003', 'q2'));
+  } catch (e) { console.error('[xAPI] answered 003/q2', e); }
+  XAPI_Q_RESULTS['003/q2'] = !!correct;
 
   var fb      = document.getElementById('s41-feedback');
   var fbBold  = document.getElementById('s41-fb-bold');
@@ -967,6 +979,7 @@ function s41Submit() {
     cont.textContent = 'המשך';
     cont.onclick  = function() { goToNextModule(); };
   }
+  flushResumeSave();   // see s37Submit
 }
 
 function s41RulerDown(e) {
@@ -1131,18 +1144,52 @@ function s42CloseHint() {
   if (popup) { popup.hidden = true; announce('רמז נסגר'); }
 }
 
-/* ── Dev tool bridge (index_dev.html postMessage) ── */
-window.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'DEV_GOTO') { goTo(e.data.screen); }
-});
-window.addEventListener('load', function() {
-  if (window.parent !== window) {
-    window.parent.postMessage({ type: 'DEV_READY', total: TOTAL_SCREENS }, '*');
-  }
-});
 
-/* ── Keyboard accessibility ── */
-document.addEventListener('DOMContentLoaded', function () {
+
+
+
+/* ═══════════════════ xAPI (720) — item scope + question ids ═══════════════════
+   Everything below is generic across the five components except SCREEN_TO_SUBCONTENT,
+   XAPI_COMP_SLUG and XAPI_EVAL_ITEMS. */
+
+/* Screen (data-screen index) -> [subContent suffix, page-in-item]; null = no catalog item.
+   Read by xapiOnScreen (element 0) and by submitReport (both elements). */
+var SCREEN_TO_SUBCONTENT = {
+  0: null,            // intro to the advanced questions
+  1: ['001', 1],      // advanced 1
+  2: ['002', 1],      // advanced 2 - part א
+  3: ['002', 2],      // advanced 2 - part ב (drag & drop)
+  4: ['003', 1],      // advanced 3 - part א
+  5: ['003', 2]       // advanced 3 - part ב
+  /* Metadata item 005 (the post-failure reinforcement screen) has no screen in this
+     component — see REPORTING-ADDING.md. Nothing maps to it. */
+};
+
+var XAPI_COMP_SLUG = 'methodica-math-scale-01-04';
+/* Component and item ids must match metadata/*.json byte-for-byte — that convention keeps a
+   TRAILING SLASH on unit, component and item ids (but not on question ids). */
+var XAPI_COMP_ID   = XAPI_ID_PREFIX + XAPI_COMP_SLUG + '/';
+
+
+
+/* Items that carry a graded question IN CODE. */
+var XAPI_EVAL_ITEMS = { '001': 1, '002': 1, '003': 1 };
+
+
+
+/* Report modal, draggable feedback, a11y wiring and image zoom: ../unit-js/ */
+
+
+/* ── Per-part boot hook ──
+   Called by ../unit-js/90-boot.js, the single place startup side effects run from.
+   These used to be a top-level IIFE and DOMContentLoaded handlers. */
+function partBoot() {
+  var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
+  var other = char === 'Character1' ? 'Character2' : 'Character1';
+  [char, other].forEach(function(c) {
+    var img = new Image(); img.src = './assets/images/' + c + '.png';
+  });
+
   document.querySelectorAll('.option-card').forEach(card => {
     card.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -1180,371 +1227,286 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
   });
-});
-
-
-
-// ============================================================
-//  REPORT MODAL
-// ============================================================
-function openReportModal() {
-  resetReportForm();
-  document.getElementById('report-modal').removeAttribute('hidden');
 }
 
-function tryCloseReportModal() {
-  var typeVal = document.getElementById('report-type').value;
-  var textVal = document.getElementById('report-text').value.trim();
+/* ═══════════════════════════════════════════════════════════════════
+   RESUME — save / restore execution state to KATA (xAPI State API)
+   One State document per unit, keyed by window.XAPI_UNIT_ID.
+   Three advanced questions; question 2 part ב is a drag-and-drop placement map.
 
-  if (typeVal || textVal) {
-    document.getElementById('report-modal').setAttribute('hidden', '');
-    document.getElementById('report-confirm-modal').removeAttribute('hidden');
-  } else {
-    forceCloseReportModal();
-  }
-}
+   Enabled by RESUME_ENABLED at the top of this file, which also switches the loader to
+   xapi-720-j.js (the State transport -i lacks).
 
-function forceCloseReportModal() {
-  document.getElementById('report-modal').setAttribute('hidden', '');
-  document.getElementById('report-confirm-modal').setAttribute('hidden', '');
-  resetReportForm();
-}
 
-function backToReportForm() {
-  document.getElementById('report-confirm-modal').setAttribute('hidden', '');
-  document.getElementById('report-modal').removeAttribute('hidden');
-  setTimeout(function() {
-    var el = document.getElementById('report-type');
-    if (el) el.focus();
-  }, 40);
-}
 
-function submitReport() {
-  var report = {
-    type:      document.getElementById('report-type').value || '(לא נבחר)',
-    text:      document.getElementById('report-text').value.trim() || '(ללא תיאור)',
-    screen:    currentScreen,
-    timestamp: new Date().toISOString()
-  };
-  console.log('[Report Issue]', report);
-  forceCloseReportModal();
-}
 
-function reportCheckSubmit() {
-  var typeVal = document.getElementById('report-type').value;
-  var textVal = document.getElementById('report-text').value.trim();
-  var btn = document.querySelector('.report-submit-btn');
-  if (btn) btn.disabled = !(typeVal && textVal);
-}
 
-/* Custom select for report-type */
-(function() {
-  var LABELS = {
-    'technical': 'תקלה טכנית או שמשהו לא עובד',
-    'unclear':   'משהו לא ברור לי',
-    'other':     'אחר'
-  };
-  var PLACEHOLDER = 'בחרו סוג בעיה';
-  var wrapper = document.getElementById('report-type-wrapper');
-  if (!wrapper) return;
-  var btn        = wrapper.querySelector('.report-select-btn');
-  var list       = wrapper.querySelector('.report-select-list');
-  var hidden     = document.getElementById('report-type');
-  var valSpan    = wrapper.querySelector('.report-select-value');
-  var errEl      = document.getElementById('report-type-error');
-  var wasOpened  = false;
-  var pickingOpt = false;
 
-  function showError() {
-    btn.classList.add('has-error');
-    if (errEl) errEl.style.display = 'block';
-  }
-  function clearError() {
-    btn.classList.remove('has-error');
-    if (errEl) errEl.style.display = 'none';
-  }
-  function closeList() {
-    list.hidden = true;
-    btn.setAttribute('aria-expanded', 'false');
-  }
 
-  btn.addEventListener('click', function() {
-    var opening = list.hidden;
-    list.hidden = !opening;
-    btn.setAttribute('aria-expanded', String(opening));
-    if (opening) {
-      wasOpened = true;
-    } else {
-      if (!hidden.value) showError();
-    }
+
+
+
+
+/* ── The 'completed' ledger ──────────────────────────────────────────
+   One 'completed' per component, per item, per unit attempt — the back button makes every finished
+   screen re-reachable, and the library's dedupe only spans a single page load. `initialized` is
+   deliberately NOT guarded: the platform asks for it on every entry.
+
+
+
+
+
+/* Variables copied verbatim in both directions. */
+var RESUME_PLAIN_VARS = ['s37Selected', 's37Attempts', 's37Solved', 's37Correct', 's38Selected', 's38Attempts', 's38Solved', 's38Correct', 'ddqDone', 'ddqAttempts', 'ddqChecked', 's40Attempts', 's40Done', 's41Selected', 's41Attempts', 's41Solved'];
+
+/* Typed answers live only in the DOM — no variable holds them — so they travel by element id.
+   Reading them at capture time is safe: no submit branch clears these inputs, only disables. */
+var RESUME_INPUT_IDS = ['s40-answer-input'];
+
+function captureResumeInputs() {
+  var out = {};
+  RESUME_INPUT_IDS.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) out[id] = el.value;
   });
+  return out;
+}
 
-  list.addEventListener('mousedown', function() { pickingOpt = true; });
-  list.addEventListener('mouseup',   function() { pickingOpt = false; });
-
-  btn.addEventListener('blur', function() {
-    if (!pickingOpt && wasOpened && !hidden.value) showError();
+/* This part's payload only. `v` and `part` live on the enclosing v3 document, not in here. */
+function capturePartPayload() {
+  var st = {
+    currentScreen: currentScreen,
+    qResults: Object.assign({}, XAPI_Q_RESULTS),
+    ddqPlacement: Object.assign({}, ddqPlacement),
+    ddqTargetResults: Object.assign({}, ddqTargetResults),
+    inputs: captureResumeInputs(),
+    vars: {}
+  };
+  /* eval keeps this list-driven: these are file-scope `var`/`let` bindings, so they are
+     not reachable as window properties. */
+  RESUME_PLAIN_VARS.forEach(function (k) {
+    try { st.vars[k] = eval(k); } catch (e) {}
   });
+  return st;
+}
 
-  wrapper.querySelectorAll('.report-select-option').forEach(function(opt) {
-    opt.addEventListener('click', function() {
-      hidden.value = opt.getAttribute('data-value');
-      valSpan.textContent = LABELS[hidden.value] || PLACEHOLDER;
-      btn.classList.remove('is-placeholder');
-      clearError();
-      wasOpened = false;
-      closeList();
-      wrapper.querySelectorAll('.report-select-option').forEach(function(o) { o.classList.remove('is-selected'); });
-      opt.classList.add('is-selected');
-      hidden.dispatchEvent(new Event('change'));
+/* Both restore passes run through here, so they can never drift apart. The parameter must stay
+   named `st` — the eval below assigns through that name. */
+function applyResumeVars(st) {
+  if (st.qResults) XAPI_Q_RESULTS = Object.assign({}, st.qResults);
+  if (st.ddqPlacement) { Object.keys(st.ddqPlacement).forEach(function(k){ ddqPlacement[k] = st.ddqPlacement[k]; }); }
+  if (st.ddqTargetResults) ddqTargetResults = Object.assign({}, st.ddqTargetResults);
+  if (st.vars) {
+    Object.keys(st.vars).forEach(function (k) {
+      if (RESUME_PLAIN_VARS.indexOf(k) === -1) return;   // never assign an unlisted name
+      try { eval(k + ' = st.vars[k];'); } catch (e) {}
     });
-  });
-
-  document.addEventListener('click', function(e) {
-    if (!wrapper.contains(e.target)) {
-      if (wasOpened && !hidden.value) showError();
-      closeList();
-    }
-  });
-
-  wrapper._resetSelect = function() {
-    wasOpened = false;
-    hidden.value = '';
-    valSpan.textContent = PLACEHOLDER;
-    btn.classList.add('is-placeholder');
-    btn.classList.remove('has-error');
-    btn.setAttribute('aria-expanded', 'false');
-    if (errEl) errEl.style.display = 'none';
-    closeList();
-    wrapper.querySelectorAll('.report-select-option').forEach(function(o) { o.classList.remove('is-selected'); });
-  };
-})();
-function resetReportForm() {
-  var wrapper = document.getElementById('report-type-wrapper');
-  if (wrapper && wrapper._resetSelect) wrapper._resetSelect();
-  var ta = document.getElementById('report-text');
-  var taErr = document.getElementById('report-text-error');
-  if (ta)    { ta.value = ''; ta.classList.remove('has-error'); }
-  if (taErr) taErr.hidden = true;
-  document.getElementById('report-char-count').textContent = '0 / 250';
-  reportCheckSubmit();
-}
-
-function reportTextBlur() {
-  var ta    = document.getElementById('report-text');
-  var taErr = document.getElementById('report-text-error');
-  if (!ta || !taErr) return;
-  if (!ta.value.trim()) {
-    ta.classList.add('has-error');
-    taErr.style.display = 'block';
-  } else {
-    ta.classList.remove('has-error');
-    taErr.style.display = 'none';
   }
 }
 
-// Character counter for report textarea
-var reportTextarea = document.getElementById('report-text');
-var reportCounter  = document.getElementById('report-char-count');
-if (reportTextarea && reportCounter) {
-  reportTextarea.addEventListener('input', function() {
-    reportCounter.textContent = reportTextarea.value.length + ' / 250';
-    reportCheckSubmit();
+function applyResumeDom(st) {
+  if (!st || !st.inputs) return;
+  RESUME_INPUT_IDS.forEach(function (id) {
+    if (typeof st.inputs[id] !== 'string') return;
+    var el = document.getElementById(id);
+    if (el) el.value = st.inputs[id];
   });
 }
 
-var reportSelect = document.getElementById('report-type');
-if (reportSelect) {
-  reportSelect.addEventListener('change', function() {
-    reportCheckSubmit();
-    var field = document.querySelector('.report-field');
-    var star = field ? field.querySelector('.required-star') : null;
-    if (star) star.classList.toggle('is-error', !reportSelect.value);
-  });
+
+
+/* ── Screen painters ────────────────────────────────────────────────
+   Question screens only (the agreed first step); narrative screens land at their start.
+   Each painter mirrors the DOM writes of its submit/check branches and NOTHING else — no state
+   mutation, no statements, no announce(). Two axes, not four branches: solved picks the terminal
+   look, otherwise an attempt already spent shows the interim feedback AND the current selection
+   is repainted, because those co-occur. Correctness comes from sNNCorrect where the variable
+   exists and from XAPI_Q_RESULTS where it does not (s39/s40/s41) — never from the attempt count,
+   which counts differently from part 02's. */
+function restoreScreenUI(n) {
+  try {
+    if (n === 1) s37RestoreUI();
+    if (n === 2) s38RestoreUI();
+    if (n === 3) s39RestoreUI();
+    if (n === 4) s40RestoreUI();
+    if (n === 5) s41RestoreUI();
+  } catch (e) { console.error('[resume] restoreScreenUI', e); }
 }
 
-if (reportTextarea) {
-  reportTextarea.addEventListener('blur', function() {
-    var star = reportTextarea.closest('.report-field').querySelector('.required-star');
-    if (star) star.classList.toggle('is-error', !reportTextarea.value.trim());
-  });
-  reportTextarea.addEventListener('input', function() {
-    if (reportTextarea.value.trim()) {
-      var star = reportTextarea.closest('.report-field').querySelector('.required-star');
-      if (star) star.classList.remove('is-error');
-    }
-  });
-}
+/* Explanation bodies, copied from the branches they mirror. */
+var S37_RESTORE_EXPLANATION = 'גובה המגדל במציאות הוא 828.8 מטרים, שהם 82,880 ס"מ. נחלק את הגובה ב-3,000, ונקבל שרטוט באורך של קצת יותר מ-27.6 ס"מ, ש"נכנס" בשלמותו בתוך 29.7 הסנטימטרים של הדף. ​';
+var S38_RESTORE_EXPLANATION = 'יובל הגדיל את התמונה פי 2 ואז הגדיל את התמונה החדשה פי 3. ​\nלכן, שתי הלחיצות על כפתור הזום הגדילו את התמונה פי 6, ומכאן שקנה המידה לאחר ההגדלה הוא 50 : 1 (50 = 6 ÷ 300). ​';
+var S39_RESTORE_EXPLANATION = 'נמיר את המידות במציאות לסנטימטרים ונקבל אורך 1,200 ס"מ וגובה 600 ס"מ. ​<br>בתמונה של יובל (קנה מידה 50 : 1) נחלק את המידות ב-50 ונקבל: אורך 24 ס"מ, גובה 12 ס"מ.​<br>בתמונה של ליאור (קנה מידה 20 : 1) נחלק את המידות ב-20 ונקבל: אורך 60 ס"מ, גובה 30 ס"מ.​';
+var S40_RESTORE_EXPLANATION = 'קנה המידה הוא 200 : 1, לכן 12 ס״מ בתמונה מייצגים  2,400 ס"מ שהם 24 מטרים במציאות. העמדה צריכה להיות ברבע הדרך, ולכן נחשב <sup>1</sup>/<sub>4</sub> מ-24 מטרים, ונקבל 6 מטרים.​';
+var S41_RESTORE_EXPLANATION = 'אורך צלע המתחם בתמונה הוא 8 ס”מ, וקנה המידה הוא 200 : 1 .​\n לכן, אורך צלע המתחם במציאות הוא 1,600 ס”מ שהם 16 מטרים. ​\nכעת, נחשב את שטח הריבוע:  256 מ”ר =  16 · 16​';
 
-// Escape key closes report modals / cancels D&D keyboard selection
-document.addEventListener('keydown', function(event) {
-  if (event.key !== 'Escape') return;
-  if (ddqKeySelected) {
-    ddqKeySelected = null;
-    ddqUpdateKeyState();
-    ddqAnnounce('הבחירה בוטלה');
+/* Screens 1, 2 and 5 — single-choice, same shape. Mirrors s37Submit / s38Submit / s41Submit. */
+function restoreChoiceScreenUI(cfg) {
+  var fb      = document.getElementById(cfg.prefix + '-feedback');
+  var fbBold  = document.getElementById(cfg.prefix + '-fb-bold');
+  var fbReg   = document.getElementById(cfg.prefix + '-fb-regular');
+  var cont    = document.getElementById(cfg.prefix + '-continue');
+  var hintBtn = document.getElementById(cfg.prefix + '-hint-btn');
+  var opts    = Array.prototype.slice.call(document.querySelectorAll('[data-screen="' + cfg.screen + '"] .s5-opt'));
+  if (!fb || !fbBold || !fbReg || !cont) return;
+
+  if (cfg.solved) {
+    opts.forEach(function (o, i) {
+      o.disabled = true;
+      if (cfg.correct) {
+        if (i === cfg.selected) { o.classList.remove('is-selected'); o.classList.add('is-correct'); }
+      } else {
+        o.classList.remove('is-selected');
+        if (i === cfg.correctIndex)   o.classList.add('is-correct');
+        else if (i === cfg.selected)  o.classList.add('is-incorrect');
+      }
+    });
+    fbBold.textContent = cfg.correct ? cfg.boldCorrect : cfg.boldWrong;
+    fbReg.innerHTML    = cfg.explanation;
+    fb.classList.add(cfg.correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden     = false;
+    cont.disabled = false;
+    if (cfg.contText) cont.textContent = cfg.contText;
+    cont.onclick  = cfg.onContinue;
     return;
   }
-  var confirmModal = document.getElementById('report-confirm-modal');
-  var reportModal  = document.getElementById('report-modal');
-  if (!confirmModal.hasAttribute('hidden')) { forceCloseReportModal(); return; }
-  if (!reportModal.hasAttribute('hidden'))  { tryCloseReportModal();   return; }
-});
 
-
-function s5FbClose(id) {
-  var el = document.getElementById(id);
-  if (el) el.hidden = true;
+  if (cfg.selected !== null && cfg.selected !== undefined) {
+    opts.forEach(function (o, i) { o.classList.toggle('is-selected', i === cfg.selected); });
+    cont.disabled = false;
+  }
+  if (cfg.attempts >= 1) {
+    fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
+    fbReg.textContent  = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
 }
 
-/* ── Draggable inline feedback elements ── */
-(function () {
-  /* #app has an active transform:scale(...), which makes it the containing
-     block for position:fixed descendants — so drag math must convert viewport
-     (clientX/clientY) coordinates into #app's own local, pre-scale space. */
-  function getAppTransform() {
-    var app = document.getElementById('app');
-    var m = app.style.transform.match(/scale\(([^)]+)\)/);
-    return {
-      scale: m ? parseFloat(m[1]) : 1,
-      left:  parseFloat(app.style.left) || 0,
-      top:   parseFloat(app.style.top)  || 0,
-    };
-  }
-
-  var BOTTOM_BAR_H = 74; /* .bottom-bar height — keep the popup from covering it */
-
-  function liftFeedback(el) {
-    if (el.dataset.lifted) return;
-    el.dataset.lifted = '1';
-    var w    = el.offsetWidth;
-    var rect = el.getBoundingClientRect();
-    var t    = getAppTransform();
-    el.style.width    = w + 'px';
-    el.style.position = 'fixed';
-    el.style.left     = ((rect.left - t.left) / t.scale) + 'px';
-    el.style.top      = ((rect.top  - t.top)  / t.scale) + 'px';
-    el.style.bottom   = 'auto';
-    el.style.height   = 'auto';
-    el.style.zIndex   = '9999';
-    el.style.margin   = '0';
-  }
-
-  function attachDrag(el) {
-    if (el.dataset.dragAttached) return;
-    el.dataset.dragAttached = '1';
-    el.addEventListener('mousedown', function (e) {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-      if (e.target.closest('.s5-fb-body')) return;
-      e.preventDefault();
-      if (!el.dataset.lifted) liftFeedback(el);
-      var t0 = getAppTransform();
-      var startLocalX = (e.clientX - t0.left) / t0.scale;
-      var startLocalY = (e.clientY - t0.top)  / t0.scale;
-      var baseLeft = parseFloat(el.style.left)  || 0;
-      var baseTop  = parseFloat(el.style.top)   || 0;
-      el.style.cursor = 'grabbing';
-      function onMove(e) {
-        var t = getAppTransform();
-        var curLocalX = (e.clientX - t.left) / t.scale;
-        var curLocalY = (e.clientY - t.top)  / t.scale;
-        var nx = baseLeft + (curLocalX - startLocalX);
-        var ny = baseTop  + (curLocalY - startLocalY);
-        el.style.left = Math.max(0, Math.min(nx, 1280 - el.offsetWidth))  + 'px';
-        el.style.top  = Math.max(0, Math.min(ny, 720 - BOTTOM_BAR_H - el.offsetHeight)) + 'px';
-      }
-      function onUp() {
-        el.style.cursor = 'grab';
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup',   onUp);
-      }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup',   onUp);
-    });
-  }
-
-  function initAll() {
-    document.querySelectorAll('.s5-inline-feedback').forEach(attachDrag);
-  }
-
-  function resetOne(el) {
-    el.removeAttribute('data-lifted');
-    el.style.position = '';
-    el.style.left     = '';
-    el.style.top      = '';
-    el.style.width    = '';
-    el.style.zIndex   = '';
-    el.style.margin   = '';
-    el.style.cursor   = '';
-    el.style.height   = '';
-    el.style.bottom   = '';
-  }
-
-  function resetFeedbacks() {
-    document.querySelectorAll('.s5-inline-feedback[data-lifted]').forEach(resetOne);
-  }
-
-  /* Every submit handler updates the feedback's class list (correct/incorrect)
-     on each new attempt, even when re-showing the SAME element for a retry
-     without ever hiding it in between — a user-dragged position would
-     otherwise persist across attempts. Watching the class attribute (rather
-     than editing every submit function) resets a lifted element back to its
-     original layout position the moment new feedback content is about to
-     appear, before the browser paints the next frame. */
-  var feedbackClassObserver = new MutationObserver(function (mutations) {
-    mutations.forEach(function (m) {
-      if (m.target.dataset.lifted) resetOne(m.target);
-    });
+function s37RestoreUI() {
+  restoreChoiceScreenUI({
+    prefix: 's37', screen: 1,
+    solved: s37Solved, correct: s37Correct, selected: s37Selected, attempts: s37Attempts,
+    correctIndex: S37_CORRECT,
+    boldCorrect: 'יופי של תשובה! ​', boldWrong: 'זו טעות, לא נורא – בואו נלמד ממנה:​',
+    explanation: S37_RESTORE_EXPLANATION,
+    onContinue: function () { goTo(2); }
   });
+}
 
-  document.addEventListener('DOMContentLoaded', function () {
-    initAll();
-    document.querySelectorAll('.s5-inline-feedback').forEach(function (el) {
-      feedbackClassObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
-    });
-    var _orig = window.goTo;
-    if (typeof _orig === 'function') {
-      window.goTo = function (n) {
-        resetFeedbacks();
-        _orig(n);
-        setTimeout(initAll, 150);
-      };
+function s38RestoreUI() {
+  restoreChoiceScreenUI({
+    prefix: 's38', screen: 2,
+    solved: s38Solved, correct: s38Correct, selected: s38Selected, attempts: s38Attempts,
+    correctIndex: S38_CORRECT,
+    boldCorrect: 'נכון מאוד!​', boldWrong: 'זו טעות – בואו נבין למה:​',
+    explanation: S38_RESTORE_EXPLANATION,
+    onContinue: function () { goTo(3); }
+  });
+}
+
+function s41RestoreUI() {
+  restoreChoiceScreenUI({
+    prefix: 's41', screen: 5,
+    solved: s41Solved, correct: (XAPI_Q_RESULTS['003/q2'] === true),
+    selected: s41Selected, attempts: s41Attempts,
+    correctIndex: S41_CORRECT,
+    boldCorrect: 'יופי!​', boldWrong: 'לא מדויק, בואו נבין למה:​',
+    explanation: S41_RESTORE_EXPLANATION,
+    contText: 'המשך',
+    onContinue: function () { goToNextModule(); }
+  });
+}
+
+/* Screen 4 — value input. Mirrors s40Check. */
+function s40RestoreUI() {
+  var fb      = document.getElementById('s40-feedback');
+  var fbBold  = document.getElementById('s40-fb-bold');
+  var fbReg   = document.getElementById('s40-fb-regular');
+  var btn     = document.getElementById('s40-check');
+  var hintBtn = document.getElementById('s40-hint-btn');
+  var input   = document.getElementById('s40-answer-input');
+  if (!fb || !fbBold || !fbReg || !btn) return;
+
+  if (s40Done) {
+    var correct = (XAPI_Q_RESULTS['003/q1'] === true);
+    if (input) input.disabled = true;
+    fbBold.textContent = correct ? 'נכון מאוד!​' : 'לא מדויק, בואו נבין למה:​';
+    fbReg.innerHTML    = S40_RESTORE_EXPLANATION;
+    fb.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
+    fb.hidden = false;
+    btn.disabled    = false;
+    btn.textContent = 'שנמשיך?';
+    btn.onclick     = function () { goTo(5); };
+    return;
+  }
+
+  if (s40Attempts >= 1) {
+    fbBold.textContent = 'לא מדויק, ננסה שוב?';
+    fbReg.textContent  = '';
+    fb.classList.add('s5-fb--incorrect');
+    fb.hidden = false;
+    if (hintBtn) hintBtn.hidden = false;
+  }
+  s40OnInput();   // the live predicate for the check button
+}
+
+/* Screen 3 — drag-and-drop. Mirrors ddqCheck. ddqRender() is the replay primitive: it rebuilds
+   the placed chips from ddqPlacement and locks them when ddqChecked, so the board comes back
+   whether the learner was mid-placement or finished.
+   The feedback is shown WITHOUT s39ShowFeedbackGated(): that gate makes the learner scroll the
+   explanation before they may continue, and they already passed it in the previous session —
+   re-imposing it can also strand them if scrollHeight is mismeasured before webfonts settle. */
+function s39RestoreUI() {
+  var fb       = document.getElementById('s39-feedback');
+  var fbBold   = document.getElementById('s39-fb-bold');
+  var fbReg    = document.getElementById('s39-fb-regular');
+  var btn      = document.getElementById('ddq-check');
+  var hintBtn  = document.getElementById('s39-hint-btn');
+  var closeBtn = document.getElementById('s39-fb-close');
+  if (!fb || !fbBold || !fbReg || !btn) return;
+
+  ddqRender();
+
+  if (!ddqDone) {
+    if (ddqAttempts >= 1) {
+      fbBold.textContent = 'לא מדויק, ננסה שוב?';
+      fbReg.textContent  = '';
+      fb.classList.add('s5-fb--incorrect', 's5-fb--try-again');
+      fb.hidden = false;
+      if (hintBtn) hintBtn.hidden = false;
     }
+    return;   // ddqRender already set the check button from the live all-filled predicate
+  }
+
+  var correct = (XAPI_Q_RESULTS['002/q2'] === true);
+  Object.keys(DDQ.correctMap).forEach(function (tId) {
+    var t = document.getElementById(tId);
+    if (!t) return;
+    t.classList.add('s39-correct');
+    if (correct) return;
+    var badge = document.createElement('div');
+    badge.className = ddqTargetResults[tId] ? 'ddq-badge ddq-badge--correct' : 'ddq-badge ddq-badge--wrong';
+    var badgeSvgOk  = '<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var badgeSvgErr = '<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    badge.innerHTML = ddqTargetResults[tId] ? badgeSvgOk : badgeSvgErr;
+    t.appendChild(badge);
   });
-})();
 
-// Accessibility: aria-live on feedback regions + tabindex on screens for focus routing
-document.querySelectorAll('.s5-inline-feedback').forEach(function(el) {
-  el.setAttribute('role', 'status');
-  el.setAttribute('aria-live', 'polite');
-});
-document.querySelectorAll('section.screen').forEach(function(s) {
-  s.setAttribute('tabindex', '-1');
-});
-
-function openImgZoom(overlayId) {
-  var overlay = document.getElementById(overlayId);
-  if (!overlay) return;
-  var activeScreen = document.querySelector('.screen.active');
-  if (activeScreen && overlay.parentElement !== activeScreen) {
-    activeScreen.appendChild(overlay);
-  }
-  overlay.removeAttribute('hidden');
+  fbBold.textContent = correct ? 'נכון מאוד!​' : 'לא מדויק, בואו נבין למה:​';
+  fbReg.innerHTML    = S39_RESTORE_EXPLANATION;
+  fb.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect', 'is-scroll');
+  fb.hidden = false;
+  s39GateSatisfied = true;
+  if (closeBtn) closeBtn.disabled = false;
+  btn.disabled    = false;
+  btn.textContent = 'שנמשיך?';
+  btn.onclick     = function () { goTo(4); };
 }
-function closeImgZoom(overlayId) {
-  if (overlayId) {
-    var overlay = document.getElementById(overlayId);
-    if (overlay) overlay.setAttribute('hidden', '');
-  } else {
-    document.querySelectorAll('.img-zoom-overlay').forEach(function(el) {
-      el.setAttribute('hidden', '');
-    });
-  }
-}
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeImgZoom();
-});
 
 
 
-
+/* xAPI loader: ../unit-js/50-loader.js. This component supplies its metadata file
+   and, where it needs one, an onXapiReady() hook. */
+var XAPI_METADATA_FILE = '../metadata/methodica-math-scale-01-04.json';
