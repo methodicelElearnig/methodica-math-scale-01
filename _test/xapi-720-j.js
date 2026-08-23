@@ -48,11 +48,19 @@
 
   var _t = null;
   window.saveState720Debounced = function (id, doc) {
-    var snapshot = JSON.stringify(doc);          // closes over the payload, as the real one does
+    /* ⚠️ Holds the REFERENCE and serialises at FIRE time, matching the real library:
+           _stateSaveTimers720[stateId] = setTimeout(function () { saveState720(stateId, obj); })
+       Corrected 2026-08-18. This stub used to do `var snapshot = JSON.stringify(doc)` at ARM
+       time, with a comment claiming that was what the real one did — it is the opposite. That is
+       not a cosmetic difference: it invents a clobber race that does not exist. A timer armed on
+       navigation would appear to overwrite a later synchronous write with pre-answer state, and
+       in the sibling unit mass-measure-02 that fiction produced a false "resume is broken"
+       diagnosis before the stub was checked against the library source. Because captureUnitState
+       returns the same object every time, the real deferred write lands the UPDATED state. */
     if (_t) clearTimeout(_t);
     _t = setTimeout(function () {
       if (sessionStorage.getItem(FAIL_KEY) === '1') return;
-      sessionStorage.setItem(STATE_KEY, snapshot);
+      sessionStorage.setItem(STATE_KEY, JSON.stringify(doc));
       console.log('[stub] debounced write landed');
     }, 800);
   };
