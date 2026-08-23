@@ -401,6 +401,18 @@ var s28Selected  = []; // indices of checked options
 var S28_CORRECT  = [0, 1, 3]; // א, ב, ד
 
 function s28Enter() {
+  if (s28Solved) {
+    updateNavBar(
+      document.querySelector('#s3 .s18-nav'), 3,
+      [
+        s26Solved ? (s26Correct ? 'correct' : 'wrong') : null,
+        s27Solved ? (s27Correct ? 'correct' : 'wrong') : null,
+        s28Solved ? (s28Correct ? 'correct' : 'wrong') : null, null
+      ],
+      [1, 2, 3, 4]
+    );
+    return;
+  }
   updateNavBar(
     document.querySelector('#s3 .s18-nav'), 3,
     [
@@ -509,12 +521,7 @@ function s28Submit() {
   } else {
     s28Attempts++;
     if (s28Attempts === 1) {
-      // first wrong — clear selection, keep interactive
-      opts.forEach(function(opt) {
-        opt.classList.remove('is-selected');
-      });
-      s28Selected = [];
-      cont.disabled = true;
+      // first wrong — keep selection, keep interactive
       fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
       fbReg.innerHTML    = '';
       fb.classList.add('s5-fb--incorrect');
@@ -641,7 +648,6 @@ function s29Submit() {
     fbReg.innerHTML    = '';
     fb.classList.add('s5-fb--incorrect');
     fb.hidden       = false;
-    cont.disabled   = true;
     announce('זה לא מדויק, ננסה שוב?');
   } else {
     s29Solved = true;
@@ -955,8 +961,6 @@ function s32Submit() {
       fb.classList.add('s5-fb--incorrect');
       fb.hidden           = false;
       if (hintBtn) hintBtn.hidden = false;
-      document.getElementById('s32-answer-input').value = '';
-      cont.disabled = true;
       announce('זה לא מדויק, ננסה שוב?');
     } else {
       // Second wrong — explanation + lock
@@ -984,6 +988,14 @@ var s33Correct  = false;
 var S33_CORRECT = 2;
 
 function s33Enter() {
+  if (s33Solved) {
+    updateNavBar(
+      document.querySelector('#s8 .s18-nav'), 2,
+      [s32Solved ? (s32Correct ? 'correct' : 'wrong') : null, s33Correct ? 'correct' : 'wrong'],
+      [7, 8]
+    );
+    return;
+  }
   updateNavBar(
     document.querySelector('#s8 .s18-nav'), 2,
     [s32Solved ? (s32Correct ? 'correct' : 'wrong') : null, null],
@@ -1066,12 +1078,8 @@ function routeAfterAdvancedPractice() {
       { success: getBasicPracticeScore() >= 3 && getAdvancedPracticeScore() >= 2,
         score: { scaled: _n / 7 } });
   } catch (e) { console.error('[xAPI] completed component 02', e); }
-  if (getAdvancedPracticeScore() >= 2) {
-    /* Resume: point the state document forward only on the branch that actually navigates. A
-       learner who never clears 2/2 stays on this screen and must resume back to it. */
-    if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-03');
-    window.location.href = '../methodica-math-scale-01-03/index.html' + window.location.search;
-  }
+  if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-03');
+  window.location.href = '../methodica-math-scale-01-03/index.html' + window.location.search;
 }
 
 function s33Submit() {
@@ -1119,14 +1127,11 @@ function s33Submit() {
     cont.onclick  = function() { routeAfterAdvancedPractice(); };
     announce('יופי! ​');
   } else if (s33Attempts === 1) {
-    opts[s33Selected].classList.remove('is-selected');
     fbBold.textContent  = 'זה לא מדויק, ננסה שוב?';
     fbReg.textContent   = '';
     fb.classList.add('s5-fb--incorrect');
     fb.hidden           = false;
     if (hintBtn) hintBtn.hidden = false;
-    s33Selected = null;
-    cont.disabled = true;
     announce('זה לא מדויק, ננסה שוב?');
   } else {
     s33Solved = true;

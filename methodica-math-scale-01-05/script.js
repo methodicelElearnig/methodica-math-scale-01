@@ -263,9 +263,6 @@ function s47Check() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
-    s47Selected = new Set();
-    checkboxes.forEach(function(cb) { cb.checked = false; });
-    s47UpdateCheckBtn();
 
   } else {
     s47Solved = true;
@@ -418,9 +415,6 @@ function s49Submit() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
-    opts[s49Selected].classList.remove('is-selected');
-    s49Selected = null;
-    cont.disabled = true;
 
   } else {
     s49Solved = true;
@@ -550,9 +544,6 @@ function s51Submit() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
-    opts[s51Selected].classList.remove('is-selected');
-    s51Selected = null;
-    cont.disabled = true;
 
   } else {
     s51Solved = true;

@@ -83,6 +83,14 @@ var s38Correct  = false;
 var S38_CORRECT = 0;
 
 function s38Enter() {
+  if (s38Solved) {
+    updateNavBar(
+      document.querySelector('#s2 .s18-nav'), 2,
+      [s37Solved ? (s37Correct ? 'correct' : 'wrong') : null, s38Correct ? 'correct' : 'wrong', null],
+      [1, 2, 4]
+    );
+    return;
+  }
   updateNavBar(
     document.querySelector('#s2 .s18-nav'), 2,
     [s37Solved ? (s37Correct ? 'correct' : 'wrong') : null, null, null],
@@ -176,15 +184,12 @@ function s38Submit() {
     cont.disabled = false;
     cont.onclick  = function() { goTo(3); };
   } else if (s38Attempts === 1) {
-    opts[s38Selected].classList.remove('is-selected');
     fbBold.textContent  = 'זה לא מדויק, ננסה שוב?';
     announce('זה לא מדויק, ננסה שוב?');
     fbReg.textContent   = '';
     fb.classList.add('s5-fb--incorrect');
     fb.hidden           = false;
     if (hintBtn) hintBtn.hidden = false;
-    s38Selected = null;
-    cont.disabled = true;
   } else {
     s38Solved = true;
     opts.forEach(function(o, i) {
@@ -213,6 +218,14 @@ var s37Correct  = false;
 var S37_CORRECT = 2;
 
 function s37Enter() {
+  if (s37Solved) {
+    updateNavBar(
+      document.querySelector('#s1 .s18-nav'), 1,
+      [s37Correct ? 'correct' : 'wrong', null, null],
+      [1, 2, 4]
+    );
+    return;
+  }
   updateNavBar(
     document.querySelector('#s1 .s18-nav'), 1,
     [null, null, null],
@@ -306,15 +319,12 @@ function s37Submit() {
     cont.disabled = false;
     cont.onclick  = function() { goTo(2); };
   } else if (s37Attempts === 1) {
-    opts[s37Selected].classList.remove('is-selected');
     fbBold.textContent  = 'זה לא מדויק, ננסה שוב?';
     announce('זה לא מדויק, ננסה שוב?');
     fbReg.textContent   = '';
     fb.classList.add('s5-fb--incorrect');
     fb.hidden           = false;
     if (hintBtn) hintBtn.hidden = false;
-    s37Selected = null;
-    cont.disabled = true;
   } else {
     s37Solved = true;
     opts.forEach(function(o, i) {
@@ -379,7 +389,7 @@ function s39Enter() {
   Object.keys(DDQ.correctMap).forEach(function(tId) {
     var t = document.getElementById(tId);
     if (!t) return;
-    t.classList.remove('s39-correct');
+    t.classList.remove('s39-correct', 's39-incorrect');
     t.querySelectorAll('.ddq-badge').forEach(function(b) { b.remove(); });
   });
 }
@@ -413,7 +423,10 @@ function ddqRender() {
       target.classList.add('occupied');
       var card = document.createElement('div');
       card.className = 'ddq-placed-card ddq-num-chip';
-      card.textContent = placedId.replace('drag-', '');
+      var cardText = document.createElement('span');
+      cardText.className = 'ddq-placed-card-text';
+      cardText.textContent = placedId.replace('drag-', '');
+      card.appendChild(cardText);
       card.setAttribute('tabindex', '0');
       card.setAttribute('role', 'button');
       card.setAttribute('aria-label', 'מספר ' + placedId.replace('drag-', '') + ', לחץ להחזרה למגש');
@@ -639,9 +652,6 @@ function ddqCheck() {
     s39ShowFeedbackGated();
 
   } else if (ddqAttempts === 1) {
-    /* First wrong — reset chips to source so learner starts fresh */
-    Object.keys(ddqPlacement).forEach(function(k) { ddqPlacement[k] = 'source'; });
-    ddqRender();
     fbBold.textContent = 'לא מדויק, ננסה שוב?';
     announce('לא מדויק, ננסה שוב?');
     fbReg.textContent  = '';
@@ -670,13 +680,14 @@ function ddqCheck() {
     Object.keys(DDQ.correctMap).forEach(function(tId) {
       var t = document.getElementById(tId);
       if (!t) return;
-      t.classList.add('s39-correct');
+      t.classList.add(targetResults[tId] ? 's39-correct' : 's39-incorrect');
       var badge = document.createElement('div');
       badge.className = targetResults[tId] ? 'ddq-badge ddq-badge--correct' : 'ddq-badge ddq-badge--wrong';
-      var badgeSvgOk  = '<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      var badgeSvgErr = '<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      var badgeSvgOk  = '<svg width="26" height="26" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#609E12"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      var badgeSvgErr = '<svg width="26" height="26" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       badge.innerHTML = targetResults[tId] ? badgeSvgOk : badgeSvgErr;
-      t.appendChild(badge);
+      var placedCard = t.querySelector('.ddq-placed-card');
+      if (placedCard) placedCard.prepend(badge); else t.appendChild(badge);
     });
 
     fbBold.textContent = 'לא מדויק, בואו נבין למה:​';
@@ -804,7 +815,6 @@ function s40Check() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
     if (input) { input.disabled = false; }
-    btn.disabled = true;
 
   } else {
     s40Done = true;
@@ -959,9 +969,6 @@ function s41Submit() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
-    opts[s41Selected].classList.remove('is-selected');
-    s41Selected = null;
-    cont.disabled = true;
 
   } else {
     s41Solved = true;
@@ -1117,7 +1124,6 @@ function s42Check() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
     if (input) { input.disabled = false; }
-    btn.disabled = true;
 
   } else {
     s42Done = true;
@@ -1484,14 +1490,15 @@ function s39RestoreUI() {
   Object.keys(DDQ.correctMap).forEach(function (tId) {
     var t = document.getElementById(tId);
     if (!t) return;
-    t.classList.add('s39-correct');
+    t.classList.add(correct ? 's39-correct' : (ddqTargetResults[tId] ? 's39-correct' : 's39-incorrect'));
     if (correct) return;
     var badge = document.createElement('div');
     badge.className = ddqTargetResults[tId] ? 'ddq-badge ddq-badge--correct' : 'ddq-badge ddq-badge--wrong';
-    var badgeSvgOk  = '<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#58A700"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    var badgeSvgErr = '<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var badgeSvgOk  = '<svg width="26" height="26" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#609E12"/><path d="M8 16.5L13.5 22L24 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var badgeSvgErr = '<svg width="26" height="26" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#B20010"/><path d="M11 11L21 21M21 11L11 21" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     badge.innerHTML = ddqTargetResults[tId] ? badgeSvgOk : badgeSvgErr;
-    t.appendChild(badge);
+    var placedCard = t.querySelector('.ddq-placed-card');
+    if (placedCard) placedCard.prepend(badge); else t.appendChild(badge);
   });
 
   fbBold.textContent = correct ? 'נכון מאוד!​' : 'לא מדויק, בואו נבין למה:​';

@@ -84,10 +84,85 @@ function s4OnPlayerStateChange(e) {
   }
 }
 
-let s7Timer = null;
 let s8Timer = null;
 
+/* â”€â”€ Custom floating scrollbar for s1/s3/s4 (mirrors native scroll of .hook-card-inner) â”€â”€ */
+const HOOK_SCROLLBAR_SCREENS = ['1', '3', '4'];
 
+function syncHookScrollbar(screenNum) {
+  const inner = document.querySelector('[data-screen="' + screenNum + '"] .hook-card-inner');
+  const track = document.getElementById('s' + screenNum + '-hook-scrollbar');
+  if (!inner || !track) return;
+  const thumb = track.querySelector('.hook-scrollbar-thumb');
+  const trackH = track.clientHeight;
+  const maxScroll = inner.scrollHeight - inner.clientHeight;
+  if (maxScroll <= 0) {
+    track.style.display = 'none';
+    return;
+  }
+  track.style.display = 'block';
+  const ratio = inner.clientHeight / inner.scrollHeight;
+  const thumbH = Math.max(40, Math.min(trackH, trackH * ratio));
+  const thumbTop = (inner.scrollTop / maxScroll) * (trackH - thumbH);
+  thumb.style.height = thumbH + 'px';
+  thumb.style.transform = 'translateY(' + thumbTop + 'px)';
+}
+
+function syncAllHookScrollbars() {
+  HOOK_SCROLLBAR_SCREENS.forEach(syncHookScrollbar);
+}
+
+function restartScrollHint(screenNum) {
+  const hint = document.getElementById('s' + screenNum + '-scroll-hint');
+  if (!hint) return;
+  hint.classList.remove('is-hidden');
+  const cursorEl = hint.querySelector('.scroll-hint-cursor');
+  if (cursorEl) {
+    cursorEl.style.animation = 'none';
+    void cursorEl.offsetHeight;
+    cursorEl.style.animation = '';
+  }
+}
+
+(function setupHookScrollbarDrag() {
+  HOOK_SCROLLBAR_SCREENS.forEach(function (screenNum) {
+    const track = document.getElementById('s' + screenNum + '-hook-scrollbar');
+    if (!track) return;
+    const thumb = track.querySelector('.hook-scrollbar-thumb');
+    let dragging = false;
+    let startY = 0;
+    let startScroll = 0;
+
+    thumb.addEventListener('mousedown', function (e) {
+      const inner = document.querySelector('[data-screen="' + screenNum + '"] .hook-card-inner');
+      if (!inner) return;
+      dragging = true;
+      startY = e.clientY;
+      startScroll = inner.scrollTop;
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      const inner = document.querySelector('[data-screen="' + screenNum + '"] .hook-card-inner');
+      if (!inner) return;
+      const trackH = track.clientHeight;
+      const thumbH = thumb.offsetHeight;
+      const maxScroll = inner.scrollHeight - inner.clientHeight;
+      if (maxScroll <= 0 || trackH === thumbH) return;
+      const scrollDelta = (e.clientY - startY) * (maxScroll / (trackH - thumbH));
+      inner.scrollTop = startScroll + scrollDelta;
+    });
+
+    window.addEventListener('mouseup', function () {
+      dragging = false;
+      document.body.style.userSelect = '';
+    });
+  });
+
+  window.addEventListener('resize', syncAllHookScrollbars);
+})();
 
 function resetScreenState(n) {
   if (n === 0) {
@@ -115,8 +190,10 @@ function resetScreenState(n) {
     document.getElementById('s1-char-img-2').alt = 'דמות עם סרגל';
     setScale(1000);
 
-    const inner = document.querySelector('.hook-card-inner');
+    const inner = document.querySelector('[data-screen="1"] .hook-card-inner');
     inner.scrollTop = 0;
+
+    restartScrollHint(1);
 
     const widget1 = document.getElementById('s1-char-widget-1');
     const widget2 = document.getElementById('s1-char-widget-2');
@@ -126,8 +203,14 @@ function resetScreenState(n) {
     const s1Btn = document.getElementById('s1-continue');
     s1Btn.disabled = true;
 
+    syncHookScrollbar(1);
+
     inner.onscroll = null;
     inner.addEventListener('scroll', function onScroll() {
+      const scrollHint = document.getElementById('s1-scroll-hint');
+      if (scrollHint) scrollHint.classList.add('is-hidden');
+      syncHookScrollbar(1);
+
       const sectionB = document.querySelector('.hook-section-b');
       const sectionC = document.querySelector('.hook-section-c');
       const scrollTop = inner.scrollTop;
@@ -170,6 +253,16 @@ function resetScreenState(n) {
       ? './assets/images/Character1_cards.png'
       : './assets/images/Character2_cards.png';
     document.getElementById('s2-char-b').alt = 'דמות עם קלפים';
+
+    const clickHint = document.getElementById('s2-click-hint');
+    if (clickHint) {
+      clickHint.classList.remove('is-hidden');
+      clickHint.querySelectorAll('.click-hint-ring, .click-hint-cursor').forEach(function (el) {
+        el.style.animation = 'none';
+        void el.offsetHeight;
+        el.style.animation = '';
+      });
+    }
   }
 
   if (n === 3) { frcEnter(); }
@@ -246,6 +339,9 @@ function selectDesign(cardEl) {
   cardEl.setAttribute('aria-checked', 'true');
   window.lomdaState.selectedDesign = cardEl.dataset.value;
   document.getElementById('s2-continue').disabled = false;
+
+  const clickHint = document.getElementById('s2-click-hint');
+  if (clickHint) clickHint.classList.add('is-hidden');
 }
 
 function advanceFromS2() {
@@ -313,11 +409,18 @@ function frcEnter() {
   var charWidget3 = document.getElementById('s3-char-widget');
   if (s3body && charWidget3) {
     charWidget3.classList.add('hidden');
+    s3body.scrollTop = 0;
+    restartScrollHint(3);
+    syncHookScrollbar(3);
     s3body.onscroll = function() {
       var infoSec = document.querySelector('[data-screen="3"] .s5-info-section');
       if (!infoSec) return;
       var infoVisible = infoSec.offsetTop < s3body.scrollTop + s3body.clientHeight - 40;
       charWidget3.classList.toggle('hidden', !infoVisible);
+
+      var scrollHint3 = document.getElementById('s3-scroll-hint');
+      if (scrollHint3) scrollHint3.classList.add('is-hidden');
+      syncHookScrollbar(3);
     };
   }
 }
@@ -346,6 +449,26 @@ function setScale(ratio) {
 
   document.querySelectorAll('.scale-input').forEach(inp => {
     inp.checked = (parseInt(inp.value) === ratio);
+  });
+
+  updateScaleTrackFill();
+}
+
+function updateScaleTrackFill() {
+  var fill = document.getElementById('scale-track-fill');
+  var wrap = document.querySelector('.scale-track-wrap');
+  var checkedMarker = document.querySelector('.scale-input:checked + .scale-marker');
+  if (!fill || !wrap || !checkedMarker) return;
+  var wrapRect = wrap.getBoundingClientRect();
+  var markerRect = checkedMarker.getBoundingClientRect();
+  var markerBottom = (markerRect.bottom - wrapRect.top);
+  fill.style.height = Math.max(0, markerBottom - 10) + 'px';
+
+  var steps = Array.from(document.querySelectorAll('.scale-step'));
+  var checkedStep = checkedMarker.closest('.scale-step');
+  var checkedIndex = steps.indexOf(checkedStep);
+  steps.forEach(function (step, i) {
+    step.classList.toggle('is-passed', i < checkedIndex);
   });
 }
 
@@ -387,12 +510,19 @@ function s4Enter() {
   if (s4body && charWidget) {
     charWidget.classList.remove('hidden');
     if (charWidgetRoller) charWidgetRoller.classList.add('hidden');
+    s4body.scrollTop = 0;
+    restartScrollHint(4);
+    syncHookScrollbar(4);
     s4body.onscroll = function() {
       var infoSec = document.querySelector('[data-screen="4"] .s5-info-section');
       if (!infoSec) return;
       var infoVisible = infoSec.offsetTop < s4body.scrollTop + s4body.clientHeight - 40;
       charWidget.classList.toggle('hidden', infoVisible);
       if (charWidgetRoller) charWidgetRoller.classList.toggle('hidden', !infoVisible);
+
+      var scrollHint4 = document.getElementById('s4-scroll-hint');
+      if (scrollHint4) scrollHint4.classList.add('is-hidden');
+      syncHookScrollbar(4);
     };
   }
 }
@@ -1154,7 +1284,6 @@ function s18Submit() {
     feedback.hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
     document.getElementById('s18-hint-btn').hidden = false;
-    continueBtn.disabled = true;
   } else {
     s18Solved = true;
     s18QuizResults[1] = 'wrong';
@@ -1265,7 +1394,6 @@ function s19Submit() {
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     document.getElementById('s19-hint-btn').hidden = false;
-    continueBtn.disabled = true;
     announce('זה לא מדוייק, ננסה שוב?');
   } else {
     s19Solved = true;
@@ -1290,6 +1418,7 @@ var s20Correct = false;
 var S20_CORRECT = 1;
 
 function s20Enter() {
+  if (s20Solved) { s18UpdateNav(2, 's20'); return; }
   s20Selected = null;
   s20Attempts = 0;
   s20Solved = false;
@@ -1354,9 +1483,6 @@ function s20Submit() {
     feedback.classList.add('s5-fb--correct'); feedback.hidden = false; continueBtn.textContent = 'שנמשיך?'; continueBtn.disabled = false;
     announce('יפה!');
   } else if (s20Attempts === 1) {
-    opts.forEach(function(o) { o.classList.remove('is-selected'); });
-    s20Selected = null;
-    continueBtn.disabled = true;
     document.getElementById('s20-hint-btn').hidden = false;
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?'; fbRegular.innerHTML = '';
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false;
@@ -1442,7 +1568,7 @@ function s21Submit() {
   } else if (s21Attempts === 1) {
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?'; fbRegular.innerHTML = '';
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false;
-    document.getElementById('s21-hint-btn').hidden = false; continueBtn.disabled = true;
+    document.getElementById('s21-hint-btn').hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
   } else {
     s21Solved = true; s18QuizResults[4] = 'wrong';
@@ -1461,6 +1587,7 @@ var s22Correct = false;
 var S22_CORRECT = 1;
 
 function s22Enter() {
+  if (s22Solved) { s18UpdateNav(4, 's22'); return; }
   s22Selected = null;
   s22Attempts = 0;
   s22Solved = false;
@@ -1558,14 +1685,11 @@ function s22Submit() {
     continueBtn.disabled = false;
     announce('יפה!');
   } else if (s22Attempts === 1) {
-    opts[s22Selected].classList.remove('is-selected');
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
     fbRegular.innerHTML = '';
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     document.getElementById('s22-hint-btn').hidden = false;
-    s22Selected = null;
-    continueBtn.disabled = true;
     announce('זה לא מדוייק, ננסה שוב?');
   } else {
     s22Solved = true;
@@ -1702,12 +1826,7 @@ function s7Enter() {
   }
 
   var cont = document.getElementById('s7-continue');
-  if (cont) cont.disabled = true;
-  if (s7Timer) { clearTimeout(s7Timer); s7Timer = null; }
-  s7Timer = setTimeout(function () {
-    if (currentScreen === 7 && cont) cont.disabled = false;
-    s7Timer = null;
-  }, 3000);
+  if (cont) cont.disabled = false;
 }
 
 /* ── Screen 8: Guided Practice step 2 ── */
@@ -1715,20 +1834,24 @@ function s8Enter() {
   var cont = document.getElementById('s8-continue');
   if (cont) cont.disabled = true;
 
-  document.querySelectorAll('#s8 .s8-btn').forEach(function (b) { b.disabled = false; });
+  document.querySelectorAll('#s8 .s8-btn').forEach(function (b) { b.disabled = false; b.classList.remove('s8-btn-highlight'); });
 
   var mark = document.getElementById('s8-correct-mark');
   if (mark) mark.classList.remove('s8-mark-visible');
 }
 
-function s8Answer(answer) {
+function s8Answer(answer, btn) {
   document.querySelectorAll('#s8 .s8-btn').forEach(function (b) { b.disabled = true; });
+  if (btn) btn.classList.add('s8-btn-highlight');
 
   var mark = document.getElementById('s8-correct-mark');
-  if (mark) {
-    requestAnimationFrame(function () { mark.classList.add('s8-mark-visible'); });
-  }
-  announce('התשובה הנכונה סומנה');
+  var correctBtn = mark ? mark.closest('.s8-btn') : null;
+  setTimeout(function () {
+    if (btn) btn.classList.remove('s8-btn-highlight');
+    if (correctBtn) correctBtn.classList.add('s8-btn-highlight');
+    if (mark) mark.classList.add('s8-mark-visible');
+    announce('התשובה הנכונה סומנה');
+  }, 900);
 
   var cont = document.getElementById('s8-continue');
   if (cont) cont.disabled = false;
@@ -1739,20 +1862,24 @@ function s9Enter() {
   var cont = document.getElementById('s9-continue');
   if (cont) cont.disabled = true;
 
-  document.querySelectorAll('#s9 .s8-btn').forEach(function (b) { b.disabled = false; });
+  document.querySelectorAll('#s9 .s8-btn').forEach(function (b) { b.disabled = false; b.classList.remove('s8-btn-highlight'); });
 
   var mark = document.getElementById('s9-correct-mark');
   if (mark) mark.classList.remove('s8-mark-visible');
 }
 
-function s9Answer(answer) {
+function s9Answer(answer, btn) {
   document.querySelectorAll('#s9 .s8-btn').forEach(function (b) { b.disabled = true; });
+  if (btn) btn.classList.add('s8-btn-highlight');
 
   var mark = document.getElementById('s9-correct-mark');
-  if (mark) {
-    requestAnimationFrame(function () { mark.classList.add('s8-mark-visible'); });
-  }
-  announce('התשובה הנכונה סומנה');
+  var correctBtn = mark ? mark.closest('.s8-btn') : null;
+  setTimeout(function () {
+    if (btn) btn.classList.remove('s8-btn-highlight');
+    if (correctBtn) correctBtn.classList.add('s8-btn-highlight');
+    if (mark) mark.classList.add('s8-mark-visible');
+    announce('התשובה הנכונה סומנה');
+  }, 900);
 
   var cont = document.getElementById('s9-continue');
   if (cont) cont.disabled = false;
@@ -1765,24 +1892,28 @@ function s10Enter() {
 
   var btn1000 = document.getElementById('s10-btn-1000');
   var btn100  = document.getElementById('s10-btn-100');
-  if (btn1000) btn1000.disabled = false;
-  if (btn100)  btn100.disabled  = false;
+  if (btn1000) { btn1000.disabled = false; btn1000.classList.remove('s8-btn-highlight'); }
+  if (btn100)  { btn100.disabled  = false; btn100.classList.remove('s8-btn-highlight'); }
 
   var mark = document.getElementById('s10-correct-mark');
   if (mark) mark.classList.remove('s8-mark-visible');
 }
 
-function s10Answer(answer) {
+function s10Answer(answer, btn) {
   var btn1000 = document.getElementById('s10-btn-1000');
   var btn100  = document.getElementById('s10-btn-100');
   if (btn1000) btn1000.disabled = true;
-  announce('התשובה הנכונה סומנה');
   if (btn100)  btn100.disabled  = true;
+  if (btn) btn.classList.add('s8-btn-highlight');
 
   var mark = document.getElementById('s10-correct-mark');
-  if (mark) {
-    requestAnimationFrame(function () { mark.classList.add('s8-mark-visible'); });
-  }
+  var correctBtn = mark ? mark.closest('.s8-btn') : null;
+  setTimeout(function () {
+    if (btn) btn.classList.remove('s8-btn-highlight');
+    if (correctBtn) correctBtn.classList.add('s8-btn-highlight');
+    if (mark) mark.classList.add('s8-mark-visible');
+    announce('התשובה הנכונה סומנה');
+  }, 900);
 
   var cont = document.getElementById('s10-continue');
   if (cont) cont.disabled = false;
@@ -1898,6 +2029,7 @@ function s23UpdateNav() {
 }
 
 function s23Enter() {
+  if (s23Solved) { s18UpdateNav(5, 's23'); return; }
   s23Selected = null;
   s23Attempts = 0;
   s23Solved = false;
@@ -1987,14 +2119,11 @@ function s23Submit() {
     continueBtn.disabled = false;
     announce('טוב מאוד!');
   } else if (s23Attempts === 1) {
-    opts[s23Selected].classList.remove('is-selected');
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?';
     fbRegular.innerHTML = '';
     feedback.classList.add('s5-fb--incorrect');
     feedback.hidden = false;
     document.getElementById('s23-hint-btn').hidden = false;
-    s23Selected = null;
-    continueBtn.disabled = true;
     announce('זה לא מדוייק, ננסה שוב?');
   } else {
     s23Solved = true;
