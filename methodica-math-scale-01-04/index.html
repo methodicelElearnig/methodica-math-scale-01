@@ -22,6 +22,7 @@
     </button>
     <section class="screen active" data-screen="0" id="s0">
 
+      <div class="screen-stage">
       <div class="s0-content">
         <div class="s6-text-block">
           <p class="s25-text-large">זמן ל-3 שאלות מתקדמות!</p>
@@ -30,6 +31,7 @@
         <div class="s17-img-wrap">
           <img id="s36-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" class="s6-char-img">
         </div>
+      </div>
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -41,6 +43,7 @@
 
     <section class="screen" data-screen="1" id="s1">
 
+      <div class="screen-stage">
       <!-- Progress: 3 questions, Q1 active -->
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item">
@@ -125,6 +128,7 @@
         <div class="s16-hint-popup-text">לפני שתבחרו קנה מידה, בדקו מהו הגובה של המגדל בס״מ, ומהו האורך המרבי שיכול "להיכנס" לדף.​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s37CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -151,6 +155,7 @@
 
     <section class="screen" data-screen="2" id="s2">
 
+      <div class="screen-stage">
       <!-- Progress: 3 questions, Q1 done, Q2 active, Q3 off -->
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
@@ -226,6 +231,7 @@
         <div class="s16-hint-popup-text">אחרי כל לחיצה על כפתור הזום, הדגם שבתמונה מוגדל. ​<br>האם כל ס״מ בתמונה מייצג במציאות אורך גדול יותר או קטן יותר?​​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s38CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -252,6 +258,7 @@
 
     <section class="screen" data-screen="3" id="s3">
 
+      <div class="screen-stage">
       <!-- Nav: Q1 done | Q2 active | Q3 off -->
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
@@ -409,6 +416,7 @@
         <div class="s16-hint-popup-text">אותה חללית מוצגת פעם בקנה מידה 1:50 ופעם בקנה מידה 1:20. ​מה הקשר בין המספר הימני בקנה המידה לבין גודל החללית בתמונה?​​</div>
         <button class="s16-hint-popup-close" type="button" onclick="ddqCloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -435,6 +443,7 @@
 
     <section class="screen" data-screen="4" id="s4">
 
+      <div class="screen-stage">
       <!-- Nav: Q1 | Q2 | Q3 -->
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
@@ -461,7 +470,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s40a">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s40-answer-input" type="text" inputmode="numeric" dir="rtl" oninput="s40OnInput()" aria-labelledby="label-s40a label-s40b">
+                <input class="s18-answer-box" id="s40-answer-input" type="text" inputmode="numeric" dir="rtl" maxlength="10" oninput="s40OnInput()" aria-labelledby="label-s40a label-s40b">
                 <span class="s18-fill-text" id="label-s40b">מטרים</span>
               </div>
             </div>
@@ -497,6 +506,7 @@
         <div class="s16-hint-popup-text">חשבו מהו אורך השביל במציאות, ואז התמקדו במיקום המבוקש.​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s40CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -523,6 +533,7 @@
 
     <section class="screen" data-screen="5" id="s5">
 
+      <div class="screen-stage">
       <!-- Nav: Q1 | Q2 | Q3 -->
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
@@ -534,7 +545,7 @@
 
       <!-- Draggable ruler (overlaps image area) -->
       <img id="s41-ruler" class="s18-ruler" src="./assets/images/Ruller.png" alt="סרגל"
-           onmousedown="s41RulerDown(event)">
+           style="touch-action: none;" onpointerdown="s41RulerDown(event)">
 
       <div class="s18-question">
         <div class="s18-q-layout">
@@ -598,6 +609,7 @@
         </div>
         <div class="s16-hint-popup-text">קנה המידה מאפשר מעבר בין אורכים. ​<br>כשעוסקים בשטח, האם מספיק להתייחס לאורך צלע אחת בלבד?​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s41CloseHint()">חזרה לשאלה</button>
+      </div>
       </div>
 
       <!-- Bottom bar -->
@@ -801,6 +813,9 @@
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
   <script src="../unit-js/10-identity.js?v=1"></script>
   <script src="../unit-js/15-ui.js?v=1"></script>
+  <!-- iPad-shaped-viewport gate — must load after scaleApp() is defined and before 90-boot.js
+       wires it to the resize listener, so the wrapped version is what gets used -->
+  <script src="canvas-tall-gate.js?v=1"></script>
   <script src="../unit-js/20-xapi.js?v=1"></script>
   <script src="../unit-js/25-report.js?v=1"></script>
   <script src="../unit-js/28-feedback-drag.js?v=1"></script>

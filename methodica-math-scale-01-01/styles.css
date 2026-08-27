@@ -79,6 +79,53 @@ body {
   outline: none;
 }
 
+/* Fixed 1280x720 reference frame, vertically centered within the fluid .screen by the
+   per-screen [data-screen="N"].active rules below — fixes the "content pinned to the top,
+   empty gap grows below it" look on viewports taller/narrower than the 1280:720 design ratio
+   (e.g. an iPad in portrait). Existing absolute top/left values on a screen's content are
+   unchanged; they're just measured from this box's edges instead of directly from the fluid
+   .screen's edges. */
+.screen-stage {
+  position: relative;
+  width: 1280px;
+  height: 720px;
+  flex: none;
+}
+
+/* Per-screen centering override of the generic `.screen.active { display: block; }` rule above —
+   scoped under #app.canvas-tall (toggled by canvas-tall-gate.js) so it only kicks in once the
+   fluid canvas's extra height is large enough to matter (roughly 4:3-and-narrower viewports —
+   iPad, not an ordinary desktop window). Below that threshold these screens render exactly as
+   the plain `display: block` rule always has — same top-pinned look as before this feature
+   existed, on any normal desktop window. See .screen-stage comment above for the full rationale.
+   Screens 1, 3 and 4 are deliberately excluded — see their own [data-screen="N"].active rules
+   below for why (.hook-card intentionally fills the whole fluid height on those screens). */
+#app.canvas-tall [data-screen="2"].active,
+#app.canvas-tall [data-screen="6"].active,
+#app.canvas-tall [data-screen="7"].active,
+#app.canvas-tall [data-screen="8"].active,
+#app.canvas-tall [data-screen="9"].active,
+#app.canvas-tall [data-screen="10"].active,
+#app.canvas-tall [data-screen="11"].active,
+#app.canvas-tall [data-screen="12"].active,
+#app.canvas-tall [data-screen="14"].active,
+#app.canvas-tall [data-screen="15"].active,
+#app.canvas-tall [data-screen="16"].active,
+#app.canvas-tall [data-screen="17"].active,
+#app.canvas-tall [data-screen="18"].active,
+#app.canvas-tall [data-screen="19"].active,
+#app.canvas-tall [data-screen="20"].active,
+#app.canvas-tall [data-screen="21"].active,
+#app.canvas-tall [data-screen="22"].active,
+#app.canvas-tall [data-screen="23"].active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 74px;
+  box-sizing: border-box;
+}
+
 /* ============================================================
    Bottom Bar (shared)
    ============================================================ */
@@ -139,6 +186,17 @@ body {
 [data-screen="0"].active {
   display: flex;
   flex-direction: column;
+}
+
+/* Centering-only additions, gated the same way as the other screens above — see that comment
+   block for the #app.canvas-tall rationale. Pre-existing display:flex/flex-direction:column
+   above is untouched (it predates this feature and had no visible effect either way, since this
+   screen's children are all position:absolute). */
+#app.canvas-tall [data-screen="0"].active {
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 74px;
+  box-sizing: border-box;
 }
 
 .s0-content {
@@ -285,6 +343,12 @@ body {
 }
 
 [data-screen="1"].active {
+  /* Deliberately NOT wrapped in .screen-stage / flex-centered like other screens: .hook-card
+     below is intentionally position:absolute; top:56px; bottom:74px, filling the ENTIRE fluid
+     .screen height so its scrollable content gets MORE visible room (less scrolling) on a
+     tall/narrow viewport (e.g. iPad) — that's a good use of the fluid canvas, not the "empty gap"
+     bug the .screen-stage wrap fixes elsewhere. Centering this screen at a fixed 720px height
+     would have thrown that benefit away. */
   display: block;
 }
 
@@ -966,6 +1030,12 @@ body {
 }
 
 [data-screen="4"].active {
+  /* Deliberately NOT wrapped in .screen-stage / flex-centered like other screens: .hook-card
+     below is intentionally position:absolute; top:56px; bottom:74px, filling the ENTIRE fluid
+     .screen height so its scrollable content gets MORE visible room (less scrolling) on a
+     tall/narrow viewport (e.g. iPad) — that's a good use of the fluid canvas, not the "empty gap"
+     bug the .screen-stage wrap fixes elsewhere. Centering this screen at a fixed 720px height
+     would have thrown that benefit away. */
   display: block;
 }
 
@@ -1034,30 +1104,6 @@ body {
   height: 100%;
   border: 0;
 }
-
-.s4-video-cover {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-
-.s4-play-btn {
-  position: absolute;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: rgba(140, 140, 140, 0.85);
-  border: 3px solid rgba(200, 200, 200, 0.5);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  transition: opacity 0.2s, transform 0.15s;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-}
-
-.s4-play-btn:hover { opacity: 0.88; transform: scale(1.06); }
 
 /* Bottom bar screen 4 â€” restore absolute positioning overridden by .s3-bottom-bar */
 [data-screen="4"] .bottom-bar {

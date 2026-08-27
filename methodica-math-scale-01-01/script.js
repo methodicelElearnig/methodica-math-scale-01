@@ -14,7 +14,6 @@ let frcRevealed = [false, false, false];
 let frcDone = false;
 
 let s4VideoEnded = false;
-let s4Playing = false;
 let s4YTPlayer = null;
 let s4PlayerReady = false;
 
@@ -47,14 +46,21 @@ function s4OnPlayerReady() {
   console.log('s4 YouTube player ready', window.location.origin);
 }
 
+/* Watchdog: if the YouTube iframe API script itself never loads (blocked by an ad-blocker,
+   corporate network, or a flaky connection), window.onYouTubeIframeAPIReady never fires and
+   s4PlayerReady silently stays false forever. Surface that instead of leaving a blank player. */
+setTimeout(function () {
+  if (s4PlayerReady) return;
+  var errMsg = document.getElementById('s4-player-error');
+  if (errMsg) {
+    errMsg.textContent = 'לא ניתן לטעון את נגן הסרטון. בדקו את החיבור לאינטרנט ורעננו את הדף.';
+    errMsg.style.display = 'block';
+  }
+}, 8000);
+
 function s4OnPlayerError(e) {
   s4PlayerReady = false;
-  s4Playing = false;
   console.warn('YouTube player error', e && e.data);
-  var cover = document.getElementById('s4-video-cover');
-  var playBtn = document.getElementById('s4-play-btn');
-  if (cover) cover.style.display = '';
-  if (playBtn) playBtn.style.display = '';
   var errMsg = document.getElementById('s4-player-error');
   if (errMsg) {
     errMsg.textContent = 'שגיאת נגן YouTube: ' + (e && e.data ? e.data : 'Unknown');
@@ -74,7 +80,6 @@ function s4OnPlayerStateChange(e) {
     }
   } catch (err) {}
   if (e.data === YT.PlayerState.ENDED) {
-    s4Playing = false;
     s4VideoEnded = true;
     var sqSection = document.getElementById('s4-sq-section');
     if (sqSection) {
@@ -133,17 +138,19 @@ function restartScrollHint(screenNum) {
     let startY = 0;
     let startScroll = 0;
 
-    thumb.addEventListener('mousedown', function (e) {
+    thumb.style.touchAction = 'none'; /* iPad: let pointerdown/move drive the drag instead of the page scrolling */
+    thumb.addEventListener('pointerdown', function (e) {
       const inner = document.querySelector('[data-screen="' + screenNum + '"] .hook-card-inner');
       if (!inner) return;
       dragging = true;
       startY = e.clientY;
       startScroll = inner.scrollTop;
       document.body.style.userSelect = 'none';
+      try { thumb.setPointerCapture(e.pointerId); } catch (err) {}
       e.preventDefault();
     });
 
-    window.addEventListener('mousemove', function (e) {
+    window.addEventListener('pointermove', function (e) {
       if (!dragging) return;
       const inner = document.querySelector('[data-screen="' + screenNum + '"] .hook-card-inner');
       if (!inner) return;
@@ -155,7 +162,11 @@ function restartScrollHint(screenNum) {
       inner.scrollTop = startScroll + scrollDelta;
     });
 
-    window.addEventListener('mouseup', function () {
+    window.addEventListener('pointerup', function () {
+      dragging = false;
+      document.body.style.userSelect = '';
+    });
+    window.addEventListener('pointercancel', function () {
       dragging = false;
       document.body.style.userSelect = '';
     });
@@ -474,11 +485,6 @@ function updateScaleTrackFill() {
 
 /* ── Screen 4: video player ── */
 function s4Enter() {
-  s4Playing = false;
-  var cover = document.getElementById('s4-video-cover');
-  if (cover) cover.style.display = '';
-  var playBtn = document.getElementById('s4-play-btn');
-  if (playBtn) playBtn.style.display = '';
   if (s4YTPlayer && typeof s4YTPlayer.pauseVideo === 'function') {
     s4YTPlayer.pauseVideo();
     s4YTPlayer.seekTo(0, true);
@@ -527,22 +533,7 @@ function s4Enter() {
   }
 }
 
-function s4Start() {
-  if (s4Playing) return;
-  s4Playing = true;
-
-  var cover = document.getElementById('s4-video-cover');
-  if (cover) cover.style.display = 'none';
-  var playBtn = document.getElementById('s4-play-btn');
-  if (playBtn) playBtn.style.display = 'none';
-
-  if (s4YTPlayer && typeof s4YTPlayer.playVideo === 'function') {
-    s4YTPlayer.playVideo();
-  }
-}
-
 function s4Back() {
-  s4Playing = false;
   if (s4YTPlayer && typeof s4YTPlayer.pauseVideo === 'function') s4YTPlayer.pauseVideo();
   goTo(2);
 }
@@ -1141,16 +1132,18 @@ function s18InitRuler() {
   var ruler = document.getElementById('s18-ruler');
   if (!ruler) return;
   var s18RulerStartX = 0, s18RulerStartY = 0, s18RulerStartLeft = 0, s18RulerStartTop = 0;
-  ruler.addEventListener('mousedown', function(e) {
+  ruler.style.touchAction = 'none'; /* iPad: let pointerdown/move drive the drag instead of the page scrolling */
+  ruler.addEventListener('pointerdown', function(e) {
     s18RulerDragging = true;
     s18RulerStartX = e.clientX;
     s18RulerStartY = e.clientY;
     s18RulerStartLeft = ruler.offsetLeft;
     s18RulerStartTop  = ruler.offsetTop;
     ruler.style.cursor = 'grabbing';
+    try { ruler.setPointerCapture(e.pointerId); } catch (err) {}
     e.preventDefault();
   });
-  document.addEventListener('mousemove', function(e) {
+  document.addEventListener('pointermove', function(e) {
     if (!s18RulerDragging) return;
     var r = document.getElementById('s18-ruler');
     if (!r) return;
@@ -1173,7 +1166,13 @@ function s18InitRuler() {
     r.style.left = newLeft + 'px';
     r.style.top  = newTop + 'px';
   });
-  document.addEventListener('mouseup', function() {
+  document.addEventListener('pointerup', function() {
+    if (!s18RulerDragging) return;
+    s18RulerDragging = false;
+    var r = document.getElementById('s18-ruler');
+    if (r) r.style.cursor = 'grab';
+  });
+  document.addEventListener('pointercancel', function() {
     if (!s18RulerDragging) return;
     s18RulerDragging = false;
     var r = document.getElementById('s18-ruler');

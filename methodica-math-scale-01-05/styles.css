@@ -79,9 +79,56 @@ body {
   outline: none;
 }
 
+/* Fixed 1280x720 reference frame, vertically centered within the fluid .screen by the
+   #app.canvas-tall-gated per-screen rules below — fixes the "content pinned to the top, empty
+   gap grows below it" look on viewports taller/narrower than the 1280:720 design ratio (e.g. an
+   iPad in portrait). Existing absolute top/left values on a screen's content are unchanged;
+   they're just measured from this box's edges instead of directly from the fluid .screen's
+   edges. Gated behind #app.canvas-tall (see canvas-tall-gate.js) so an ORDINARY desktop window
+   (16:9, 16:10, 3:2 — anything down to ~1.47 aspect ratio) renders exactly as it always did;
+   only a genuinely narrow/portrait-shaped viewport (iPad) crosses the gate's threshold and
+   triggers the centering. */
+.screen-stage {
+  position: relative;
+  width: 1280px;
+  height: 720px;
+  flex: none;
+}
+
 /* ============================================================
    Bottom Bar (shared)
    ============================================================ */
+/* iPad-shaped-viewport centering (see canvas-tall-gate.js): only kicks in once the fluid
+   .screen's local height is meaningfully taller than the 720px design height. Screens 0-9 have
+   no other per-screen .active override, so they get display:flex directly here. */
+#app.canvas-tall [data-screen="0"].active,
+#app.canvas-tall [data-screen="1"].active,
+#app.canvas-tall [data-screen="2"].active,
+#app.canvas-tall [data-screen="3"].active,
+#app.canvas-tall [data-screen="4"].active,
+#app.canvas-tall [data-screen="5"].active,
+#app.canvas-tall [data-screen="6"].active,
+#app.canvas-tall [data-screen="7"].active,
+#app.canvas-tall [data-screen="8"].active,
+#app.canvas-tall [data-screen="9"].active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 74px; /* reserve room for .bottom-bar */
+  box-sizing: border-box;
+}
+
+/* Screen 10 already has its own [data-screen="10"].active rule below (display:flex;
+   flex-direction:column) for unrelated layout reasons — add only the missing centering
+   properties on top instead of duplicating display/flex-direction. */
+#app.canvas-tall [data-screen="10"].active {
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 74px;
+  box-sizing: border-box;
+}
+
 .bottom-bar {
   position: absolute;
   bottom: 0;

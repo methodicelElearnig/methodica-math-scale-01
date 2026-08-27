@@ -8,7 +8,13 @@
    component 04), so closest() returns null everywhere else. Component 01 differed only by two
    comments; component 03 still carried the original pre-getAppTransform version, which ignored
    the #app scale and had no clamping or MutationObserver. Component 03's markup has zero
-   .s5-inline-feedback elements, so adopting this version there changes nothing observable. */
+   .s5-inline-feedback elements, so adopting this version there changes nothing observable.
+
+   iPad/touch update: mousedown/mousemove/mouseup → Pointer Events (unifies mouse/touch/pen in
+   one listener set; this popup previously could not be dragged at all on a touch-only device
+   like an iPad). Trialed first as a component-01-only override before being folded in here —
+   see the /responsiveness audit's hardcoded-canvas-constant finding for why the vertical clamp
+   below also changed from a literal 720 to the live canvas height. */
 function initFeedbackDrag() {
   /* #app has an active transform:scale(...), which makes it the containing
      block for position:fixed descendants — so drag math must convert viewport
@@ -21,6 +27,16 @@ function initFeedbackDrag() {
       left:  parseFloat(app.style.left) || 0,
       top:   parseFloat(app.style.top)  || 0,
     };
+  }
+
+  /* Canvas is fluid-height-only (RESPONSIVITY.md): #app.style.height is always the true current
+     design-space height (>=720, grows on viewports taller/narrower than the 1280:720 design
+     ratio — e.g. an iPad in portrait). Reading it live, instead of hardcoding 720, is what lets
+     the popup actually reach the full drag range the fluid canvas provides. */
+  function getCanvasHeight() {
+    var app = document.getElementById('app');
+    var h = parseFloat(app.style.height);
+    return h || 720; /* pre-scaleApp fallback, matches the CSS design height */
   }
 
   var BOTTOM_BAR_H = 74; /* .bottom-bar height — keep the popup from covering it */
@@ -44,13 +60,15 @@ function initFeedbackDrag() {
   function attachDrag(el) {
     if (el.dataset.dragAttached) return;
     el.dataset.dragAttached = '1';
-    el.addEventListener('mousedown', function (e) {
+    el.style.touchAction = 'none'; /* iPad: let pointerdown/move drive the drag instead of the page scrolling */
+    el.addEventListener('pointerdown', function (e) {
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
       /* .s5-fb-body is a scrollable region (component 04's #s39-fb-body, which drives a scroll
          gate). Starting a drag there would steal the scroll the gate depends on. */
       if (e.target.closest('.s5-fb-body')) return;
       e.preventDefault();
       if (!el.dataset.lifted) liftFeedback(el);
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
       var t0 = getAppTransform();
       var startLocalX = (e.clientX - t0.left) / t0.scale;
       var startLocalY = (e.clientY - t0.top)  / t0.scale;
@@ -64,15 +82,17 @@ function initFeedbackDrag() {
         var nx = baseLeft + (curLocalX - startLocalX);
         var ny = baseTop  + (curLocalY - startLocalY);
         el.style.left = Math.max(0, Math.min(nx, 1280 - el.offsetWidth))  + 'px';
-        el.style.top  = Math.max(0, Math.min(ny, 720 - BOTTOM_BAR_H - el.offsetHeight)) + 'px';
+        el.style.top  = Math.max(0, Math.min(ny, getCanvasHeight() - BOTTOM_BAR_H - el.offsetHeight)) + 'px';
       }
       function onUp() {
         el.style.cursor = 'grab';
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup',   onUp);
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup',   onUp);
+        el.removeEventListener('pointercancel', onUp);
       }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup',   onUp);
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup',   onUp);
+      el.addEventListener('pointercancel', onUp);
     });
   }
 

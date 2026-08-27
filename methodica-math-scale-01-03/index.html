@@ -21,6 +21,7 @@
     </button>
     <section class="screen active" data-screen="0" id="s0">
 
+      <div class="screen-stage">
       <div class="s0-content">
         <div class="s6-text-block">
           <p class="s25-text-small">השלמת בהצלחה את התרגול – כל הכבוד!</p>
@@ -42,6 +43,7 @@
           </div>
         </div>
       </div>
+      </div>
 
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" id="back-to-prev-part" type="button" hidden onclick="goBackToPrevPart()">חזרה</button>
@@ -52,6 +54,7 @@
 
     <section class="screen" data-screen="1" id="s1">
 
+      <div class="screen-stage">
       <div class="select-content">
         <div class="select-head">
           <h1 class="select-title">משימת כיתה</h1>
@@ -81,6 +84,7 @@
         <div class="speech-bubble">זמן טוב לחלץ עצמות!<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
         <img id="s34-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
       </div>
+      </div>
 
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(0)">חזרה</button>
@@ -91,6 +95,7 @@
 
     <section class="screen" data-screen="2" id="s2">
 
+      <div class="screen-stage">
       <div class="select-content">
         <div class="select-head">
           <h1 class="select-title">משימת כיתה</h1>
@@ -98,7 +103,7 @@
             <p><strong>אז מהו קנה המידה של המסלול שלכם?</strong></p>
             <div class="s35-input-row">
               <span class="s35-label" id="label-s35">הקלידו אותו כאן:</span>
-              <input class="s35-input" id="s35-input" type="text" dir="rtl" oninput="s35OnInput()" aria-labelledby="label-s35">
+              <input class="s35-input" id="s35-input" type="text" dir="rtl" maxlength="10" oninput="s35OnInput()" aria-labelledby="label-s35">
             </div>
           </div>
         </div>
@@ -108,6 +113,7 @@
       <div class="character-widget hidden" id="s35-char-widget">
         <div class="speech-bubble">יופי של קנה מידה!<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
         <img id="s35-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
+      </div>
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -216,6 +222,9 @@
   </main>
   <script src="../unit-js/10-identity.js?v=1"></script>
   <script src="../unit-js/15-ui.js?v=1"></script>
+  <!-- iPad-shaped-viewport gate — must load after scaleApp() is defined and before 90-boot.js
+       wires it to the resize listener, so the wrapped version is what gets used -->
+  <script src="canvas-tall-gate.js?v=1"></script>
   <script src="../unit-js/20-xapi.js?v=1"></script>
   <script src="../unit-js/25-report.js?v=1"></script>
   <script src="../unit-js/28-feedback-drag.js?v=1"></script>

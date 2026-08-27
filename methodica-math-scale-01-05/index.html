@@ -23,6 +23,7 @@
 
     <section class="screen active" data-screen="0" id="s0">
 
+      <div class="screen-stage">
       <div class="s0-content">
         <div class="s6-text-block">
           <p class="s25-text-small">כל הכבוד!​</p>
@@ -31,6 +32,7 @@
           <p class="s0-text-hint">יש בה 4 סעיפים. עליכם להצליח ב - 3 לפחות.  ​</p>
         </div>
         <img id="s43-char-img" src="./assets/images/Character1_workout.png" alt="דמות מלווה" class="s6-char-img" style="opacity:0;transition:opacity 0.15s;">
+      </div>
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -42,6 +44,7 @@
 
     <section class="screen" data-screen="1" id="s1">
 
+      <div class="screen-stage">
       <div class="s44-bg">
         <img src="./assets/images/Rescue team.jpg" alt="סיירת הרחפנים" class="s44-bg-img">
       </div>
@@ -51,6 +54,7 @@
           <p>סיירת הרחפנים הארצית הוקפצה לסייע באיתור מטיילים שאיבדו את דרכם בפארק הלאומי.<br>הרחפן משדר למסך הטאבלט תצלומים בזמן אמת.</p>
           <p>עזרו לצוות בשטח לקבל החלטות מבוססות נתונים על סמך המפות וכלי המדידה.</p>
         </div>
+      </div>
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -62,6 +66,7 @@
 
     <section class="screen" data-screen="2" id="s2">
 
+      <div class="screen-stage">
       <div class="s18-question">
         <div class="s18-q-layout">
 
@@ -78,7 +83,7 @@
                 </div>
               </div>
               <div class="s18-fill-row">
-                <input class="s18-answer-box" id="s45-answer-input" type="text" inputmode="numeric" dir="rtl" oninput="s45OnInput()" aria-label="הקלידו את קנה המידה (מספר) ביחס 1">
+                <input class="s18-answer-box" id="s45-answer-input" type="text" inputmode="numeric" dir="rtl" maxlength="10" oninput="s45OnInput()" aria-label="הקלידו את קנה המידה (מספר) ביחס 1">
                 <span class="s18-fill-text">:1</span>
               </div>
             </div>
@@ -114,6 +119,7 @@
         <div class="s16-hint-popup-text">כדי למצוא את קנה המידה, עלינו להתאים בין האורך במפה לאורך במציאות. ​<br>כיצד נייצג את שניהם באותן יחידות מידה כדי לגלות את היחס המצומצם?​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s45CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -140,6 +146,7 @@
 
     <section class="screen" data-screen="3" id="s3">
 
+      <div class="screen-stage">
       <div class="s44-bg">
         <img src="./assets/images/Team.jpg" alt="צוות חיפוש" class="s44-bg-img">
       </div>
@@ -148,6 +155,7 @@
         <div class="s44-text-box">
           <p>החיפושים כבר בעיצומם, אבל נראה שיש בעיית קליטה של הרחפן באיזור האגם.</p>
         </div>
+      </div>
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -159,6 +167,7 @@
 
     <section class="screen" data-screen="4" id="s4">
 
+      <div class="screen-stage">
       <div class="s18-question">
         <div class="s18-q-layout">
 
@@ -233,6 +242,7 @@
         <div class="s16-hint-popup-text">המרחק בין אוהל הפיקוד לאגם הוא 1 ק"מ. ​<br>מהו האורך הכולל של הכבלים שיש ברשות הצוות, והאם הוא יספיק כדי לכסות מרחק זה?​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s47CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -259,6 +269,7 @@
 
     <section class="screen" data-screen="5" id="s5">
 
+      <div class="screen-stage">
       <div class="s44-bg">
         <img src="./assets/images/Noa.jpg" alt="נועה מחילוץ" class="s44-bg-img">
       </div>
@@ -268,6 +279,7 @@
           <p>רגע, מה זה?</p>
           <p>נועה מצוות החילוץ חושבת שהיא מזהה סימן לאחד המטיילים האבודים באיזור האגם.</p>
         </div>
+      </div>
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -279,6 +291,7 @@
 
     <section class="screen" data-screen="6" id="s6">
 
+      <div class="screen-stage">
       <div class="s18-question">
         <div class="s18-q-layout">
 
@@ -345,6 +358,7 @@
         <div class="s16-hint-popup-text">כשמגדילים את התמונה במסך (מבצעים זום הגדלה) המציאות לא משתנה, אך כל ס"מ במסך מייצג כעת מרחק קטן יותר במציאות. נסו לחשוב - איך זה משפיע על קנה המידה?​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s49CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -371,6 +385,7 @@
 
     <section class="screen" data-screen="7" id="s7">
 
+      <div class="screen-stage">
       <div class="s44-bg">
         <img src="./assets/images/Elicopter.jpg" alt="מסוק חילוץ" class="s44-bg-img">
       </div>
@@ -382,6 +397,7 @@
           <p>עכשיו צריך לחפש <span class="s22-help-wrap">קרחת יער<button class="s22-help-btn" type="button" onclick="s14ToggleHelp()" aria-label="מה זה קרחת יער?"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="15" height="15" rx="7.5" fill="#3B2FC2"/><path d="M7.144 12.12C6.912 12.12 6.716 12.086 6.556 12.018C6.4 11.95 6.286 11.856 6.214 11.736C6.142 11.612 6.116 11.466 6.136 11.298C6.156 11.118 6.184 10.898 6.22 10.638C6.26 10.378 6.302 10.086 6.346 9.762C6.394 9.438 6.446 9.088 6.502 8.712C6.558 8.336 6.612 7.944 6.664 7.536C6.72 7.128 6.776 6.712 6.832 6.288L6.136 5.958L6.22 5.484L8.302 5.19L8.596 5.328L7.804 10.788C7.784 10.932 7.792 11.042 7.828 11.118C7.864 11.19 7.922 11.226 8.002 11.226C8.074 11.226 8.152 11.204 8.236 11.16C8.324 11.112 8.436 11.032 8.572 10.92L8.728 11.286C8.684 11.346 8.594 11.442 8.458 11.574C8.326 11.706 8.15 11.83 7.93 11.946C7.71 12.062 7.448 12.12 7.144 12.12ZM7.864 4.386C7.628 4.386 7.426 4.298 7.258 4.122C7.094 3.946 7.018 3.74 7.03 3.504C7.042 3.212 7.138 2.966 7.318 2.766C7.502 2.566 7.748 2.466 8.056 2.466C8.32 2.466 8.53 2.552 8.686 2.724C8.842 2.892 8.918 3.086 8.914 3.306C8.91 3.61 8.82 3.866 8.644 4.074C8.468 4.282 8.208 4.386 7.864 4.386Z" fill="white"/></svg></button><span class="scq-tooltip" role="tooltip" id="s14-help-tooltip">קרחת יער היא אזור פתוח בתוך יער שבו אין עצים, או שיש בו מעט מאוד עצים, בניגוד לסביבה המיוערת שמסביב.</span></span> מספיק גדולה להנחתת המסוק. ​</p>
         </div>
       </div>
+      </div>
 
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(6)">חזרה</button>
@@ -392,6 +408,7 @@
 
     <section class="screen" data-screen="8" id="s8">
 
+      <div class="screen-stage">
       <div class="s18-question">
         <div class="s18-q-layout">
 
@@ -458,6 +475,7 @@
         <div class="s16-hint-popup-text">מהו האורך במציאות של כל קרחת יער, והאם הוא עומד בתנאי הנדרש?​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s51CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -484,6 +502,7 @@
 
     <section class="screen" data-screen="9" id="s9">
 
+      <div class="screen-stage">
       <div class="s44-bg">
         <img src="./assets/images/Happy Team.jpg" alt="צוות חילוץ שמח" class="s44-bg-img">
       </div>
@@ -495,6 +514,7 @@
           <p>תודה שעזרתם לצוות החילוץ!</p>
         </div>
       </div>
+      </div>
 
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(8)">חזרה</button>
@@ -505,6 +525,7 @@
 
     <section class="screen" data-screen="10" id="s10">
 
+      <div class="screen-stage">
       <div class="s0-content">
         <div class="s6-text-block">
           <div id="s53-success">
@@ -514,6 +535,7 @@
         </div>
 
         <video id="s53-gif" class="s53-gif" autoplay loop muted playsinline disablepictureinpicture></video>
+      </div>
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -667,6 +689,9 @@
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
   <script src="../unit-js/10-identity.js?v=1"></script>
   <script src="../unit-js/15-ui.js?v=1"></script>
+  <!-- iPad-shaped-viewport gate — must load after scaleApp() is defined and before 90-boot.js
+       wires it to the resize listener, so the wrapped version is what gets used -->
+  <script src="canvas-tall-gate.js?v=1"></script>
   <script src="../unit-js/20-xapi.js?v=1"></script>
   <script src="../unit-js/25-report.js?v=1"></script>
   <script src="../unit-js/28-feedback-drag.js?v=1"></script>

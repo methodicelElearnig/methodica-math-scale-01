@@ -79,6 +79,54 @@ body {
   outline: none;
 }
 
+/* Fixed 1280x720 reference frame, vertically centered within the fluid .screen by the
+   #app.canvas-tall-gated per-screen rules below — fixes the "content pinned to the top, empty
+   gap grows below it" look on viewports taller/narrower than the 1280:720 design ratio (e.g. an
+   iPad in portrait). Existing absolute top/left values on a screen's content are unchanged;
+   they're just measured from this box's edges instead of directly from the fluid .screen's
+   edges. Gated behind #app.canvas-tall (see canvas-tall-gate.js) so an ORDINARY desktop window
+   (16:9, 16:10, 3:2 — anything down to ~1.47 aspect ratio) renders exactly as it always did;
+   only a genuinely narrow/portrait-shaped viewport (iPad) crosses the gate's threshold and
+   triggers the centering. */
+.screen-stage {
+  position: relative;
+  width: 1280px;
+  height: 720px;
+  flex: none;
+}
+
+/* canvas-tall centering: screen 2 has no own [data-screen="2"].active rule (falls back to the
+   generic .screen.active { display: block; }), so it gets the full default block. */
+#app.canvas-tall [data-screen="2"].active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 74px; /* reserves room for .bottom-bar (shared 74px height; .s3-bottom-bar
+                            only overrides justify-content, not height) */
+  box-sizing: border-box;
+}
+
+/* canvas-tall centering: screens 0 and 1 already have their own [data-screen="N"].active rules
+   (see above) — left untouched. These add only the missing centering properties on top.
+   Screen 0's own rule already sets display:flex; flex-direction:column, so those are omitted
+   here. Screen 1's own rule only sets display:block (not flex), so display:flex is repeated
+   here to actually make the centering take effect. */
+#app.canvas-tall [data-screen="0"].active {
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 74px;
+  box-sizing: border-box;
+}
+
+#app.canvas-tall [data-screen="1"].active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 74px;
+  box-sizing: border-box;
+}
+
 /* ============================================================
    Bottom Bar (shared)
    ============================================================ */

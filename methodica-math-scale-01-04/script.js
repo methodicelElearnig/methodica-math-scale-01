@@ -1006,10 +1006,11 @@ function s41RulerDown(e) {
     startTop:  ruler.offsetTop
   };
   ruler.style.cursor = 'grabbing';
+  try { ruler.setPointerCapture(e.pointerId); } catch (err) {}
   e.preventDefault();
 }
 
-document.addEventListener('mousemove', function(e) {
+document.addEventListener('pointermove', function(e) {
   if (!s41RulerDrag) return;
   var ruler = document.getElementById('s41-ruler');
   if (!ruler) return;
@@ -1032,7 +1033,13 @@ document.addEventListener('mousemove', function(e) {
   ruler.style.top  = newTop  + 'px';
 });
 
-document.addEventListener('mouseup', function() {
+document.addEventListener('pointerup', function() {
+  if (!s41RulerDrag) return;
+  var ruler = document.getElementById('s41-ruler');
+  if (ruler) ruler.style.cursor = 'grab';
+  s41RulerDrag = null;
+});
+document.addEventListener('pointercancel', function() {
   if (!s41RulerDrag) return;
   var ruler = document.getElementById('s41-ruler');
   if (ruler) ruler.style.cursor = 'grab';

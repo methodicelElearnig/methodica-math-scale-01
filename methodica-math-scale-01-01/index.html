@@ -20,6 +20,7 @@
       <span class="flag-btn-label">מצאתם בעיה?</span>
     </button>
     <section class="screen active" data-screen="0">
+      <div class="screen-stage">
       <div class="s0-content">
         <h1 class="s0-title">איזו דמות תרצו שתלווה אתכם?</h1>
         <div class="option-cards" role="radiogroup" aria-label="בחרו דמות מלווה">
@@ -40,6 +41,9 @@
 
         </div>
       </div>
+      
+      </div>
+
       <div class="bottom-bar">
         <button class="btn-continue" id="s0-continue" disabled onclick="advanceFromS0()">
           בחרתי
@@ -152,7 +156,6 @@
         <img id="s1-char-img-2" src="./assets/images/Character1_roller.png" alt="דמות עם משקפת">
       </div>
 
-      <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(0)">חזרה</button>
         <button class="btn-continue" id="s1-continue" disabled onclick="goTo(2)">להמשיך</button>
@@ -161,6 +164,7 @@
     </section>
 
     <section class="screen" data-screen="2">
+      <div class="screen-stage">
       <div class="s0-content">
         <div style="width: 810px; height: 171px;">
           <h1 class="s0-title">בואו נלמד על קנה מידה</h1>
@@ -195,6 +199,9 @@
 
         </div>
       </div>
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(1)">חזרה</button>
         <button class="btn-continue" id="s2-continue" disabled onclick="advanceFromS2()">
@@ -479,17 +486,13 @@
 
           <div class="s4-player-wrap">
 
+            <!-- Uses YouTube's own native thumbnail/play button (no custom cover/button overlay
+                 — removed after a real bug where a click on the overlay landed on the iframe's
+                 own native play control instead, a known hit-testing quirk with a cross-origin
+                 iframe under a transform:scale(...) ancestor like #app). Video-gating (unlocking
+                 the quiz on ENDED) works the same regardless of how playback was started. -->
             <div id="s4-yt-player"></div>
             <div id="s4-player-error" class="s4-player-error" role="alert" aria-live="assertive" style="display:none; color:#b20010; margin-top:16px;"></div>
-
-            <div class="s4-video-cover" id="s4-video-cover"></div>
-
-            <!-- כפתור play — נעלם כשהסרטון מתחיל -->
-            <button class="s4-play-btn" id="s4-play-btn" type="button" onclick="s4Start()" aria-label="הפעל סרטון">
-              <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="16,10 38,22 16,34" fill="white"/>
-              </svg>
-            </button>
 
           </div>
         </div>
@@ -669,6 +672,7 @@
     </section>
 
     <section class="screen" data-screen="6" id="s6">
+      <div class="screen-stage">
 
       <div class="s0-content">
         <div class="s6-text-block">
@@ -676,6 +680,9 @@
           <p class="s2-subtitle">רגע לפני, בואו נפתור תרגיל אחד יחד</p>
         </div>
         <img id="s6-char-img" src="./assets/images/Character1_holdhands.png" alt="דמויות מחזיקות ידיים" class="s6-char-img">
+      </div>
+
+      
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -686,6 +693,7 @@
     </section>
 
     <section class="screen" data-screen="7" id="s7">
+      <div class="screen-stage">
 
       <!-- כותרת + הנחיה -->
       <div class="s7-header">
@@ -723,6 +731,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(6)">חזרה</button>
         <button class="btn-continue" id="s7-continue" type="button" onclick="goTo(8)">המשך</button>
@@ -731,6 +742,7 @@
     </section>
 
     <section class="screen" data-screen="8" id="s8">
+      <div class="screen-stage">
 
       <!-- כותרת + הנחיה -->
       <div class="s7-header">
@@ -783,6 +795,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(7)">חזרה</button>
         <button class="btn-continue" id="s8-continue" type="button" disabled onclick="goTo(9)">המשך</button>
@@ -791,6 +806,7 @@
     </section>
 
     <section class="screen" data-screen="9" id="s9">
+      <div class="screen-stage">
 
       <!-- כותרת + הנחיה -->
       <div class="s7-header">
@@ -843,6 +859,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(8)">חזרה</button>
         <button class="btn-continue" id="s9-continue" type="button" disabled onclick="goTo(10)">המשך</button>
@@ -851,6 +870,7 @@
     </section>
 
     <section class="screen" data-screen="10" id="s10">
+      <div class="screen-stage">
 
       <!-- כותרת + הנחיה -->
       <div class="s7-header">
@@ -903,6 +923,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(9)">חזרה</button>
         <button class="btn-continue" id="s10-continue" type="button" disabled onclick="goTo(11)">המשך</button>
@@ -911,6 +934,7 @@
     </section>
 
     <section class="screen" data-screen="11" id="s11">
+      <div class="screen-stage">
 
       <!-- כותרת + הנחיה -->
       <div class="s7-header">
@@ -955,6 +979,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(10)">חזרה</button>
         <button class="btn-continue" id="s11-continue" type="button" onclick="goTo(12)">המשך</button>
@@ -963,6 +990,7 @@
     </section>
 
     <section class="screen" data-screen="12" id="s12">
+      <div class="screen-stage">
 
       <!-- כותרת + הנחיה -->
       <div class="s7-header">
@@ -998,6 +1026,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(11)">חזרה</button>
         <button class="btn-continue" id="s12-continue" type="button" onclick="goTo(14)">המשך</button>
@@ -1006,6 +1037,7 @@
     </section>
 
     <section class="screen" data-screen="14" id="s14">
+      <div class="screen-stage">
 
       <!-- כותרת + הנחיה -->
       <div class="s7-header">
@@ -1047,6 +1079,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(12)">חזרה</button>
         <button class="btn-continue" id="s14-continue" type="button" onclick="goTo(15)">המשך</button>
@@ -1055,6 +1090,7 @@
     </section>
 
     <section class="screen" data-screen="15" id="s15">
+      <div class="screen-stage">
 
       <div class="s0-content">
         <div class="s6-text-block">
@@ -1062,6 +1098,9 @@
           <p class="s15-subtitle">שאלה קלילה לחימום לפני שנתקדם</p>
         </div>
         <img id="s15-char-img" src="./assets/images/Character1_workout.png" alt="דמות מתאמנת" class="s6-char-img">
+      </div>
+
+      
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -1072,6 +1111,7 @@
     </section>
 
     <section class="screen" data-screen="16" id="s16">
+      <div class="screen-stage">
 
       <div class="s16-content">
 
@@ -1125,6 +1165,9 @@
         <button class="s16-hint-popup-close" type="button" onclick="s16CloseHint()">חזרה לשאלה</button>
       </div>
 
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(15)">חזרה</button>
         <div class="s16-hint-continue-group">
@@ -1148,6 +1191,7 @@
     </section>
 
     <section class="screen" data-screen="17" id="s17">
+      <div class="screen-stage">
 
       <div class="s0-content">
         <div class="s6-text-block">
@@ -1160,6 +1204,9 @@
         </div>
       </div>
 
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(16)">חזרה</button>
         <button class="btn-continue" type="button" onclick="goTo(18)">המשך</button>
@@ -1168,6 +1215,7 @@
     </section>
 
     <section class="screen" data-screen="18" id="s18">
+      <div class="screen-stage">
 
       <!-- Header -->
       <div class="s18-header">
@@ -1207,7 +1255,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s18">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s18-answer-input" type="text" dir="rtl" oninput="s18CheckInput()" aria-labelledby="label-s18">
+                <input class="s18-answer-box" id="s18-answer-input" type="text" dir="rtl" maxlength="10" oninput="s18CheckInput()" aria-labelledby="label-s18">
               </div>
             </div>
           </div>
@@ -1251,6 +1299,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(17)">חזרה</button>
         <div class="s16-hint-continue-group">
@@ -1274,6 +1325,7 @@
     </section>
 
     <section class="screen" data-screen="19" id="s19">
+      <div class="screen-stage">
 
       <!-- Header -->
       <div class="s18-header">
@@ -1314,7 +1366,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s19a">השלימו את התשובה:</span>
-                <input class="s18-answer-box" id="s19-answer-input" type="text" dir="rtl" oninput="s19CheckInput()" aria-labelledby="label-s19a label-s19b">
+                <input class="s18-answer-box" id="s19-answer-input" type="text" dir="rtl" maxlength="10" oninput="s19CheckInput()" aria-labelledby="label-s19a label-s19b">
                 <span class="s18-fill-text" id="label-s19b">: 1</span>
               </div>
             </div>
@@ -1350,6 +1402,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(18)">חזרה</button>
         <div class="s16-hint-continue-group">
@@ -1373,6 +1428,7 @@
     </section>
 
     <section class="screen" data-screen="20" id="s20">
+      <div class="screen-stage">
 
       <!-- Header -->
       <div class="s18-header">
@@ -1462,6 +1518,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(19)">חזרה</button>
         <div class="s16-hint-continue-group">
@@ -1485,6 +1544,7 @@
     </section>
 
     <section class="screen" data-screen="21" id="s21">
+      <div class="screen-stage">
 
       <!-- Header -->
       <div class="s18-header">
@@ -1523,7 +1583,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s21">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s21-answer-input" type="text" dir="rtl" oninput="s21CheckInput()" aria-labelledby="label-s21">
+                <input class="s18-answer-box" id="s21-answer-input" type="text" dir="rtl" maxlength="10" oninput="s21CheckInput()" aria-labelledby="label-s21">
               </div>
             </div>
           </div>
@@ -1564,6 +1624,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(20)">חזרה</button>
         <div class="s16-hint-continue-group">
@@ -1587,6 +1650,7 @@
     </section>
 
     <section class="screen" data-screen="22" id="s22">
+      <div class="screen-stage">
 
       <!-- Header -->
       <div class="s18-header">
@@ -1685,6 +1749,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(21)">חזרה</button>
         <div class="s16-hint-continue-group">
@@ -1708,6 +1775,7 @@
     </section>
 
     <section class="screen" data-screen="23" id="s23">
+      <div class="screen-stage">
 
       <!-- Header -->
       <div class="s18-header">
@@ -1779,6 +1847,9 @@
       </div>
 
       <!-- Bottom bar -->
+      
+      </div>
+
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(22)">חזרה</button>
         <div class="s16-hint-continue-group">
@@ -1997,6 +2068,9 @@
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
   <script src="../unit-js/10-identity.js?v=1"></script>
   <script src="../unit-js/15-ui.js?v=1"></script>
+  <!-- iPad-shaped-viewport gate (01-01 trial only) — must load after scaleApp() is defined and
+       before 90-boot.js wires it to the resize listener, so the wrapped version is what gets used -->
+  <script src="canvas-tall-gate.js?v=1"></script>
   <script src="../unit-js/20-xapi.js?v=1"></script>
   <script src="../unit-js/25-report.js?v=1"></script>
   <script src="../unit-js/28-feedback-drag.js?v=1"></script>
@@ -2004,7 +2078,7 @@
   <script src="../unit-js/40-resume.js?v=1"></script>
   <script src="../unit-js/50-loader.js?v=1"></script>
   <script src="../unit-js/60-devbridge.js?v=1"></script>
-  <script src="script.js?v=12"></script>
+  <script src="script.js?v=13"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="../unit-js/90-boot.js?v=1"></script>
 </body>

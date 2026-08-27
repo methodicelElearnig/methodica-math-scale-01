@@ -22,14 +22,16 @@
     </button>
     <section class="screen active" data-screen="0" id="s0">
 
-      <div class="s0-content">
-        <div class="s6-text-block">
-          <p class="s25-text-small">אין כמו תרגול לחיזוק הלמידה​</p>
-          <p class="s25-text-large">4 שאלות</p>
-          <p class="s0-text-hint">וכבר בהתחלה יש רמז! ענו נכון על 3 שאלות ומעלה (75%) כדי להתקדם.​</p>
-        </div>
-        <div class="s17-img-wrap">
-          <img id="s25-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" class="s6-char-img">
+      <div class="screen-stage">
+        <div class="s0-content">
+          <div class="s6-text-block">
+            <p class="s25-text-small">אין כמו תרגול לחיזוק הלמידה​</p>
+            <p class="s25-text-large">4 שאלות</p>
+            <p class="s0-text-hint">וכבר בהתחלה יש רמז! ענו נכון על 3 שאלות ומעלה (75%) כדי להתקדם.​</p>
+          </div>
+          <div class="s17-img-wrap">
+            <img id="s25-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" class="s6-char-img">
+          </div>
         </div>
       </div>
 
@@ -42,6 +44,7 @@
 
     <section class="screen" data-screen="1" id="s1">
 
+      <div class="screen-stage">
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item">
           <div class="s18-nav-icon s18-nav-icon--active"></div>
@@ -167,6 +170,7 @@
         <div class="s16-hint-popup-text">בקנה מידה 1,000 : 1, אורך השביל במציאות גדול פי 1,000 מאורכו במפה.<br>קבעו לפי אורך השביל במפה את אורכו במציאות בס"מ.</div>
         <button class="s16-hint-popup-close" type="button" onclick="s26CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -193,6 +197,7 @@
 
     <section class="screen" data-screen="2" id="s2">
 
+      <div class="screen-stage">
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
         <div class="s18-nav-line"></div>
@@ -289,6 +294,7 @@
         <div class="s16-hint-popup-text">לפני שתענו, בדקו פי כמה גדול המרחק במציאות מהמרחק במפה.<br>אחר כך חשבו כמה ס"מ יש במטר אחד.</div>
         <button class="s16-hint-popup-close" type="button" onclick="s27CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -315,6 +321,7 @@
 
     <section class="screen" data-screen="3" id="s3">
 
+      <div class="screen-stage">
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
         <div class="s18-nav-line"></div>
@@ -389,6 +396,7 @@
         <div class="s16-hint-popup-text">זכרו - קנה מידה של 50 : 1 מציין שכל ס"מ אחד בתרשים מייצג 50 ס"מ בחצר. בדקו כל אפשרות, ושימו לב היטב היכן כתוב ס"מ והיכן כתוב מטרים - זה עלול להטעות!​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s28CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -415,6 +423,7 @@
 
     <section class="screen" data-screen="4" id="s4">
 
+      <div class="screen-stage">
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
         <div class="s18-nav-line"></div>
@@ -441,7 +450,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s29a">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s29-answer-input" type="text" inputmode="numeric" dir="rtl" oninput="s29CheckInput()" aria-labelledby="label-s29a label-s29b">
+                <input class="s18-answer-box" id="s29-answer-input" type="text" inputmode="numeric" dir="rtl" maxlength="10" oninput="s29CheckInput()" aria-labelledby="label-s29a label-s29b">
                 <span class="s18-fill-text" id="label-s29b">מטרים</span>
               </div>
             </div>
@@ -477,6 +486,7 @@
         <div class="s16-hint-popup-text">נרצה לעבור מהתוכנית המשורטטת למציאות, כלומר להגדיל את המידות.​<br>כל 1 ס"מ בתוכנית המשורטטת מייצג 200 ס"מ במציאות, ולכן נמצא תחילה כמה ס"מ במציאות הם 2 ס"מ בשרטוט.​<br>זכרו להמיר את התוצאה למטרים.</div>
         <button class="s16-hint-popup-close" type="button" onclick="s29CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -503,6 +513,7 @@
 
     <section class="screen" data-screen="5" id="s5">
 
+      <div class="screen-stage">
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
         <div class="s18-nav-line"></div>
@@ -641,6 +652,7 @@
         <div class="s16-hint-popup-text">מידות החדר נתונות במטרים, וקנה המידה הוא בס״מ. בדקו תחילה כמה ס״מ יש במטר אחד. ​<br>אחר כך חישבו: אם מעבירים חדר במציאות לתרשים מוקטן, איזו פעולה מקטינה את האורך?​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s30CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -667,6 +679,7 @@
 
     <section class="screen" data-screen="6" id="s6">
 
+      <div class="screen-stage">
       <div class="s0-content">
         <div class="s6-text-block">
           <p class="s25-text-small">יופי של עבודה!</p>
@@ -687,6 +700,7 @@
           </div>
         </div>
       </div>
+      </div>
 
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(5)">חזרה</button>
@@ -697,6 +711,7 @@
 
     <section class="screen" data-screen="7" id="s7">
 
+      <div class="screen-stage">
       <!-- Progress: 2 questions, Q1 active -->
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item">
@@ -726,7 +741,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s32a">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s32-answer-input" type="text" inputmode="numeric" dir="rtl" oninput="s32CheckInput()" aria-labelledby="label-s32a label-s32b">
+                <input class="s18-answer-box" id="s32-answer-input" type="text" inputmode="numeric" dir="rtl" maxlength="10" oninput="s32CheckInput()" aria-labelledby="label-s32a label-s32b">
                 <span class="s18-fill-text" id="label-s32b">ס"מ</span>
               </div>
             </div>
@@ -762,6 +777,7 @@
         <div class="s16-hint-popup-text">שימו לב: יש להמיר את יחידות המידה.</div>
         <button class="s16-hint-popup-close" type="button" onclick="s32CloseHint()">חזרה לשאלה</button>
       </div>
+      </div>
 
       <!-- Bottom bar -->
       <div class="bottom-bar s3-bottom-bar">
@@ -788,6 +804,7 @@
 
     <section class="screen" data-screen="8" id="s8">
 
+      <div class="screen-stage">
       <!-- Progress: 2 questions, Q1 done, Q2 active -->
       <div class="s18-nav" dir="rtl">
         <div class="s18-nav-item"><div class="s18-nav-icon"></div><div class="s18-nav-label">שאלה 1</div></div>
@@ -859,6 +876,7 @@
         </div>
         <div class="s16-hint-popup-text">שימו לב ליחידות המידה. אחר כך בדקו: באיזה מספר אפשר לצמצם את היחס בין אורך הבריכה בסרטוט לבין אורך הבריכה במציאות?​</div>
         <button class="s16-hint-popup-close" type="button" onclick="s33CloseHint()">חזרה לשאלה</button>
+      </div>
       </div>
 
       <!-- Bottom bar -->
@@ -1067,6 +1085,9 @@
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
   <script src="../unit-js/10-identity.js?v=1"></script>
   <script src="../unit-js/15-ui.js?v=1"></script>
+  <!-- iPad-shaped-viewport gate — must load after scaleApp() is defined and before 90-boot.js
+       wires it to the resize listener, so the wrapped version is what gets used -->
+  <script src="canvas-tall-gate.js?v=1"></script>
   <script src="../unit-js/20-xapi.js?v=1"></script>
   <script src="../unit-js/25-report.js?v=1"></script>
   <script src="../unit-js/28-feedback-drag.js?v=1"></script>

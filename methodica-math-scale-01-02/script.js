@@ -945,6 +945,7 @@ function s32Submit() {
     document.getElementById('s32-answer-input').disabled = true;
     fbBold.textContent  = 'כל הכבוד! ​';
     fbReg.innerHTML     = explanationCorrect;
+    fb.classList.remove('s5-fb--incorrect');
     fb.classList.add('s5-fb--correct');
     fb.hidden     = false;
     cont.textContent = 'שנמשיך?';
