@@ -87,13 +87,16 @@ param(
 # NEVER hard-code it here — this script is committed. It is resolved at runtime, in
 # order, from: the -ApiKey parameter, the KATA_API_KEY environment variable, or the
 # git-ignored key file below (one line, just the key). Shared with send-metadata.ps1.
-$ApiKeyFile = Join-Path $PSScriptRoot 'kata-api-key.txt'
+# Repo root is one level up: this script lives in docs-and-tools/, while the
+# key file, metadata/, metadata-from/, and the log all stay at the repo root.
+$RepoRoot = Split-Path $PSScriptRoot -Parent
+$ApiKeyFile = Join-Path $RepoRoot 'kata-api-key.txt'
 # API base URL (override at launch with -BaseUrl).
 if (-not $BaseUrl) { $BaseUrl = 'https://kata.cet.ac.il' }
 # Where the retrieved metadata files go (override with -OutDir).
-if (-not $OutDir)  { $OutDir  = Join-Path $PSScriptRoot 'metadata-from' }
+if (-not $OutDir)  { $OutDir  = Join-Path $RepoRoot 'metadata-from' }
 # Run log (git-ignored via *.log).
-$LogFile = Join-Path $PSScriptRoot 'retrieve-metadata.log'
+$LogFile = Join-Path $RepoRoot 'retrieve-metadata.log'
 
 # ── (2) PER-UNIT — usually fine as-is ───────────────────────────────────────
 # Which language to unwrap the unit's title object with:
@@ -439,7 +442,7 @@ Write-Log ("Output dir : {0}" -f $OutDir)
 # 1) Which unit? Parameter, else the local metadata folder, else ask the catalog.
 if ($UnitKey) { Write-Log ("Unit key   : {0} (-UnitKey)" -f $UnitKey) }
 if (-not $UnitKey) {
-    $localUnit = Get-ChildItem -Path (Join-Path $PSScriptRoot 'metadata') -Filter '*_unit.json' -ErrorAction SilentlyContinue |
+    $localUnit = Get-ChildItem -Path (Join-Path $RepoRoot 'metadata') -Filter '*_unit.json' -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if ($localUnit) {
         $UnitKey = Get-Slug ((Get-Content -Raw -Path $localUnit.FullName -Encoding UTF8 | ConvertFrom-Json).id)

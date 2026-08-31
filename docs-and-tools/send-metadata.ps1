@@ -60,13 +60,16 @@ param(
 # NEVER hard-code it here — this script is committed. It is resolved at runtime, in
 # order, from: the -ApiKey parameter, the KATA_API_KEY environment variable, or the
 # git-ignored key file below (one line, just the key). See SEND-METADATA.md.
-$ApiKeyFile = Join-Path $PSScriptRoot 'kata-api-key.txt'
+# Repo root is one level up: this script lives in docs-and-tools/, while the
+# key file, metadata/, and the log all stay at the repo root.
+$RepoRoot = Split-Path $PSScriptRoot -Parent
+$ApiKeyFile = Join-Path $RepoRoot 'kata-api-key.txt'
 # API base URL (override at launch with -BaseUrl).
 if (-not $BaseUrl) { $BaseUrl = 'https://kata.cet.ac.il' }
-# Metadata folder to send (override with -MetadataDir). Defaults to ./metadata.
-if (-not $MetadataDir) { $MetadataDir = Join-Path $PSScriptRoot 'metadata' }
+# Metadata folder to send (override with -MetadataDir). Defaults to repo root's ./metadata.
+if (-not $MetadataDir) { $MetadataDir = Join-Path $RepoRoot 'metadata' }
 # Run log (git-ignored via *.log).
-$LogFile = Join-Path $PSScriptRoot 'send-metadata.log'
+$LogFile = Join-Path $RepoRoot 'send-metadata.log'
 
 # ── (2) PER-UNIT — usually fine as-is ───────────────────────────────────────
 # Title language key: wraps a string title into the API object, e.g.
