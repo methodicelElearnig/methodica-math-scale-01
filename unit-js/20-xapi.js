@@ -103,13 +103,154 @@ function xapiFinishItems(){
   }
 }
 
-/* HTML5 <video> played/paused. */
+/* ═══════════════════ The call-site helpers ═══════════════════
+   Every `answered` site used to be a 6–8 line block, duplicated 25 times across five files, and
+   every hint site a 1-line raw send duplicated 23 times. These helpers turn each into one call.
+   Less duplication means fewer places to get it wrong — and that is exactly the class of mistake
+   the swallowing try/catch around each site was hiding.
+
+   ⚠️ The write to XAPI_Q_RESULTS happens BEFORE the try/catch and outside it, not inside. That is
+   an invariant from docs-and-tools/REPORT-XAPI.md §2: a reporting failure must not be able to
+   corrupt the score. It is now enforced in one place rather than relied on at 25 call sites. */
+
+/* ── Answer-text builders, for question types that are not single choice ──
+   result.response should carry what the learner actually answered. For single choice that is
+   xapiAnswerText(optEl); drag and field questions need to describe a state rather than one
+   element. All three are deliberately generic so they can move between units unchanged. */
+
+/* A drag board: for each zone, the items the learner dropped in it.
+   'ton: locomotive | kg: giant turtle | gram: apple, grain of salt'
+   ⚠️ Unused in this unit — component 04's drag question serialises its own ddqPlacement map,
+   because its markup has no <prefix>-zone-<id> containers. Kept so this file stays identical
+   across units; delete it only if the whole family stops using zone markup. */
+function xapiZoneAnswer(prefix, zoneIds){
+  try {
+    return zoneIds.map(function(z){
+      var el = document.getElementById(prefix + '-zone-' + z);
+      var items = el ? el.querySelectorAll('[class*="drag-item"], [class*="placed-card"]') : [];
+      var names = [];
+      for (var i = 0; i < items.length; i++) names.push(xapiAnswerText(items[i]));
+      return z + ': ' + (names.join(', ') || '—');
+    }).join(' | ');
+  } catch (e) { return ''; }
+}
+
+/* A group of inputs or dropdowns. `values` is optional — without it .value is read from the DOM.
+   's18-input-1=1400 | s18-input-2=900' */
+function xapiFieldsAnswer(ids, values){
+  try {
+    return ids.map(function(id){
+      var v = values ? values[id] : (document.getElementById(id) || {}).value;
+      return id + '=' + (v == null || v === '' ? '—' : v);
+    }).join(' | ');
+  } catch (e) { return ''; }
+}
+
+/* Multiple choice: the labels of the selected options, via the screen's own lookup function. */
+function xapiMultiAnswer(ids, optElFn){
+  try {
+    return (ids || []).map(function(id){
+      return xapiAnswerText(optElFn(id)) || String(id);
+    }).join(', ');
+  } catch (e) { return ''; }
+}
+
+/* Report one graded answer.
+     item      the item suffix, e.g. '005'
+     qKey      the question key, e.g. 'q1'
+     correct   whether the answer is correct
+     isLast    whether this is the final answer to the question (correct, or attempts exhausted).
+               Only 'answered.last' enters the component score denominator.
+     answer    the learner's answer text, as they see it */
+function xapiAnswered(item, qKey, correct, isLast, answer){
+  XAPI_Q_RESULTS[item + '/' + qKey] = !!correct;
+  if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
+  try {
+    sendStatement720(isLast ? 'answered.last' : 'answered', 'question',
+      { success: !!correct,
+        score: { scaled: correct ? 1 : 0 },
+        extensions: { student_answer: [answer == null ? '' : String(answer)] } },
+      xapiQ(item, qKey));
+  } catch (e) { console.error('[xAPI] answered ' + item + '/' + qKey, e); }
+}
+
+/* The (item/qKey) pairs already reported with 'requested.1' during THIS page load. Same key
+   xapiAnswered uses for XAPI_Q_RESULTS. */
+var XAPI_HINTS_SENT = {};
+
+/* A hint request. ⚠️ Place only in the branch where the hint is actually being OPENED. Hints here
+   are overlays whose `hidden` is toggled, and calling this on the toggle would report a second
+   request on every close.
+
+   ── Dedupe: once per question ──
+   Opening alone is not enough. Each overlay closes three ways (its close button, a click on the
+   backdrop, and Escape) and all three leave the hint button live, so a learner who opened a hint
+   twice reported 'requested.1' twice. The check lives here rather than at the call sites because
+   there are 23 of them across four components and every one goes through this function.
+
+   ── Scope: one page load ──
+   The map is cleared on reload, so a learner who refreshes and reopens the same hint reports
+   again. That is a deliberate trade (the alternative is holding these keys in the state
+   document). The restore itself is not at risk: applyExecutionState replaces sendStatement720
+   with a no-op for as long as _restoring is set. */
+function xapiRequestedHint(item, qKey){
+  var _k = item + '/' + qKey;
+  if (XAPI_HINTS_SENT[_k]) return;
+  XAPI_HINTS_SENT[_k] = true;
+  if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
+  try { sendStatement720('requested.1', 'question', null, xapiQ(item, qKey)); } catch (e) {}
+}
+
+/* The component 'completed'. Closes the open item first, then reports through the ledger.
+   ⚠️ Must be called on failure paths too. A component the learner did not pass still has to be
+   reported, otherwise their whole attempt goes unrecorded — routing a failing learner is the
+   platform's job, via the component's recommendedAfterFail. See REPORT-XAPI.md §5. */
+function xapiCompleteComponent(result){
+  try { xapiFinishItems(); } catch (e) {}
+  try {
+    sendCompletedOnce('done', currentPartSlug(), 'onlinelesson', result || null);
+  } catch (e) { console.error('[xAPI] completed component', e); }
+}
+
+/* The unit 'completed'. Sent once per attempt, from the finale screen in component 05.
+   'unit' is a ledger key of its own, because the statement belongs to the unit and not to the
+   component that happens to send it.
+
+   ⚠️ opts is { scope: 'unit' }, NOT { objectId: window.XAPI_UNIT_ID }. Both reach the same object,
+   but this unit has used `scope` since its first version — including for the unit 'initialized'
+   in component 01's onXapiReady — and that is the shape its live statements have been reviewed
+   against. The science unit uses objectId; do not "harmonise" one into the other without checking
+   what the library does with each, because the two are resolved by different code paths. */
+function xapiCompleteUnit(result){
+  try {
+    sendCompletedOnce('done', 'unit', 'onlinelesson', result || null, { scope: 'unit' });
+  } catch (e) { console.error('[xAPI] completed unit', e); }
+}
+
+/* played/paused for HTML5 <video> — CONTENT VIDEO ONLY, by explicit opt-in.
+   ── Why an allowlist rather than every <video> ──
+   The previous version selected querySelectorAll('video') with no filter. The only <video> in
+   this unit is #s53-gif in component 05 — a decorative autoplay/loop/muted clip of the companion
+   character, not content — and it was wired and reporting. Components 01–04 were silent only
+   because they have no <video> element, not because anything filtered them.
+   It was not quiet reporting either: an element that is playing emits a pause event followed by a
+   play whenever .load() or a src swap happens, i.e. a fabricated paused/played pair on every
+   entry to the screen, including on back-navigation and on resume.
+   Only elements carrying data-xapi-report are wired now, its value being the item suffix (e.g.
+   data-xapi-report="003" data-xapi-q="q1"). No element in this unit carries it, so video
+   reporting is off in practice — the mechanism stays ready for real content video.
+   ── objectId ──
+   The previous version sent objectType 'question' with no objectId and no questionId, so those
+   statements had no question to hang off. They now carry xapiQ() like every other question-scoped
+   statement. */
 function xapiWireVideos(){
   if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
-  document.querySelectorAll('video').forEach(function(v){
+  document.querySelectorAll('video[data-xapi-report]').forEach(function(v){
     if (v.__xapiWired) return; v.__xapiWired = true;
+    var item = v.getAttribute('data-xapi-report');
+    var qKey = v.getAttribute('data-xapi-q') || 'q1';
     var pausedOnce = false;
-    v.addEventListener('pause', function(){ if (v.ended || v.currentTime === 0) return; pausedOnce = true; try { sendStatement720('paused', 'question', null, { time: v.currentTime }); } catch (e) {} });
-    v.addEventListener('play',  function(){ if (!pausedOnce) return; try { sendStatement720('played', 'question', null, { time: v.currentTime }); } catch (e) {} });
+    v.addEventListener('pause', function(){ if (v.ended || v.currentTime === 0) return; pausedOnce = true; try { sendStatement720('paused', 'question', null, Object.assign({ time: v.currentTime }, xapiQ(item, qKey))); } catch (e) {} });
+    v.addEventListener('play',  function(){ if (!pausedOnce) return; try { sendStatement720('played', 'question', null, Object.assign({ time: v.currentTime }, xapiQ(item, qKey))); } catch (e) {} });
   });
 }

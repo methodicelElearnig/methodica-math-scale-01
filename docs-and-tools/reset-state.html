@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>איפוס מסמך state — כלי QA</title>
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  כלי QA למחיקת מסמך ה-state של רישום (registration) אחד ב-Kata.
+
+  ⚠️ **לא נפרס.** הקובץ יושב ב-docs-and-tools/ במכוון: תהליך האריזה מוחק את
+  התיקייה הזאת מחבילת השחרור (ראו DEPLOY.md). דף שמוחק התקדמות של לומד לא
+  אמור להיות נגיש בייצור.
+
+  ── למה ?registration לבדו לא מספיק ──
+  ה-State API של Kata מאמת **רק** בכותרת `Authorization: Bearer <token>`.
+  אין צורת query-string לטוקן, אין X-HTTP-Method-Override ואין syntax חלופי
+  של xAPI §7.7 — אומת מול Documentation/KATA/KATA-API.md. לכן ה-registration
+  מגיע מה-URL כמבוקש, והטוקן מגיע מאחד משניים:
+    1. `?slxapi={...}` — מעטפת ההשקה, אם פותחים עם קישור השקה קיים
+    2. הדבקה בשדה שבדף — לא נשמר, לא נכתב ל-URL ולא ללוג
+
+  ⚠️ הטוקן **לא** מוקשח לתוך הקובץ במכוון: זה קובץ בריפו, וטוקן חי בתוכו הוא
+  דליפת אישורים. הדף גם לא כותב אותו לקונסול — רק `Bearer …(len N)`.
+
+  ── CORS — המגבלה המעשית ──
+  ה-CORS מול kata.cet.ac.il אומת בהרצה חיה **רק** מ-lomdot.education.gov.il.
+  מ-file:// או מ-localhost הקריאה עשויה להיכשל עם status 0. אם זה קורה, שתי
+  אפשרויות:
+    • להשתמש ב-`?resetState` על אחד הסינים בייצור — הפתח הקיים, שכותב מסמך
+      ריק ועובר בוודאות (unit-js/40-resume.js). לא DELETE אמיתי, אבל שקול
+      מבחינת הלומד.
+    • להעלות את הקובץ הזה זמנית לתיקיית היחידה בייצור, להשתמש, **ולמחוק
+      מיד**. לא להשאיר אותו שם.
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #fff; --ink: #16242e; --muted: #5b6b76;
+    --line: #d7dee3; --blue: #019de5; --red: #c62828; --green: #2e7d32;
+    --amber: #f9a825;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 20px; background: var(--bg); color: var(--ink);
+    font-family: 'Assistant', 'Segoe UI', Arial, sans-serif; font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 20px; margin-bottom: 16px;
+  }
+  .warn {
+    border-inline-start: 5px solid var(--amber); background: #fffdf3;
+    font-size: 14px;
+  }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; font-size: 14px; }
+  input[type=text], input[type=password] {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px;
+    font-family: ui-monospace, 'Consolas', monospace; font-size: 13px; direction: ltr;
+  }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  button {
+    font-family: inherit; font-size: 15px; font-weight: 600; padding: 10px 22px;
+    border-radius: 1000px; cursor: pointer; border: 2px solid var(--blue);
+    background: #fff; color: var(--blue);
+  }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.danger { border-color: var(--red); color: #fff; background: var(--red); }
+  button.danger:disabled { background: #e8a0a0; border-color: #e8a0a0; }
+  pre {
+    background: #0f1c24; color: #d6e6f2; padding: 14px; border-radius: 8px;
+    overflow-x: auto; font-size: 12.5px; direction: ltr; text-align: left;
+    white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; min-height: 42px;
+  }
+  .ok { color: #7ddba0; } .bad { color: #ff9c9c; } .dim { color: #8fa6b4; }
+  code { background: #eef2f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .chk { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
+  .chk input { width: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>איפוס מסמך state</h1>
+  <p class="sub">מוחק את מסמך ה-state של רישום אחד ב-Kata (<code>DELETE /activities/state</code>).</p>
+
+  <div class="card warn">
+    <strong>כלי QA — לא לפרוס.</strong>
+    הפעולה מוחקת את כל ההתקדמות של אותו רישום: מסך נחיתה, תשובות, ויומן
+    ה-<code>completed</code>. מחיקת היומן פירושה שהשיגור הבא ישלח <code>completed</code>
+    מחדש לכל רכיב ופריט. להשתמש רק על רישום בדיקה.
+  </div>
+
+  <div class="card">
+    <label for="reg">Registration</label>
+    <input id="reg" type="text" placeholder="93e7ad5d-…" autocomplete="off" spellcheck="false">
+    <div class="hint">נקרא מ-<code>?registration=</code> ב-URL. ניתן לערוך.</div>
+
+    <label for="tok">Reporting token</label>
+    <input id="tok" type="password" placeholder="Bearer … (או הדביקו את הטוקן בלבד)" autocomplete="off" spellcheck="false">
+    <div class="hint">
+      נקרא מ-<code>?slxapi=</code> אם קיים. לא נשמר, לא נכתב ל-URL ולא לקונסול —
+      הדף מדפיס אותו רק כאורך.
+    </div>
+
+    <label for="ep">Endpoint</label>
+    <input id="ep" type="text" value="https://kata.cet.ac.il/api/v1/xapi/" spellcheck="false">
+    <div class="hint">
+      סיומת <code>statements</code> מסולקת אוטומטית — אותו נרמול שהספרייה עושה
+      ב-<code>stateBaseUrl720()</code>.
+    </div>
+
+    <div class="chk">
+      <input id="ifmatch" type="checkbox">
+      <label for="ifmatch" style="margin:0;font-weight:400">
+        לשלוח <code>If-Match</code> עם ה-ETag מהבדיקה (מונע מחיקת מסמך שהשתנה מאז)
+      </label>
+    </div>
+    <div class="hint">
+      ⚠️ preflight של <code>If-Match</code> מול Kata לא אומת בהרצה חיה. אם נכשל
+      ב-status 0 — לכבות.
+    </div>
+
+    <div class="row">
+      <button id="btnCheck">בדיקה — מה קיים שם</button>
+      <button id="btnDel" class="danger" disabled>מחיקה</button>
+      <button id="btnCurl">העתקת פקודת curl</button>
+    </div>
+    <div class="hint" id="delHint">המחיקה נפתחת אחרי בדיקה, כדי שלא תמחקו משהו שלא ראיתם.</div>
+  </div>
+
+  <pre id="out"><span class="dim">מוכן.</span></pre>
+
+  <div class="card">
+    <strong style="font-size:15px">אם הכפתורים נכשלים ב-<code>status 0</code></strong>
+    <div class="hint" style="margin-top:6px">
+      זה CORS, לא באג: הדפדפן חוסם את הקריאה כשהדף לא מוגש מ-<code>lomdot.education.gov.il</code>
+      — המקור היחיד שאומת מול Kata. ל-<code>curl</code> אין מגבלת CORS בכלל, ולכן
+      הוא עובד מכל מקום. "העתקת פקודת curl" מייצר את שתי הפקודות (בדיקה ומחיקה)
+      עם הטוקן האמיתי, מוכנות להדבקה בטרמינל.
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var $ = function (id) { return document.getElementById(id); };
+var out = $('out');
+var lastEtag = null;
+var checkedReg = null;
+
+function log(html, cls) {
+  out.innerHTML = cls ? '<span class="' + cls + '">' + html + '</span>' : html;
+}
+function append(html, cls) {
+  out.innerHTML += '\n' + (cls ? '<span class="' + cls + '">' + html + '</span>' : html);
+}
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* מסתיר את הטוקן בכל פלט. אורך בלבד — מספיק לאבחן "הודבק חלקית" בלי לחשוף. */
+function redact(tok) {
+  if (!tok) return '(none)';
+  return 'Bearer …(len ' + String(tok).replace(/^Bearer\s+/i, '').length + ')';
+}
+
+/* אותו נרמול כמו stateBaseUrl720: מעטפת שנמסרה עם '…/xapi/statements' הייתה
+   מייצרת '…/statements/activities/state' → 404, שנראה כמו "אין מסמך". */
+function baseUrl() {
+  var ep = $('ep').value.trim();
+  var stripped = ep.replace(/statements\/?$/, '');
+  if (stripped && !/\/$/.test(stripped)) stripped += '/';
+  return stripped;
+}
+function stateUrl(reg) {
+  return baseUrl() + 'activities/state?registration=' + encodeURIComponent(reg);
+}
+function authHeader() {
+  var t = $('tok').value.trim();
+  if (!t) return null;
+  return /^Bearer\s+/i.test(t) ? t : 'Bearer ' + t;
+}
+
+/* אותה טבלת status→reason של xapi-720-k.js, כדי שהאבחון כאן ידבר באותה שפה
+   כמו stateLastResult720() בלומדה עצמה. */
+function reasonFor(op, status) {
+  if (status >= 200 && status < 300) return 'ok';
+  switch (status) {
+    case 0:   return 'network / CORS';
+    case 400: return 'bad-address';
+    case 401: return 'auth';
+    case 404: return (op === 'delete') ? 'absent (nothing to delete)' : 'absent';
+    case 412: return 'stale (If-Match)';
+    case 413: return 'too-large';
+    case 422: return 'validation';
+    default:  return 'http-' + status;
+  }
+}
+
+function readParams() {
+  var q = new URLSearchParams(location.search);
+
+  var reg = q.get('registration');
+  if (reg) $('reg').value = reg;
+
+  /* שלוש דרכים להעביר את הטוקן, לפי סדר עדיפות. בכולן הוא נקרא לזיכרון
+     ומיד מסולק מה-URL (ראו למטה) — אבל URL עדיין עובר דרך לוגים של שרת
+     ודרך היסטוריית הדפדפן לפני שהסקריפט רץ, ולכן הדבקה בשדה עדיפה כשאפשר. */
+  var raw = q.get('slxapi');
+  if (raw) {
+    try {
+      var env = JSON.parse(raw);
+      if (env && env.auth) $('tok').value = env.auth;
+      if (env && env.endpoint) $('ep').value = env.endpoint;
+    } catch (e) {
+      append('⚠ ?slxapi present but not valid JSON — ignored.', 'bad');
+    }
+  }
+  /* ?auth= — נוח יותר מ-?slxapi כי לא דורש לבנות JSON ביד. מקבל גם
+     'Bearer xxx' וגם 'xxx' בלבד. */
+  var authQ = q.get('auth');
+  if (authQ) $('tok').value = authQ;
+  var epQ = q.get('endpoint');
+  if (epQ) $('ep').value = epQ;
+
+  var msgs = [];
+  msgs.push('registration: ' + (reg ? esc(reg) : '(not in URL — enter it above)'));
+  msgs.push('token:        ' + redact($('tok').value));
+  msgs.push('endpoint:     ' + esc(baseUrl() || '(empty)'));
+  log(msgs.join('\n'), 'dim');
+
+  /* ה-URL עצמו עלול לשאת טוקן. מסלקים אותו מההיסטוריה מיד — אותו דפוס כמו
+     initResumeResetHatch, שמנקה את ?resetState אחרי שקרא אותו. */
+  if (raw || authQ) {
+    try {
+      var clean = new URLSearchParams(location.search);
+      clean.delete('slxapi');
+      clean.delete('auth');
+      var qs = clean.toString();
+      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+      append('\n✓ token param removed from the address bar (kept in memory only).', 'ok');
+    } catch (e) {}
+  }
+}
+
+function validate(op) {
+  var reg = $('reg').value.trim();
+  if (!reg) { log('✗ registration is empty.', 'bad'); return null; }
+  if (!authHeader()) {
+    log('✗ no reporting token.\n\n' +
+        'Kata authenticates the State API with an Authorization: Bearer header only —\n' +
+        'there is no query-string form. Paste the token above, or open this page with\n' +
+        'a launch link that carries ?slxapi={...,"auth":"Bearer ..."}.', 'bad');
+    return null;
+  }
+  if (!baseUrl()) { log('✗ endpoint is empty.', 'bad'); return null; }
+  return { reg: reg, url: stateUrl(reg), auth: authHeader() };
+}
+
+/* GET — מה קיים שם. הפרדה מכוונת מהמחיקה: אין למחוק מסמך שלא ראיתם. */
+$('btnCheck').onclick = function () {
+  var v = validate('load'); if (!v) return;
+  log('GET ' + esc(v.url.replace(/registration=.*/, 'registration=' + v.reg)) +
+      '\nauth: ' + redact(v.auth) + '\n…', 'dim');
+
+  fetch(v.url, { method: 'GET', headers: { 'Authorization': v.auth,
+                                           'X-Experience-API-Version': '1.0.3' } })
+    .then(function (res) {
+      lastEtag = res.headers.get('ETag');
+      return res.text().then(function (body) { return { res: res, body: body }; });
+    })
+    .then(function (r) {
+      var s = r.res.status;
+      append('\nstatus ' + s + '  → ' + reasonFor('load', s), (s >= 200 && s < 300) ? 'ok' : 'bad');
+      if (lastEtag) append('ETag:   ' + esc(lastEtag), 'dim');
+      if (s === 404) {
+        append('\nNothing stored for this registration. Nothing to delete.', 'dim');
+        $('btnDel').disabled = true;
+        return;
+      }
+      if (s < 200 || s >= 300) { $('btnDel').disabled = true; return; }
+
+      append('bytes:  ' + r.body.length, 'dim');
+      var preview = r.body;
+      try {
+        var doc = JSON.parse(r.body);
+        append('v:      ' + (doc.v !== undefined ? doc.v : '(none)'), 'dim');
+        append('part:   ' + (doc.part || '(none)'), 'dim');
+        append('parts:  ' + (doc.parts ? Object.keys(doc.parts).join(', ') : '(none)'), 'dim');
+        var doneN = doc.done ? Object.keys(doc.done).length : 0;
+        var itemN = doc.doneItems ? Object.keys(doc.doneItems).length : 0;
+        append('ledger: ' + doneN + ' components / ' + itemN + ' items already reported completed',
+               (doneN || itemN) ? 'bad' : 'dim');
+        preview = JSON.stringify(doc, null, 2);
+      } catch (e) {
+        append('(body is not JSON — shown raw)', 'dim');
+      }
+      append('\n' + esc(preview.slice(0, 1200)) + (preview.length > 1200 ? '\n… truncated' : ''), 'dim');
+
+      checkedReg = v.reg;
+      $('btnDel').disabled = false;
+      $('delHint').textContent = 'המחיקה פתוחה עבור ' + v.reg + '.';
+    })
+    .catch(function (e) {
+      /* fetch נכשל בלי status = כמעט תמיד CORS או רשת. */
+      append('\nstatus 0 → network / CORS', 'bad');
+      append('\n' + esc(e && e.message ? e.message : String(e)), 'bad');
+      append('\nCORS to kata.cet.ac.il was verified only from lomdot.education.gov.il.\n' +
+             'From file:// or localhost it is expected to fail. See the comment at the top\n' +
+             'of this file for the two ways around it.', 'dim');
+      $('btnDel').disabled = true;
+    });
+};
+
+/* DELETE — אחרי בדיקה ואחרי אישור מפורש. */
+$('btnDel').onclick = function () {
+  var v = validate('delete'); if (!v) return;
+
+  if (v.reg !== checkedReg) {
+    log('✗ the registration changed since the check. Run the check again.', 'bad');
+    $('btnDel').disabled = true;
+    return;
+  }
+  if (!window.confirm(
+        'למחוק את מסמך ה-state של הרישום הזה?\n\n' + v.reg +
+        '\n\nכל ההתקדמות תימחק, כולל יומן ה-completed — כלומר השיגור הבא ידווח ' +
+        'completed מחדש לכל רכיב ופריט.\n\nאין ביטול.')) {
+    append('\nביטול — לא נשלח כלום.', 'dim');
+    return;
+  }
+
+  var headers = { 'Authorization': v.auth, 'X-Experience-API-Version': '1.0.3' };
+  if ($('ifmatch').checked && lastEtag) headers['If-Match'] = lastEtag;
+
+  log('DELETE ' + esc(v.url.replace(/registration=.*/, 'registration=' + v.reg)) +
+      '\nauth: ' + redact(v.auth) +
+      (headers['If-Match'] ? '\nIf-Match: ' + esc(headers['If-Match']) : '') + '\n…', 'dim');
+
+  fetch(v.url, { method: 'DELETE', headers: headers })
+    .then(function (res) {
+      var s = res.status;
+      append('\nstatus ' + s + '  → ' + reasonFor('delete', s), (s >= 200 && s < 300) ? 'ok' : 'bad');
+      if (s >= 200 && s < 300) {
+        append('\n✓ deleted. Verify with the check button — it should now report 404 / absent.', 'ok');
+        $('btnDel').disabled = true;
+        checkedReg = null;
+        lastEtag = null;
+      } else if (s === 412) {
+        append('\nThe document changed since the check. Re-check and try again.', 'bad');
+      }
+    })
+    .catch(function (e) {
+      append('\nstatus 0 → network / CORS', 'bad');
+      append('\n' + esc(e && e.message ? e.message : String(e)), 'bad');
+    });
+};
+
+/* מחלץ ל-curl. קיים כי ה-fetch של הדף כפוף ל-CORS ו-curl לא — כלומר זה
+   המסלול שעובד מכל מקום, כולל מהמכונה המקומית. הפלט על המסך מצונזר; מה
+   שמועתק ללוח מכיל את הטוקן האמיתי, כי אחרת הפקודה לא שמישה. */
+function curlCommands(reg, auth, redacted) {
+  var url = stateUrl(reg);
+  var a = redacted ? redact(auth) : auth;
+  return [
+    '# 1) בדיקה — מה קיים שם (200 = יש מסמך, 404 = אין)',
+    'curl -i "' + url + '" \\',
+    '  -H "Authorization: ' + a + '" \\',
+    '  -H "X-Experience-API-Version: 1.0.3"',
+    '',
+    '# 2) מחיקה (204 = נמחק). ⚠️ מוחק את כל ההתקדמות, כולל יומן ה-completed.',
+    'curl -i -X DELETE "' + url + '" \\',
+    '  -H "Authorization: ' + a + '" \\',
+    '  -H "X-Experience-API-Version: 1.0.3"'
+  ].join('\n');
+}
+
+$('btnCurl').onclick = function () {
+  var reg = $('reg').value.trim();
+  var auth = authHeader();
+  if (!reg)  { log('✗ registration is empty.', 'bad'); return; }
+  if (!auth) { log('✗ no reporting token — the curl command would not authenticate.', 'bad'); return; }
+
+  log(esc(curlCommands(reg, auth, true)), 'dim');
+  append('\n(הפקודות שעל המסך מצונזרות. מה שמועתק ללוח מכיל את הטוקן האמיתי.)', 'dim');
+
+  var real = curlCommands(reg, auth, false);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(real).then(function () {
+      append('\n✓ הועתק ללוח.', 'ok');
+    }).catch(function () {
+      append('\n⚠ ההעתקה נחסמה. סמנו והעתיקו מהשדה שנפתח למטה.', 'bad');
+      showFallback(real);
+    });
+  } else {
+    showFallback(real);
+  }
+};
+
+/* clipboard.writeText חסום בהקשר לא-מאובטח (http://, file://) בחלק
+   מהדפדפנים. אז נותנים textarea לסימון ידני — אחרת הכפתור פשוט לא עושה כלום. */
+function showFallback(text) {
+  var ta = document.getElementById('curlFallback');
+  if (!ta) {
+    ta = document.createElement('textarea');
+    ta.id = 'curlFallback';
+    ta.style.cssText = 'width:100%;height:150px;margin-top:12px;direction:ltr;' +
+      'font-family:ui-monospace,Consolas,monospace;font-size:12.5px;' +
+      'border:1px solid var(--line);border-radius:6px;padding:10px;';
+    out.parentNode.insertBefore(ta, out.nextSibling);
+  }
+  ta.value = text;
+  ta.select();
+}
+
+$('ep').addEventListener('change', function () { $('btnDel').disabled = true; checkedReg = null; });
+$('reg').addEventListener('input', function () { $('btnDel').disabled = true; checkedReg = null; });
+
+readParams();
+</script>
+</body>
+</html>

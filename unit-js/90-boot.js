@@ -7,6 +7,8 @@
    order was whatever the file happened to be in. It is now explicit, and the order below is
    load-bearing:
 
+     0. initResumeResetHatch() before everything — it rewrites the URL and raises the reset flag,
+        so it must run before anything reads the query or touches the state document.
      1. scaleApp() first — initFeedbackDrag's getAppTransform() parses #app.style.transform,
         which does not exist until scaleApp has written it.
      2. initFeedbackDrag() must be the LAST thing that wraps goTo. It replaces window.goTo with a
@@ -21,12 +23,18 @@
    is already complete. That is the same position the report-select and a11y code ran from before
    the split. */
 (function boot () {
+  /* FIRST, before anything reads the query string or touches the state document: the hatch strips
+     ?resetState from the URL and raises the reset flag. Every cross-part navigation copies
+     window.location.search verbatim, so a ?resetState left in place would re-fire on every hop
+     and resume would never work at all. */
+  try { initResumeResetHatch(); } catch (e) { console.error('[boot] initResumeResetHatch', e); }
+
   window.addEventListener('resize', scaleApp);
   scaleApp();
 
-  initA11yWiring();
-  initReportModal();
-  initImgZoomEscape();
+  try { initA11yWiring(); }    catch (e) { console.error('[boot] initA11yWiring', e); }
+  try { initReportModal(); }   catch (e) { console.error('[boot] initReportModal', e); }
+  try { initImgZoomEscape(); } catch (e) { console.error('[boot] initImgZoomEscape', e); }
   initFeedbackDrag();
   initDevBridge();
   initResumeLeaveHandlers();

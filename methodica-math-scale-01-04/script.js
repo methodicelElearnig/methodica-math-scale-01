@@ -5,7 +5,15 @@
 
 var TOTAL_SCREENS = 6;
 window.lomdaState = { selectedCharacter: null, selectedDesign: null };
-const _savedChar = localStorage.getItem('lomdaCharacter');
+/* Read through the shared getter: from v4 the Kata state document is the source of truth for
+   the character and localStorage is only a synchronous cache (unit-js/40-resume.js). This runs
+   before the first paint, while the document is still two CDN scripts away, so the cache is
+   what the getter returns here — the document overrides it in loader phase A.
+   typeof-guarded so a shared file that failed to load degrades to the old cache-only
+   behaviour rather than throwing at top level and killing the rest of this script. */
+const _savedChar = (typeof getUnitCharacter === 'function')
+  ? getUnitCharacter()
+  : localStorage.getItem('lomdaCharacter');
 if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
 
 let frcRevealed = [false, false, false];
@@ -52,13 +60,10 @@ let ddqTargetResults = {};
 
 /* ── Navigation ── */
 function goToNextModule() {
-  try { xapiFinishItems(); } catch (e) {}
-  try {
-    var _n = xapiCorrectCount();
-    sendCompletedOnce('done', currentPartSlug(), 'onlinelesson', { success: _n >= 4, score: { scaled: _n / 5 } });
-  } catch (e) { console.error('[xAPI] completed component 04', e); }
+  var _n = xapiCorrectCount();
+  xapiCompleteComponent({ success: _n >= 4, score: { scaled: _n / 5 } });
   /* Resume: point the state document at the component being entered, before navigating. */
-  if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-05');
+  writeForwardState('methodica-math-scale-01-05', '#screen=5');
   window.location.href = '../methodica-math-scale-01-05/index.html' + window.location.search;
 }
 
@@ -131,7 +136,7 @@ function s38ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('002', 'q1')); } catch (e) {}
+      xapiRequestedHint('002', 'q1');
     }
   }
 }
@@ -147,17 +152,8 @@ function s38Submit() {
 
   var correct = (s38Selected === S38_CORRECT);
   s38Attempts++;
-  /* xAPI: item 002 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s38Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="2"] .s5-opt')[s38Selected])] } },
-      xapiQ('002', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 002/q1', e); }
-  XAPI_Q_RESULTS['002/q1'] = !!correct;
+  xapiAnswered('002', 'q1', correct, correct || s38Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="2"] .s5-opt')[s38Selected]));
 
   var fb      = document.getElementById('s38-feedback');
   var fbBold  = document.getElementById('s38-fb-bold');
@@ -266,7 +262,7 @@ function s37ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('001', 'q1')); } catch (e) {}
+      xapiRequestedHint('001', 'q1');
     }
   }
 }
@@ -282,17 +278,8 @@ function s37Submit() {
 
   var correct = (s37Selected === S37_CORRECT);
   s37Attempts++;
-  /* xAPI: item 001 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s37Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="1"] .s5-opt')[s37Selected])] } },
-      xapiQ('001', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 001/q1', e); }
-  XAPI_Q_RESULTS['001/q1'] = !!correct;
+  xapiAnswered('001', 'q1', correct, correct || s37Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="1"] .s5-opt')[s37Selected]));
 
   var fb      = document.getElementById('s37-feedback');
   var fbBold  = document.getElementById('s37-fb-bold');
@@ -615,17 +602,8 @@ function ddqCheck() {
     });
     return placed === DDQ.correctMap[tId];
   });
-  /* xAPI: item 002 / q2. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(allCorrect ? 'answered.last' : (ddqAttempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!allCorrect, score: { scaled: allCorrect ? 1 : 0 },
-        extensions: { student_answer: [Object.keys(ddqPlacement).filter(function(k){ return ddqPlacement[k] !== 'source'; }).map(function(k){ return k + ' -> ' + ddqPlacement[k]; }).join(' | ')] } },
-      xapiQ('002', 'q2'));
-  } catch (e) { console.error('[xAPI] answered 002/q2', e); }
-  XAPI_Q_RESULTS['002/q2'] = !!allCorrect;
+  xapiAnswered('002', 'q2', allCorrect, allCorrect || ddqAttempts >= 2,
+    Object.keys(ddqPlacement).filter(function(k){ return ddqPlacement[k] !== 'source'; }).map(function(k){ return k + ' -> ' + ddqPlacement[k]; }).join(' | '));
 
   var fb      = document.getElementById('s39-feedback');
   var fbBold  = document.getElementById('s39-fb-bold');
@@ -717,7 +695,7 @@ function ddqToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('002', 'q2')); } catch (e) {}
+      xapiRequestedHint('002', 'q2');
     }
   }
 }
@@ -775,17 +753,8 @@ function s40Check() {
   var val     = parseFloat(input ? input.value : '');
   var correct = (val === 6);
   s40Attempts++;
-  /* xAPI: item 003 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s40Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [String(val)] } },
-      xapiQ('003', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 003/q1', e); }
-  XAPI_Q_RESULTS['003/q1'] = !!correct;
+  xapiAnswered('003', 'q1', correct, correct || s40Attempts >= 2,
+    String(val));
 
   var fb      = document.getElementById('s40-feedback');
   var fbBold  = document.getElementById('s40-fb-bold');
@@ -837,7 +806,7 @@ function s40ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('003', 'q1')); } catch (e) {}
+      xapiRequestedHint('003', 'q1');
     }
   }
 }
@@ -911,7 +880,7 @@ function s41ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('003', 'q2')); } catch (e) {}
+      xapiRequestedHint('003', 'q2');
     }
   }
 }
@@ -927,17 +896,8 @@ function s41Submit() {
 
   var correct = (s41Selected === S41_CORRECT);
   s41Attempts++;
-  /* xAPI: item 003 / q2. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s41Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="5"] .s5-opt')[s41Selected])] } },
-      xapiQ('003', 'q2'));
-  } catch (e) { console.error('[xAPI] answered 003/q2', e); }
-  XAPI_Q_RESULTS['003/q2'] = !!correct;
+  xapiAnswered('003', 'q2', correct, correct || s41Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="5"] .s5-opt')[s41Selected]));
 
   var fb      = document.getElementById('s41-feedback');
   var fbBold  = document.getElementById('s41-fb-bold');

@@ -131,12 +131,12 @@ part added, then verify the difference cannot fire elsewhere. Two worked example
 |---|---|
 | `10-identity.js` | `XAPI_ID_PREFIX`, `window.XAPI_UNIT_ID`, `shortId()`, `RESUME_ENABLED` |
 | `15-ui.js` | `announce`, `scaleApp`, image zoom, `initA11yWiring`, `s5FbClose`, `checkRatio`, `updateNavBar` |
-| `20-xapi.js` | item scope and question ids — `xapiOnScreen`, `xapiQ`, `xapiFinishItems`, `xapiWireVideos`, `xapiItemResult` |
+| `20-xapi.js` | item scope and question ids — `xapiOnScreen`, `xapiQ`, `xapiFinishItems`, `xapiWireVideos`, `xapiItemResult` — plus the call-site helpers `xapiAnswered`, `xapiRequestedHint`, `xapiCompleteComponent`, `xapiCompleteUnit` and the answer-text builders |
 | `25-report.js` | the whole "מצאתם בעיה?" layer + `initReportModal()` |
 | `28-feedback-drag.js` | `initFeedbackDrag()` — draggable inline feedback |
 | `30-nav.js` | `currentScreen`, `goTo()`, `applyExecutionState()` |
-| `40-resume.js` | the v3 resume core, the `completed` ledger, cross-part back, save/flush |
-| `50-loader.js` | `bootXAPI()` — CDN loader, metadata poll, resume hop, `onXapiReady()` |
+| `40-resume.js` | the v4 resume core, unit-level state (character/results), the `completed` ledger, cross-part back edges, the boot cover, the reset hatch, save/flush |
+| `50-loader.js` | `bootXAPI()` — CDN loader, the three gates, the capped metadata poll, the two-phase resume hop, `onXapiReady()` |
 | `60-devbridge.js` | `initDevBridge()` — the `index_dev.html` postMessage bridge (not deployed) |
 | `90-boot.js` | the startup sequence — the only side effects |
 

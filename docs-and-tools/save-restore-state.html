@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>שמירה והזרקה של מסמך state — כלי QA</title>
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  כלי QA לשמירת מסמך ה-state של רישום אחד לקובץ, ולהזרקתו בחזרה.
+  אח של reset-state.html, שמוחק. כאן: GET → קובץ, וקובץ → PUT.
+
+  ⚠️ **לא נפרס.** הקובץ יושב ב-docs-and-tools/ במכוון: תהליך האריזה מוחק את
+  התיקייה הזאת מחבילת השחרור (ראו DEPLOY.md).
+
+  ⚠️ והוא מסוכן יותר מ-reset-state.html, לא פחות: reset מוחק, וזה **כותב
+  התקדמות** לתוך רישום חי. אם מעלים אותו זמנית לייצור כדי לעקוף CORS —
+  למחוק אותו מיד אחרי השימוש.
+
+  ── מה נשמר, ולמה זה מספיק ──
+  מ-v4 (2026-08-20) כל מצב הלומד שקובע מה הוא רואה יושב במסמך ה-state:
+  מצביע הסין והמסך, התשובות, יומן ה-completed, **הדמות הנבחרת** (ui.character)
+  ו**תוצאות מועד א/ב** (results). לפני v4 השניים האחרונים ישבו רק
+  ב-localStorage, ואז תמונת מצב הייתה חלקית מעצם הגדרתה. ראו RESUME.md §3.
+
+  שני דברים שנשארו ב-localStorage/sessionStorage הם **קאש נגזר**, לא מקור אמת:
+    • מפתחות lomda_selectedCharacter / lomda_moed*_result — applyUnitProfile
+      מיישר אותם מהמסמך בכל טעינה, ולכן הזרקת המסמך לבדה מספיקה.
+    • lomda_nav_edges::… — כפילות של doc.prev, וגם per-tab ולכן לא נגיש
+      מלשונית אחרת בכלל.
+  הכלי מתעד אותם בתמונת המצב לצורכי אבחון ומחזיר אותם כשהוא same-origin,
+  אבל שחזור נכון לא תלוי בזה.
+
+  ── CORS — אותה מגבלה כמו ב-reset-state.html ──
+  ה-CORS מול kata.cet.ac.il אומת בהרצה חיה **רק** מ-lomdot.education.gov.il.
+  מ-file:// או מ-localhost הקריאה עשויה להיכשל עם status 0. לכן יש כאן ייצוא
+  ל-curl, שאין לו מגבלת CORS.
+
+  ── file:// לא נתמך במלואו במכוון ──
+  showSaveFilePicker/showDirectoryPicker דורשים secure context, ו-localStorage
+  זורק SecurityError ב-origin אטום. הכלי מתדרדר להורדה רגילה ולקלט קובץ.
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #fff; --ink: #16242e; --muted: #5b6b76;
+    --line: #d7dee3; --blue: #019de5; --red: #c62828; --green: #2e7d32;
+    --amber: #f9a825;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 20px; background: var(--bg); color: var(--ink);
+    font-family: 'Assistant', 'Segoe UI', Arial, sans-serif; font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 20px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 17px; margin: 0 0 2px; }
+  .card .lead { color: var(--muted); font-size: 13.5px; margin: 0 0 8px; }
+  .warn {
+    border-inline-start: 5px solid var(--amber); background: #fffdf3;
+    font-size: 14px;
+  }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; font-size: 14px; }
+  input[type=text], input[type=password], select, textarea {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px;
+    font-family: ui-monospace, 'Consolas', monospace; font-size: 13px; direction: ltr;
+    background: #fff; color: var(--ink);
+  }
+  textarea { min-height: 110px; white-space: pre; overflow-x: auto; }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  button {
+    font-family: inherit; font-size: 15px; font-weight: 600; padding: 10px 22px;
+    border-radius: 1000px; cursor: pointer; border: 2px solid var(--blue);
+    background: #fff; color: var(--blue);
+  }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.danger { border-color: var(--red); color: #fff; background: var(--red); }
+  button.danger:disabled { background: #e8a0a0; border-color: #e8a0a0; }
+  button.small { font-size: 13.5px; padding: 7px 16px; }
+  pre {
+    background: #0f1c24; color: #d6e6f2; padding: 14px; border-radius: 8px;
+    overflow-x: auto; font-size: 12.5px; direction: ltr; text-align: left;
+    white-space: pre-wrap; word-break: break-word; margin: 14px 0 0; min-height: 42px;
+  }
+  .ok { color: #7ddba0; } .bad { color: #ff9c9c; } .dim { color: #8fa6b4; }
+  .warnc { color: #ffd479; }
+  code { background: #eef2f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .chk { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
+  .chk input { width: auto; }
+  .chk label { margin: 0; font-weight: 400; }
+  .status { font-size: 13px; margin-top: 8px; padding: 8px 10px; border-radius: 6px;
+            background: #eef4f8; border: 1px solid var(--line); direction: rtl; }
+  .kv { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; direction: ltr;
+        text-align: left; }
+  a { color: var(--blue); }
+  .linkbox { margin-top: 10px; font-size: 13px; }
+  .linkbox code { display: block; padding: 8px 10px; margin-top: 4px; direction: ltr;
+                  text-align: left; word-break: break-all; background: #eef2f5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>שמירה והזרקה של מסמך state</h1>
+  <p class="sub">
+    שומר את מסמך ה-state של רישום אחד לקובץ בתיקיית <code>states/</code>, ומזריק
+    קובץ שמור בחזרה (<code>PUT /activities/state</code>) — כדי להריץ את היחידה שוב
+    ושוב מאותה נקודה בדיוק.
+  </p>
+
+  <div class="card warn">
+    <strong>כלי QA — לא לפרוס.</strong>
+    ה-<code>PUT</code> הוא <strong>החלפה מלאה</strong> של המסמך, לא מיזוג. המסמך
+    שהיה שם קודם אינו ניתן לשחזור אלא אם הוא עצמו נשמר לקובץ. להשתמש רק על
+    רישום בדיקה.
+    <div class="hint" style="margin-top:6px">
+      הזרקה מחזירה גם את יומן ה-<code>completed</code> שבתוך המסמך. יומן מלא =
+      אותם <code>completed</code> <strong>לא</strong> יישלחו שוב; יומן ריק = הם
+      יישלחו מחדש. זה כלי שימושי בפני עצמו — ראו "עריכה ביד" למטה.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>1. חיבור</h2>
+    <p class="lead">אותם שדות ואותו נרמול כמו <code>reset-state.html</code>.</p>
+
+    <label for="reg">Registration</label>
+    <input id="reg" type="text" placeholder="93e7ad5d-…" autocomplete="off" spellcheck="false">
+    <div class="hint">נקרא מ-<code>?registration=</code> ב-URL. ניתן לערוך.</div>
+
+    <label for="tok">Reporting token</label>
+    <input id="tok" type="password" placeholder="Bearer … (או הדביקו את הטוקן בלבד)" autocomplete="off" spellcheck="false">
+    <div class="hint">
+      נקרא מ-<code>?slxapi=</code> אם קיים. לא נשמר, לא נכתב ל-URL ולא לקונסול —
+      הדף מדפיס אותו רק כאורך. <strong>לא</strong> נכתב לקובץ תמונת המצב.
+    </div>
+
+    <label for="ep">Endpoint</label>
+    <input id="ep" type="text" value="https://kata.cet.ac.il/api/v1/xapi/" spellcheck="false">
+    <div class="hint">
+      סיומת <code>statements</code> מסולקת אוטומטית — אותו נרמול כמו
+      <code>stateBaseUrl720()</code>.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. תיקיית התמונות</h2>
+    <p class="lead">
+      דפדפן לא יכול לבחור לעצמו תיקיית שמירה. בחירה חד-פעמית של
+      <code>docs-and-tools/states</code> נשמרת ב-IndexedDB, ומשם השמירות נכתבות
+      בשקט והכלי גם יודע להציג את מה שכבר יש שם.
+    </p>
+    <div class="row">
+      <button id="btnPickDir">בחירת תיקיית states</button>
+      <button id="btnGrant" class="small" hidden>אישור גישה לתיקייה</button>
+      <button id="btnRefresh" class="small">רענון הרשימה</button>
+    </div>
+    <div class="status" id="dirStatus">לא נבחרה תיקייה. השמירה תתדרדר להורדה רגילה.</div>
+  </div>
+
+  <div class="card">
+    <h2>3. שמירה</h2>
+    <p class="lead">קריאה מ-Kata, ואז כתיבה לקובץ עם חותמת תאריך ושעה בשם.</p>
+    <div class="row">
+      <button id="btnCheck">בדיקה — מה קיים שם</button>
+      <button id="btnSave" disabled>שמירת מצב לקובץ</button>
+      <button id="btnCurlGet" class="small">העתקת curl (GET)</button>
+    </div>
+    <div class="hint" id="saveHint">השמירה נפתחת אחרי בדיקה מוצלחת.</div>
+  </div>
+
+  <div class="card">
+    <h2>4. הזרקה</h2>
+    <p class="lead">
+      טעינת קובץ, ולידציה, ואז <code>PUT</code>. הכפתור נפתח רק כשהוולידציה
+      עוברת <strong>וגם</strong> אחרי בדיקה — אין להחליף מסמך שלא ראיתם.
+    </p>
+
+    <label for="fileSel">מהתיקייה</label>
+    <select id="fileSel"><option value="">— לא נבחרה תיקייה —</option></select>
+    <div class="hint">החדש ביותר ראשון.</div>
+
+    <label for="fileInput">או קובץ מהדיסק</label>
+    <input id="fileInput" type="file" accept=".json,application/json"
+           style="font-family:inherit;direction:rtl;padding:7px 9px">
+
+    <label for="paste">או הדבקה ידנית</label>
+    <textarea id="paste" spellcheck="false" placeholder='{"kind":"methodica-state-snapshot", …}'></textarea>
+    <div class="hint">
+      <strong>עריכה ביד נתמכת ומועילה:</strong> ה-<code>state</code> נשמר
+      מפורמט וקריא. אפשר להזיז <code>currentScreen</code>, לרוקן
+      <code>done</code>/<code>doneItems</code> כדי שה-<code>completed</code>
+      יישלחו שוב, או לשנות <code>ui.character</code> — וכך לייצר מקרה בדיקה
+      חדש בלי לשחק שוב את היחידה.
+    </div>
+
+    <div class="chk">
+      <input id="allowOtherReg" type="checkbox">
+      <label for="allowOtherReg">
+        לאשר הזרקה ל-<strong>רישום אחר</strong> מזה שבקובץ (שחזור התקדמות של
+        לומד אחד תחת רישום בדיקה)
+      </label>
+    </div>
+    <div class="chk">
+      <input id="restoreCache" type="checkbox" checked>
+      <label for="restoreCache">
+        להחזיר גם את קאש ה-<code>localStorage</code> של הדפדפן הזה (מיותר —
+        המסמך מיישר אותו בכל טעינה — אבל מסדר את הפריים הראשון)
+      </label>
+    </div>
+    <div class="chk">
+      <input id="ifmatch" type="checkbox">
+      <label for="ifmatch">
+        לשלוח <code>If-Match</code> עם ה-ETag מהבדיקה (מונע דריסת מסמך שהשתנה מאז)
+      </label>
+    </div>
+    <div class="hint">
+      ⚠️ preflight של <code>If-Match</code> מול Kata לא אומת בהרצה חיה. אם נכשל
+      ב-status 0 — לכבות.
+    </div>
+
+    <div class="row">
+      <button id="btnValidate">בדיקת תקינות</button>
+      <button id="btnInject" class="danger" disabled>הזרקה (PUT)</button>
+      <button id="btnCurlPut" class="small">העתקת curl (PUT)</button>
+      <button id="btnPutBody" class="small">שמירת גוף ה-PUT לקובץ</button>
+    </div>
+    <div class="hint" id="injectHint">טענו קובץ והריצו בדיקת תקינות.</div>
+  </div>
+
+  <pre id="out"><span class="dim">מוכן.</span></pre>
+
+  <div class="card" id="launchCard" hidden>
+    <h2>5. שיגור</h2>
+    <p class="lead">אחרי הזרקה מוצלחת — הקישורים שמריצים את היחידה מהנקודה שהוזרקה.</p>
+    <div id="launchLinks"></div>
+  </div>
+
+  <div class="card">
+    <h2>קאש הדפדפן הזה</h2>
+    <p class="lead">
+      אבחון בלבד. מ-v4 המפתחות האלה הם קאש נגזר מהמסמך, לא מקור אמת —
+      <code>applyUnitProfile</code> מיישר אותם בכל טעינה (RESUME.md §3).
+      נגיש רק כשהכלי מוגש מאותו origin כמו היחידה; מ-<code>file://</code> הוא זורק.
+    </p>
+    <div class="status kv" id="cacheStatus">—</div>
+    <div class="row">
+      <button id="btnCacheRead" class="small">קריאה</button>
+      <button id="btnCacheClear" class="small">ניקוי הקאש</button>
+    </div>
+    <div class="hint">
+      ניקוי כאן שקול ל-<code>?resetState</code> על הקאש בלבד — הוא <strong>לא</strong>
+      נוגע במסמך ב-Kata.
+    </div>
+  </div>
+
+  <div class="card">
+    <strong style="font-size:15px">אם הכפתורים נכשלים ב-<code>status 0</code></strong>
+    <div class="hint" style="margin-top:6px">
+      זה CORS, לא באג: הדפדפן חוסם את הקריאה כשהדף לא מוגש
+      מ-<code>lomdot.education.gov.il</code> — המקור היחיד שאומת מול Kata.
+      ל-<code>curl</code> אין מגבלת CORS, ולכן שני כפתורי ה-curl עובדים מכל
+      מקום. ה-PUT דורש את גוף המסמך בקובץ — "שמירת גוף ה-PUT לקובץ" מייצר
+      <code>states/_put-body.json</code>, וה-curl מצביע עליו.
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════ קבועים שנגזרים מהיחידה ═══════════════════
+   מסונכרנים ידנית מול הקוד. אי-התאמה כאן = ולידציה שמאשרת מסמך שהיחידה תזרוק. */
+var RESUME_STATE_VERSION = 4;                       // unit-js/40-resume.js
+var UNIT_SLUG   = 'methodica-math-scale-01';
+var SLUG_RE     = /^methodica-math-scale-01-0[1-6]$/;
+var SCREEN_COUNTS = {                                // TOTAL_SCREENS פר סין
+  'methodica-math-scale-01-01': 20,
+  'methodica-math-scale-01-02': 9,
+  'methodica-math-scale-01-03': 2,
+  'methodica-math-scale-01-04': 2,
+  'methodica-math-scale-01-05': 5,
+  'methodica-math-scale-01-06': 9
+};
+var CACHE_KEYS = [                                   // unit-js/40-resume.js
+  'lomda_selectedCharacter',
+  'lomda_moedA_partA_result',
+  'lomda_moedA_partB_result',
+  'lomda_moedB_partA_step1_result',
+  'lomda_moedB_partA_step2_result',
+  'lomda_moedB_partB_result'
+];
+var NAV_EDGE_KEY   = 'lomda_nav_edges::' + UNIT_SLUG;
+var SNAPSHOT_KIND  = 'methodica-state-snapshot';
+var SNAPSHOT_VER   = 1;
+var MAX_BYTES      = 1024 * 1024;                    // 413 מעל זה
+var IDB_NAME = 'srstate', IDB_STORE = 'handles', IDB_KEY = 'statesDir';
+
+var $ = function (id) { return document.getElementById(id); };
+var out = $('out');
+
+/* מצב הדף */
+var lastEtag = null;          // ETag מהבדיקה האחרונה
+var lastLoaded = null;        // {doc, etag, lastModified, reg}
+var checkedReg = null;        // הרישום שנבדק, לשער ההזרקה
+var snapshot = null;          // תמונת המצב שנטענה
+var validated = false;
+var dirHandle = null;
+var rawSlxapi = null;         // ה-slxapi הגולמי, אם הכלי נפתח בקישור השקה
+
+/* ═══════════════════ הועתק מ-reset-state.html ═══════════════════
+   במכוון מילה במילה: אותו נרמול endpoint, אותה טבלת status→reason ואותה
+   צנזורת טוקן. שתי גרסאות שמתפצלות היו מאבחנות אותו כשל בשתי שפות. */
+
+function log(html, cls) {
+  out.innerHTML = cls ? '<span class="' + cls + '">' + html + '</span>' : html;
+}
+function append(html, cls) {
+  out.innerHTML += '\n' + (cls ? '<span class="' + cls + '">' + html + '</span>' : html);
+}
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function redact(tok) {
+  if (!tok) return '(none)';
+  return 'Bearer …(len ' + String(tok).replace(/^Bearer\s+/i, '').length + ')';
+}
+function baseUrl() {
+  var ep = $('ep').value.trim();
+  var stripped = ep.replace(/statements\/?$/, '');
+  if (stripped && !/\/$/.test(stripped)) stripped += '/';
+  return stripped;
+}
+function stateUrl(reg) {
+  return baseUrl() + 'activities/state?registration=' + encodeURIComponent(reg);
+}
+function authHeader() {
+  var t = $('tok').value.trim();
+  if (!t) return null;
+  return /^Bearer\s+/i.test(t) ? t : 'Bearer ' + t;
+}
+function reasonFor(op, status) {
+  if (status >= 200 && status < 300) return 'ok';
+  switch (status) {
+    case 0:   return 'network / CORS';
+    case 400: return 'bad-address';
+    case 401: return 'auth';
+    case 404: return 'absent';
+    case 412: return 'stale (If-Match)';
+    case 413: return 'too-large';
+    case 422: return 'validation';
+    default:  return 'http-' + status;
+  }
+}
+function validate(op) {
+  var reg = $('reg').value.trim();
+  if (!reg) { log('✗ registration is empty.', 'bad'); return null; }
+  if (!authHeader()) {
+    log('✗ no reporting token.\n\n' +
+        'Kata authenticates the State API with an Authorization: Bearer header only —\n' +
+        'there is no query-string form. Paste the token above, or open this page with\n' +
+        'a launch link that carries ?slxapi={...,"auth":"Bearer ..."}.', 'bad');
+    return null;
+  }
+  if (!baseUrl()) { log('✗ endpoint is empty.', 'bad'); return null; }
+  return { reg: reg, url: stateUrl(reg), auth: authHeader() };
+}
+function showFallback(text) {
+  var ta = document.getElementById('curlFallback');
+  if (!ta) {
+    ta = document.createElement('textarea');
+    ta.id = 'curlFallback';
+    ta.style.cssText = 'width:100%;height:150px;margin-top:12px;direction:ltr;' +
+      'font-family:ui-monospace,Consolas,monospace;font-size:12.5px;' +
+      'border:1px solid var(--line);border-radius:6px;padding:10px;';
+    out.parentNode.insertBefore(ta, out.nextSibling);
+  }
+  ta.value = text;
+  ta.select();
+}
+function copyOrFallback(text, redactedForScreen) {
+  log(esc(redactedForScreen), 'dim');
+  append('\n(הפקודות שעל המסך מצונזרות. מה שמועתק ללוח מכיל את הטוקן האמיתי.)', 'dim');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () {
+      append('\n✓ הועתק ללוח.', 'ok');
+    }).catch(function () {
+      append('\n⚠ ההעתקה נחסמה. סמנו והעתיקו מהשדה שנפתח למטה.', 'bad');
+      showFallback(text);
+    });
+  } else {
+    showFallback(text);
+  }
+}
+
+function readParams() {
+  var q = new URLSearchParams(location.search);
+
+  var reg = q.get('registration');
+  if (reg) $('reg').value = reg;
+
+  var raw = q.get('slxapi');
+  if (raw) {
+    rawSlxapi = raw;   // נשמר בזיכרון בלבד — הוא מה שמאפשר לבנות קישור שיגור אמיתי
+    try {
+      var env = JSON.parse(raw);
+      if (env && env.auth) $('tok').value = env.auth;
+      if (env && env.endpoint) $('ep').value = env.endpoint;
+    } catch (e) {
+      append('⚠ ?slxapi present but not valid JSON — ignored.', 'bad');
+    }
+  }
+  var authQ = q.get('auth');
+  if (authQ) $('tok').value = authQ;
+  var epQ = q.get('endpoint');
+  if (epQ) $('ep').value = epQ;
+
+  var msgs = [];
+  msgs.push('registration: ' + (reg ? esc(reg) : '(not in URL — enter it above)'));
+  msgs.push('token:        ' + redact($('tok').value));
+  msgs.push('endpoint:     ' + esc(baseUrl() || '(empty)'));
+  msgs.push('slxapi:       ' + (rawSlxapi ? 'present (launch link → real launch URL available)'
+                                          : 'absent (see the launch section after an inject)'));
+  log(msgs.join('\n'), 'dim');
+
+  /* אותו ניקוי כמו ב-reset-state.html: ה-URL עובר דרך לוגים של שרת ודרך
+     היסטוריית הדפדפן, ולכן הטוקן מסולק ממנו מיד. */
+  if (raw || authQ) {
+    try {
+      var clean = new URLSearchParams(location.search);
+      clean.delete('slxapi');
+      clean.delete('auth');
+      var qs = clean.toString();
+      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+      append('\n✓ token param removed from the address bar (kept in memory only).', 'ok');
+    } catch (e) {}
+  }
+}
+
+/* ═══════════════════ זמן ושמות קבצים ═══════════════════ */
+
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function stampName(d) {
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+         '_' + pad(d.getHours()) + '-' + pad(d.getMinutes()) + '-' + pad(d.getSeconds());
+}
+function isoLocal(d) {
+  var off = -d.getTimezoneOffset(), sign = off >= 0 ? '+' : '-';
+  off = Math.abs(off);
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+         'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) +
+         sign + pad(Math.floor(off / 60)) + ':' + pad(off % 60);
+}
+/* state_<תאריך>_<שעה>_p<סין>_scr<מסך>_<8 ראשונים של הרישום>.json
+   ASCII ובר-מיון לפי שם, כדי שרשימת התיקייה תהיה כרונולוגית בלי מטא-דאטה. */
+function snapshotName(doc, reg, d) {
+  var part = (doc && doc.part) || 'unknown';
+  var m = /-(\d\d)$/.exec(part);
+  var scr = 'x';
+  if (doc && doc.parts && doc.parts[part] && typeof doc.parts[part].currentScreen === 'number') {
+    scr = doc.parts[part].currentScreen;
+  }
+  var r8 = String(reg || '').replace(/[^0-9a-zA-Z]/g, '').slice(0, 8) || 'noreg';
+  return 'state_' + stampName(d) + '_p' + (m ? m[1] : 'xx') + '_scr' + scr + '_' + r8 + '.json';
+}
+
+/* ═══════════════════ IndexedDB — ידית התיקייה ═══════════════════
+   ידית FileSystemDirectoryHandle ניתנת לסריאליזציה ל-IndexedDB (לא ל-
+   localStorage). ההרשאה עצמה לא נשמרת — לכן queryPermission בטעינה
+   וכפתור לבקשה, ש-requestPermission דורש gesture של המשתמש. */
+function idbOpen() {
+  return new Promise(function (res, rej) {
+    var r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = function () {
+      if (!r.result.objectStoreNames.contains(IDB_STORE)) r.result.createObjectStore(IDB_STORE);
+    };
+    r.onsuccess = function () { res(r.result); };
+    r.onerror = function () { rej(r.error); };
+  });
+}
+function idbSet(k, v) {
+  return idbOpen().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(v, k);
+      tx.oncomplete = function () { res(); };
+      tx.onerror = function () { rej(tx.error); };
+    });
+  });
+}
+function idbGet(k) {
+  return idbOpen().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction(IDB_STORE, 'readonly');
+      var q = tx.objectStore(IDB_STORE).get(k);
+      q.onsuccess = function () { res(q.result); };
+      q.onerror = function () { rej(q.error); };
+    });
+  });
+}
+
+function fsaSupported() { return typeof window.showDirectoryPicker === 'function'; }
+
+function setDirStatus(html, cls) {
+  $('dirStatus').innerHTML = html;
+  $('dirStatus').style.borderColor = (cls === 'bad') ? 'var(--red)'
+                                   : (cls === 'ok') ? 'var(--green)' : 'var(--line)';
+}
+
+function verifyPermission(handle, request) {
+  if (!handle || !handle.queryPermission) return Promise.resolve('granted');
+  return handle.queryPermission({ mode: 'readwrite' }).then(function (p) {
+    if (p === 'granted') return 'granted';
+    if (!request) return p;
+    return handle.requestPermission({ mode: 'readwrite' });
+  });
+}
+
+function adoptDir(handle, requested) {
+  dirHandle = handle;
+  return verifyPermission(handle, requested).then(function (p) {
+    if (p === 'granted') {
+      $('btnGrant').hidden = true;
+      setDirStatus('✓ תיקייה: <code>' + esc(handle.name) + '</code> — השמירה תיכתב לשם ישירות.', 'ok');
+      return refreshList();
+    }
+    $('btnGrant').hidden = false;
+    setDirStatus('⚠ נדרש אישור גישה לתיקייה <code>' + esc(handle.name) +
+                 '</code>. לחצו "אישור גישה לתיקייה".', 'bad');
+  });
+}
+
+function refreshList() {
+  var sel = $('fileSel');
+  sel.innerHTML = '';
+  if (!dirHandle) {
+    sel.innerHTML = '<option value="">— לא נבחרה תיקייה —</option>';
+    return Promise.resolve();
+  }
+  var names = [];
+  return (function () {
+    /* entries() הוא async iterator; אין for-await ב-ES5, ולכן איטרציה ידנית. */
+    var it = dirHandle.entries();
+    function step() {
+      return it.next().then(function (r) {
+        if (r.done) return;
+        var name = r.value[0], h = r.value[1];
+        if (h.kind === 'file' && /\.json$/i.test(name) && name.charAt(0) !== '_') names.push(name);
+        return step();
+      });
+    }
+    return step();
+  })().then(function () {
+    names.sort().reverse();
+    if (!names.length) {
+      sel.innerHTML = '<option value="">— אין קבצים בתיקייה —</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— בחרו קובץ —</option>';
+    names.forEach(function (n) {
+      var o = document.createElement('option');
+      o.value = n; o.textContent = n;
+      sel.appendChild(o);
+    });
+  }).catch(function (e) {
+    sel.innerHTML = '<option value="">— שגיאה בקריאת התיקייה —</option>';
+    append('\n⚠ directory listing failed: ' + esc(e && e.message), 'bad');
+  });
+}
+
+function writeToDir(name, text) {
+  return dirHandle.getFileHandle(name, { create: true }).then(function (fh) {
+    return fh.createWritable().then(function (w) {
+      return w.write(text).then(function () { return w.close(); });
+    });
+  });
+}
+
+/* ההידרדרות: הורדה רגילה. הקובץ נוחת בתיקיית ההורדות ויש להעביר אותו ביד. */
+function downloadFallback(name, text) {
+  var blob = new Blob([text], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+}
+
+/* ═══════════════════ קאש ה-localStorage ═══════════════════
+   אבחון בלבד — ראו ההערה בראש הקובץ. זורק ב-file://, ולכן הכל מגודר. */
+function readCache() {
+  var o = { available: true, localStorage: {}, note: '' };
+  try {
+    CACHE_KEYS.forEach(function (k) {
+      var v = window.localStorage.getItem(k);
+      if (v !== null) o.localStorage[k] = v;
+    });
+  } catch (e) {
+    o.available = false;
+    o.note = 'localStorage blocked (' + (e && e.name) + ') — expected on file://';
+  }
+  return o;
+}
+function renderCache() {
+  var c = readCache();
+  if (!c.available) {
+    $('cacheStatus').textContent = c.note;
+    return c;
+  }
+  var keys = Object.keys(c.localStorage);
+  $('cacheStatus').innerHTML = keys.length
+    ? keys.map(function (k) { return esc(k) + ' = ' + esc(c.localStorage[k]); }).join('<br>')
+    : '(ריק — אין מפתחות קאש ב-origin הזה)';
+  return c;
+}
+
+/* ═══════════════════ תמונת המצב ═══════════════════ */
+
+function summarize(doc) {
+  var part = doc && doc.part;
+  return {
+    part: part || null,
+    currentScreen: (doc && doc.parts && doc.parts[part] &&
+                    typeof doc.parts[part].currentScreen === 'number')
+                     ? doc.parts[part].currentScreen : null,
+    parts: (doc && doc.parts) ? Object.keys(doc.parts) : [],
+    character: (doc && doc.ui) ? (doc.ui.character || null) : undefined,
+    results: (doc && doc.results) ? doc.results : undefined,
+    done: (doc && doc.done) ? Object.keys(doc.done).length : 0,
+    doneItems: (doc && doc.doneItems) ? Object.keys(doc.doneItems).length : 0
+  };
+}
+
+function buildSnapshot(loaded) {
+  var d = new Date();
+  return {
+    kind: SNAPSHOT_KIND,
+    snapshotVersion: SNAPSHOT_VER,
+    savedAt: isoLocal(d),
+    unitId: UNIT_SLUG,
+    registration: loaded.reg,
+    endpoint: baseUrl(),
+    etag: loaded.etag || null,
+    lastModified: loaded.lastModified || null,
+    summary: summarize(loaded.doc),
+    /* ה-state הוא מה שמוזרק. שמור מפורמט במכוון — עריכה ביד היא תכונה. */
+    state: loaded.doc,
+    /* אבחון. השחזור לא תלוי בזה: מ-v4 הדמות והתוצאות יושבות ב-state עצמו. */
+    localCache: readCache()
+  };
+}
+
+/* ולידציה fail-closed. blocking חוסם את ה-PUT; warn רק מדווח. */
+function validateSnapshot(snap, formReg) {
+  var block = [], warn = [];
+
+  if (!snap || typeof snap !== 'object') { block.push('הקובץ אינו JSON של אובייקט.'); return { block: block, warn: warn }; }
+  if (snap.kind !== SNAPSHOT_KIND) block.push('kind אינו "' + SNAPSHOT_KIND + '" (התקבל: ' + snap.kind + ').');
+  if (snap.snapshotVersion !== SNAPSHOT_VER) block.push('snapshotVersion אינו ' + SNAPSHOT_VER + ' (התקבל: ' + snap.snapshotVersion + ').');
+
+  var st = snap.state;
+  if (!st || typeof st !== 'object') { block.push('אין state בקובץ.'); return { block: block, warn: warn }; }
+
+  /* readUnitState זורק כל v שאינו הנוכחי, ואז הלומד מתחיל מאפס. עדיף לסרב
+     כאן מלכתוב מסמך שהיחידה תזרוק. */
+  if (st.v !== RESUME_STATE_VERSION) {
+    block.push('state.v הוא ' + st.v + ' ולא ' + RESUME_STATE_VERSION +
+               ' — readUnitState() יזרוק מסמך כזה והלומד יתחיל מאפס.');
+  }
+  if (!st.part || typeof st.part !== 'string') block.push('state.part חסר או אינו מחרוזת.');
+
+  ['parts', 'prev', 'done', 'doneItems'].forEach(function (k) {
+    if (!st[k] || typeof st[k] !== 'object' || Array.isArray(st[k])) {
+      block.push('state.' + k + ' חסר או אינו אובייקט.');
+    }
+  });
+
+  /* v4: בלי ui/results ה-getters נופלים ל-localStorage, כלומר המסמך לא יהיה
+     הסמכות — וזה בדיוק מה ש-v4 בא לתקן. אזהרה ולא חסימה: readUnitState
+     ממלא ברירות מחדל, ולכן המסמך שמיש. */
+  if (!st.ui || typeof st.ui !== 'object') {
+    warn.push('אין state.ui — הדמות תיקרא מ-localStorage עד לכתיבה הבאה (ראו RESUME.md §3).');
+  }
+  if (!st.results || typeof st.results !== 'object') {
+    warn.push('אין state.results — שערי מועד א/ב ייקראו מ-localStorage עד לכתיבה הבאה.');
+  }
+
+  /* toLowerCase אינו קוסמטי: slug באות רישית מייצר משבצת שנייה לאותו סין,
+     ומשם יומן done שמחמיץ ו-completed כפול (40-resume.js). */
+  var slugs = [];
+  if (st.part) slugs.push(st.part);
+  if (st.parts && typeof st.parts === 'object') slugs = slugs.concat(Object.keys(st.parts));
+  slugs.forEach(function (s) {
+    if (s !== s.toLowerCase()) block.push('slug עם אות רישית: "' + s + '" — מפצל את הסין לשתי משבצות.');
+    else if (!SLUG_RE.test(s)) warn.push('slug לא מוכר: "' + s + '".');
+  });
+
+  if (st.parts && typeof st.parts === 'object') {
+    Object.keys(st.parts).forEach(function (s) {
+      var p = st.parts[s];
+      if (!p || typeof p !== 'object') { block.push('parts["' + s + '"] אינו אובייקט.'); return; }
+      if (typeof p.currentScreen !== 'number') {
+        warn.push('parts["' + s + '"].currentScreen אינו מספר — השחזור ייפול ל-0.');
+      } else if (SCREEN_COUNTS[s] !== undefined &&
+                 (p.currentScreen < 0 || p.currentScreen >= SCREEN_COUNTS[s])) {
+        warn.push('parts["' + s + '"].currentScreen=' + p.currentScreen +
+                  ' מחוץ לטווח (0..' + (SCREEN_COUNTS[s] - 1) + ') — goTo() יחסום והשחזור ייפול לערך שבמסמך.');
+      }
+    });
+  }
+
+  var bytes = 0;
+  try { bytes = new Blob([JSON.stringify(st)]).size; } catch (e) { bytes = JSON.stringify(st).length; }
+  if (bytes > MAX_BYTES) block.push('גוף המסמך ' + bytes + ' בתים — מעל תקרת ~1MB, Kata תחזיר 413.');
+
+  if (snap.registration && formReg && snap.registration !== formReg) {
+    if ($('allowOtherReg').checked) {
+      warn.push('הרישום בקובץ (' + snap.registration + ') שונה מזה שבטופס — אושר במפורש.');
+    } else {
+      block.push('הרישום בקובץ (' + snap.registration + ') שונה מזה שבטופס (' + formReg +
+                 '). אם זה מכוון — לסמן "לאשר הזרקה לרישום אחר".');
+    }
+  }
+
+  var ledger = (st.done ? Object.keys(st.done).length : 0) +
+               (st.doneItems ? Object.keys(st.doneItems).length : 0);
+  warn.push(ledger
+    ? 'יומן ה-completed מכיל ' + ledger + ' רשומות — אותם completed **לא** יישלחו שוב.'
+    : 'יומן ה-completed ריק — כל ה-completed **יישלחו מחדש** בשיגור הבא.');
+
+  return { block: block, warn: warn, bytes: bytes };
+}
+
+/* ═══════════════════ GET ═══════════════════ */
+
+function doGet(v, label) {
+  append('\n' + label + ' GET ' + esc(v.url) + '\nauth: ' + redact(v.auth) + '\n…', 'dim');
+  return fetch(v.url, {
+    method: 'GET',
+    headers: { 'Authorization': v.auth, 'X-Experience-API-Version': '1.0.3' }
+  }).then(function (res) {
+    return res.text().then(function (body) { return { res: res, body: body }; });
+  }).then(function (r) {
+    var s = r.res.status;
+    append('status ' + s + '  → ' + reasonFor('load', s), (s >= 200 && s < 300) ? 'ok' : 'bad');
+    if (s === 404) return { status: s, doc: null };
+    if (s < 200 || s >= 300) return { status: s, doc: null };
+    var etag = r.res.headers.get('ETag');
+    var lm = r.res.headers.get('Last-Modified');
+    if (etag) append('ETag:   ' + esc(etag), 'dim');
+    append('bytes:  ' + r.body.length, 'dim');
+    var doc = null;
+    try { doc = JSON.parse(r.body); }
+    catch (e) { append('✗ הגוף אינו JSON — לא ניתן לשמור כתמונת מצב.', 'bad'); return { status: s, doc: null }; }
+    return { status: s, doc: doc, etag: etag, lastModified: lm };
+  }).catch(function (e) {
+    append('status 0 → network / CORS', 'bad');
+    append(esc(e && e.message ? e.message : String(e)), 'bad');
+    append('CORS to kata.cet.ac.il was verified only from lomdot.education.gov.il.\n' +
+           'From file:// or localhost it is expected to fail — use the curl buttons.', 'dim');
+    return { status: 0, doc: null };
+  });
+}
+
+function describeDoc(doc, prefix) {
+  var s = summarize(doc);
+  append(prefix + 'v:         ' + doc.v, 'dim');
+  append(prefix + 'part:      ' + (s.part || '(none)'), 'dim');
+  append(prefix + 'screen:    ' + (s.currentScreen === null ? '(none)' : s.currentScreen), 'dim');
+  append(prefix + 'parts:     ' + (s.parts.length ? s.parts.join(', ') : '(none)'), 'dim');
+  append(prefix + 'character: ' + (s.character === undefined ? '(no ui section)' : (s.character || 'null')),
+         (s.character === undefined) ? 'warnc' : 'dim');
+  append(prefix + 'results:   ' + (s.results === undefined ? '(no results section)' : JSON.stringify(s.results)),
+         (s.results === undefined) ? 'warnc' : 'dim');
+  append(prefix + 'ledger:    ' + s.done + ' components / ' + s.doneItems + ' items already completed',
+         (s.done || s.doneItems) ? 'warnc' : 'dim');
+}
+
+$('btnCheck').onclick = function () {
+  var v = validate('load'); if (!v) return;
+  log('', 'dim');
+  $('btnSave').disabled = true;
+  $('btnInject').disabled = true;
+  doGet(v, '').then(function (r) {
+    if (!r.doc) {
+      if (r.status === 404) append('\nאין מסמך לרישום הזה. אין מה לשמור — אבל אפשר להזריק.', 'dim');
+      lastLoaded = null;
+      checkedReg = (r.status === 404) ? v.reg : null;
+      if (r.status === 404) {
+        $('saveHint').textContent = 'אין מסמך לשמור (404).';
+        maybeEnableInject();
+      }
+      return;
+    }
+    describeDoc(r.doc, '');
+    lastEtag = r.etag || null;
+    lastLoaded = { doc: r.doc, etag: r.etag, lastModified: r.lastModified, reg: v.reg };
+    checkedReg = v.reg;
+    $('btnSave').disabled = false;
+    $('saveHint').textContent = 'השמירה פתוחה עבור ' + v.reg + '.';
+    maybeEnableInject();
+    append('\n✓ נקרא. אפשר לשמור לקובץ.', 'ok');
+  });
+};
+
+/* ═══════════════════ שמירה ═══════════════════ */
+
+$('btnSave').onclick = function () {
+  if (!lastLoaded) { append('\n✗ אין מסמך שנקרא. הריצו בדיקה.', 'bad'); return; }
+  var snap = buildSnapshot(lastLoaded);
+  var text = JSON.stringify(snap, null, 2);
+  var name = snapshotName(lastLoaded.doc, lastLoaded.reg, new Date());
+
+  append('\nשומר: ' + esc(name) + '  (' + text.length + ' בתים)', 'dim');
+  if (!snap.localCache.available) {
+    append('⚠ קאש ה-localStorage לא נגיש כאן (' + esc(snap.localCache.note) + ') — ' +
+           'נרשם כלא-זמין. לא משפיע על השחזור.', 'warnc');
+  }
+
+  if (dirHandle) {
+    verifyPermission(dirHandle, false).then(function (p) {
+      if (p !== 'granted') {
+        append('⚠ אין הרשאה לתיקייה — מוריד במקום.', 'warnc');
+        downloadFallback(name, text);
+        append('✓ הורד לתיקיית ההורדות. להעביר ביד ל-docs-and-tools/states/.', 'ok');
+        return;
+      }
+      return writeToDir(name, text).then(function () {
+        append('✓ נכתב ל-' + esc(dirHandle.name) + '/' + esc(name), 'ok');
+        return refreshList();
+      });
+    }).catch(function (e) {
+      append('✗ כתיבה לתיקייה נכשלה: ' + esc(e && e.message) + ' — מוריד במקום.', 'bad');
+      downloadFallback(name, text);
+    });
+  } else {
+    downloadFallback(name, text);
+    append('✓ הורד לתיקיית ההורדות (לא נבחרה תיקייה). ' +
+           'להעביר ביד ל-docs-and-tools/states/.', 'ok');
+  }
+};
+
+/* ═══════════════════ טעינת תמונת מצב ═══════════════════ */
+
+function adoptSnapshot(obj, source) {
+  snapshot = obj;
+  validated = false;
+  $('btnInject').disabled = true;
+  $('injectHint').textContent = 'נטען מ' + source + '. הריצו בדיקת תקינות.';
+  log('נטען מ' + esc(source) + '.', 'dim');
+  if (obj && obj.state) describeDoc(obj.state, '  ');
+  if (obj && obj.savedAt) append('\nsavedAt: ' + esc(obj.savedAt), 'dim');
+}
+
+function parseAndAdopt(text, source) {
+  var obj;
+  try { obj = JSON.parse(text); }
+  catch (e) { log('✗ הקובץ אינו JSON תקין: ' + esc(e.message), 'bad'); snapshot = null; return; }
+  adoptSnapshot(obj, source);
+}
+
+$('fileSel').onchange = function () {
+  var name = $('fileSel').value;
+  if (!name || !dirHandle) return;
+  dirHandle.getFileHandle(name).then(function (fh) { return fh.getFile(); })
+    .then(function (f) { return f.text(); })
+    .then(function (t) { parseAndAdopt(t, 'תיקייה: ' + name); })
+    .catch(function (e) { log('✗ קריאת הקובץ נכשלה: ' + esc(e && e.message), 'bad'); });
+};
+
+$('fileInput').onchange = function () {
+  var f = $('fileInput').files && $('fileInput').files[0];
+  if (!f) return;
+  f.text().then(function (t) { parseAndAdopt(t, 'דיסק: ' + f.name); })
+    .catch(function (e) { log('✗ קריאת הקובץ נכשלה: ' + esc(e && e.message), 'bad'); });
+};
+
+$('paste').addEventListener('change', function () {
+  var t = $('paste').value.trim();
+  if (!t) return;
+  parseAndAdopt(t, 'הדבקה ידנית');
+});
+
+/* ═══════════════════ ולידציה ═══════════════════ */
+
+function maybeEnableInject() {
+  $('btnInject').disabled = !(validated && snapshot && checkedReg === $('reg').value.trim());
+  if ($('btnInject').disabled && validated) {
+    $('injectHint').textContent = 'הריצו בדיקה (כפתור "בדיקה") על הרישום שבטופס לפני הזרקה.';
+  }
+}
+
+$('btnValidate').onclick = function () {
+  if (!snapshot) { log('✗ לא נטענה תמונת מצב.', 'bad'); return; }
+  var formReg = $('reg').value.trim();
+  var r = validateSnapshot(snapshot, formReg);
+
+  log('בדיקת תקינות', 'dim');
+  if (r.bytes) append('גודל גוף ה-PUT: ' + r.bytes + ' בתים', 'dim');
+  r.warn.forEach(function (w) { append('⚠ ' + esc(w), 'warnc'); });
+  r.block.forEach(function (b) { append('✗ ' + esc(b), 'bad'); });
+
+  if (r.block.length) {
+    validated = false;
+    $('btnInject').disabled = true;
+    $('injectHint').textContent = 'הוולידציה נכשלה — ' + r.block.length + ' חסימות.';
+    append('\nההזרקה חסומה.', 'bad');
+    return;
+  }
+  validated = true;
+  append('\n✓ הוולידציה עברה' + (r.warn.length ? ' (' + r.warn.length + ' אזהרות)' : '') + '.', 'ok');
+  maybeEnableInject();
+  if ($('btnInject').disabled) {
+    append('ההזרקה עוד סגורה: יש להריץ "בדיקה" על הרישום שבטופס — אין להחליף מסמך שלא נראה.', 'dim');
+  }
+};
+
+/* ═══════════════════ הזרקה ═══════════════════ */
+
+$('btnInject').onclick = function () {
+  var v = validate('save'); if (!v) return;
+  if (!snapshot || !validated) { append('\n✗ אין תמונת מצב מאומתת.', 'bad'); return; }
+  if (v.reg !== checkedReg) {
+    log('✗ הרישום השתנה מאז הבדיקה. הריצו בדיקה מחדש.', 'bad');
+    $('btnInject').disabled = true;
+    return;
+  }
+
+  var nowS = lastLoaded ? summarize(lastLoaded.doc) : null;
+  var newS = summarize(snapshot.state);
+  var msg = 'להחליף את מסמך ה-state של הרישום\n\n' + v.reg + '\n\n' +
+            'עכשיו:  ' + (nowS ? (nowS.part + ' / מסך ' + nowS.currentScreen) : '(אין מסמך)') + '\n' +
+            'אחרי:   ' + newS.part + ' / מסך ' + newS.currentScreen + '\n\n' +
+            'ה-PUT הוא החלפה מלאה. אין ביטול.';
+  if (!window.confirm(msg)) { append('\nביטול — לא נשלח כלום.', 'dim'); return; }
+
+  var body = JSON.stringify(snapshot.state);
+  var headers = {
+    'Authorization': v.auth,
+    'Content-Type': 'application/json',
+    'X-Experience-API-Version': '1.0.3'
+  };
+  if ($('ifmatch').checked && lastEtag) headers['If-Match'] = lastEtag;
+
+  append('\nPUT ' + esc(v.url) + '\nauth: ' + redact(v.auth) +
+         (headers['If-Match'] ? '\nIf-Match: ' + esc(headers['If-Match']) : '') +
+         '\nbytes: ' + body.length + '\n…', 'dim');
+
+  fetch(v.url, { method: 'PUT', headers: headers, body: body })
+    .then(function (res) {
+      var s = res.status;
+      append('status ' + s + '  → ' + reasonFor('save', s), (s >= 200 && s < 300) ? 'ok' : 'bad');
+      if (s === 412) {
+        append('\nהמסמך השתנה מאז הבדיקה. לבדוק מחדש ולנסות שוב.', 'bad');
+        return null;
+      }
+      if (s < 200 || s >= 300) return null;
+      append('\n✓ הוזרק. מאמת בקריאה חוזרת…', 'ok');
+      return doGet(v, 'verify:');
+    })
+    .then(function (r) {
+      if (!r) return;
+      if (!r.doc) { append('\n⚠ הקריאה החוזרת לא החזירה מסמך.', 'warnc'); return; }
+      describeDoc(r.doc, '  ');
+      var same = JSON.stringify(r.doc) === JSON.stringify(snapshot.state);
+      append(same ? '\n✓ המסמך שחזר זהה לתמונת המצב.'
+                  : '\n⚠ המסמך שחזר שונה מתמונת המצב (ייתכן שסדר המפתחות שונה).',
+             same ? 'ok' : 'warnc');
+      lastEtag = r.etag || null;
+      lastLoaded = { doc: r.doc, etag: r.etag, lastModified: r.lastModified, reg: v.reg };
+
+      if ($('restoreCache').checked) restoreCacheKeys();
+      renderLaunch(snapshot.state);
+    })
+    .catch(function (e) {
+      append('status 0 → network / CORS', 'bad');
+      append(esc(e && e.message ? e.message : String(e)), 'bad');
+      append('להשתמש ב"העתקת curl (PUT)" — ל-curl אין מגבלת CORS.', 'dim');
+    });
+};
+
+/* מיישר את הקאש של הדפדפן הזה לפי המסמך שהוזרק. מיותר לנכונות — היחידה
+   מיישרת אותו בעצמה ב-applyUnitProfile — אבל מסדר את הפריים הראשון, לפני
+   שהמסמך מגיע. */
+function restoreCacheKeys() {
+  var st = snapshot.state;
+  try {
+    if (st.ui && Object.prototype.hasOwnProperty.call(st.ui, 'character')) {
+      if (st.ui.character) window.localStorage.setItem(CACHE_KEYS[0], st.ui.character);
+      else window.localStorage.removeItem(CACHE_KEYS[0]);
+    }
+    CACHE_KEYS.slice(1).forEach(function (k) {
+      if (st.results && st.results[k]) window.localStorage.setItem(k, st.results[k]);
+      else window.localStorage.removeItem(k);
+    });
+    /* המפה הזאת היא per-tab, ולכן כתיבה מהלשונית הזאת לא תגיע ללשונית
+       היחידה. doc.prev מכסה את זה בכל מקרה — ראו RESUME.md §6. */
+    window.sessionStorage.removeItem(NAV_EDGE_KEY);
+    append('✓ קאש ה-localStorage של ה-origin הזה יושר לפי המסמך.', 'ok');
+    renderCache();
+  } catch (e) {
+    append('⚠ הקאש לא נגיש (' + esc(e && e.name) + ') — לא נורא, המסמך הוא הסמכות.', 'warnc');
+  }
+}
+
+/* ═══════════════════ קישורי שיגור ═══════════════════ */
+
+function renderLaunch(st) {
+  var reg = $('reg').value.trim();
+  var qs, note;
+  if (rawSlxapi) {
+    /* הדרך היחידה שמריצה את היחידה **מול Kata**. ה-slxapi נדרש שלם (actor,
+       endpoint, auth) — בלעדיו הספרייה מדליקה XAPI_DISABLED. */
+    var p = new URLSearchParams();
+    p.set('slxapi', rawSlxapi);
+    if (reg) p.set('registration', reg);
+    qs = '?' + p.toString();
+    note = '<strong>⚠ הקישורים נושאים את הטוקן</strong> (בתוך <code>slxapi</code>). ' +
+           'לא לשתף ולא להדביק ביומנים.';
+  } else {
+    qs = reg ? ('?registration=' + encodeURIComponent(reg)) : '';
+    note = '<strong>⚠ אין <code>slxapi</code></strong> — הכלי לא נפתח בקישור השקה, ולכן ' +
+           'אי אפשר לבנות קישור מלא (חסר <code>actor</code>). היחידה תרוץ עם ' +
+           '<code>XAPI_DISABLED=true</code> ותקרא את מסמך ה-<em>fallback</em> ' +
+           'שב-<code>localStorage</code> — <strong>לא</strong> את המסמך שהוזרק ל-Kata. ' +
+           'להשתמש בקישור ההשקה המקורי מהפלטפורמה, ולהוסיף לו את ה-<code>registration</code> הזה.';
+  }
+
+  var part = st.part;
+  var scr = (st.parts && st.parts[part] && typeof st.parts[part].currentScreen === 'number')
+              ? st.parts[part].currentScreen : null;
+  var rootUrl = '../index.html' + qs;
+  var directUrl = '../' + part + '/index.html' + qs + (scr !== null ? '#screen=' + scr : '');
+
+  $('launchLinks').innerHTML =
+    '<div class="linkbox"><strong>1. דרך שער היחידה</strong> — המסלול המציאותי. ' +
+    'ה-shim תמיד מפנה לסין 01, והלואדר שלו קופץ משם ל-<code>doc.part</code> בעצמו ' +
+    '(<code>50-loader.js</code>) — כלומר בדיוק מה שקורה בשיגור אמיתי.' +
+    '<code><a href="' + esc(rootUrl) + '" target="_blank" rel="noopener">' + esc(rootUrl) + '</a></code></div>' +
+    '<div class="linkbox"><strong>2. ישר לסין, עם מסך מקובע</strong> — ' +
+    'נחוץ כי הקפיצה בין הסינים גוררת רק את ה-query string, ולכן hash על הקישור ' +
+    'הראשון נופל בדרך.' +
+    '<code><a href="' + esc(directUrl) + '" target="_blank" rel="noopener">' + esc(directUrl) + '</a></code></div>' +
+    '<div class="hint" style="margin-top:10px">' + note + '</div>' +
+    '<div class="hint">⚠ לא להוסיף <code>?resetState</code> לקישורים האלה — הוא ימחק ' +
+    'בדיוק את מה שהוזרק.</div>';
+  $('launchCard').hidden = false;
+}
+
+/* ═══════════════════ ייצוא ל-curl ═══════════════════ */
+
+function curlGet(reg, auth, redacted) {
+  var url = stateUrl(reg);
+  var a = redacted ? redact(auth) : auth;
+  return [
+    '# בדיקה / שמירה — מה קיים שם (200 = יש מסמך, 404 = אין)',
+    '# להפניה לקובץ: הוסיפו   -o state-raw.json',
+    'curl -i "' + url + '" \\',
+    '  -H "Authorization: ' + a + '" \\',
+    '  -H "X-Experience-API-Version: 1.0.3"'
+  ].join('\n');
+}
+function curlPut(reg, auth, redacted, etag) {
+  var url = stateUrl(reg);
+  var a = redacted ? redact(auth) : auth;
+  var lines = [
+    '# הזרקה (204 = הוזרק). ⚠️ החלפה מלאה של המסמך.',
+    '# הגוף נלקח מהקובץ שנוצר ע"י "שמירת גוף ה-PUT לקובץ":',
+    '#   docs-and-tools/states/_put-body.json',
+    '# ב-PowerShell 5.1 המילה curl היא alias ל-Invoke-WebRequest — להריץ curl.exe',
+    '# במפורש, כמו שעושים retrieve-metadata.ps1 / send-metadata.ps1.',
+    'curl -i -X PUT "' + url + '" \\',
+    '  -H "Authorization: ' + a + '" \\',
+    '  -H "Content-Type: application/json" \\',
+    '  -H "X-Experience-API-Version: 1.0.3" \\'
+  ];
+  /* גרשיים בודדים סביב If-Match, ולא כפולים: ETag חזק הוא **בעצמו** עטוף
+     בגרשיים כפולים (`"abc123"`), ולכן עטיפה בכפולים הייתה מייצרת
+     -H "If-Match: "abc123"" — ציטוט שבור שהשל מפרק לשלוש מילים, וה-header
+     יוצא פגום. הגרש הבודד מנוקה מהערך כדי שהעטיפה לא תישבר בכיוון השני. */
+  if (etag) lines.push("  -H 'If-Match: " + String(etag).replace(/'/g, '') + "' \\");
+  lines.push('  --data-binary "@_put-body.json"');
+  lines.push('');
+  lines.push('# אימות אחרי ההזרקה');
+  lines.push('curl -s "' + url + '" \\');
+  lines.push('  -H "Authorization: ' + a + '" \\');
+  lines.push('  -H "X-Experience-API-Version: 1.0.3"');
+  return lines.join('\n');
+}
+
+$('btnCurlGet').onclick = function () {
+  var reg = $('reg').value.trim(), auth = authHeader();
+  if (!reg)  { log('✗ registration is empty.', 'bad'); return; }
+  if (!auth) { log('✗ no reporting token — the curl command would not authenticate.', 'bad'); return; }
+  copyOrFallback(curlGet(reg, auth, false), curlGet(reg, auth, true));
+};
+
+$('btnCurlPut').onclick = function () {
+  var reg = $('reg').value.trim(), auth = authHeader();
+  if (!reg)  { log('✗ registration is empty.', 'bad'); return; }
+  if (!auth) { log('✗ no reporting token — the curl command would not authenticate.', 'bad'); return; }
+  var etag = ($('ifmatch').checked && lastEtag) ? lastEtag : null;
+  copyOrFallback(curlPut(reg, auth, false, etag), curlPut(reg, auth, true, etag));
+};
+
+$('btnPutBody').onclick = function () {
+  if (!snapshot || !snapshot.state) { log('✗ לא נטענה תמונת מצב.', 'bad'); return; }
+  var text = JSON.stringify(snapshot.state);
+  if (dirHandle) {
+    verifyPermission(dirHandle, false).then(function (p) {
+      if (p !== 'granted') { downloadFallback('_put-body.json', text); return; }
+      return writeToDir('_put-body.json', text).then(function () {
+        append('\n✓ נכתב ל-' + esc(dirHandle.name) + '/_put-body.json (' + text.length + ' בתים).', 'ok');
+        append('ה-curl של ה-PUT מצביע עליו. להריץ מתוך התיקייה הזאת.', 'dim');
+      });
+    }).catch(function (e) {
+      append('\n✗ כתיבה נכשלה: ' + esc(e && e.message), 'bad');
+      downloadFallback('_put-body.json', text);
+    });
+  } else {
+    downloadFallback('_put-body.json', text);
+    append('\n✓ הורד כ-_put-body.json. להעביר ל-docs-and-tools/states/.', 'ok');
+  }
+};
+
+/* ═══════════════════ כפתורי התיקייה והקאש ═══════════════════ */
+
+$('btnPickDir').onclick = function () {
+  if (!fsaSupported()) {
+    setDirStatus('הדפדפן הזה לא תומך ב-File System Access API (או שההקשר אינו מאובטח). ' +
+                 'השמירה תתדרדר להורדה, והטעינה — לקלט קובץ.', 'bad');
+    return;
+  }
+  window.showDirectoryPicker({ id: 'mm02-states', mode: 'readwrite' }).then(function (h) {
+    return idbSet(IDB_KEY, h).then(function () { return adoptDir(h, true); });
+  }).catch(function (e) {
+    if (e && e.name === 'AbortError') return;
+    setDirStatus('✗ בחירת התיקייה נכשלה: ' + esc(e && e.message), 'bad');
+  });
+};
+
+$('btnGrant').onclick = function () {
+  if (!dirHandle) return;
+  adoptDir(dirHandle, true);
+};
+
+$('btnRefresh').onclick = function () { refreshList(); };
+$('btnCacheRead').onclick = function () { renderCache(); };
+$('btnCacheClear').onclick = function () {
+  try {
+    CACHE_KEYS.forEach(function (k) { window.localStorage.removeItem(k); });
+    window.sessionStorage.removeItem(NAV_EDGE_KEY);
+    append('\n✓ הקאש נוקה ב-origin הזה. המסמך ב-Kata לא נגע.', 'ok');
+  } catch (e) {
+    append('\n⚠ הקאש לא נגיש (' + esc(e && e.name) + ').', 'warnc');
+  }
+  renderCache();
+};
+
+/* שינוי רישום/endpoint מבטל את שער הבדיקה — אותו דפוס כמו ב-reset-state.html. */
+$('reg').addEventListener('input', function () {
+  $('btnSave').disabled = true; $('btnInject').disabled = true;
+  checkedReg = null; lastLoaded = null;
+});
+$('ep').addEventListener('change', function () {
+  $('btnSave').disabled = true; $('btnInject').disabled = true;
+  checkedReg = null; lastLoaded = null;
+});
+$('allowOtherReg').addEventListener('change', function () {
+  validated = false; $('btnInject').disabled = true;
+  $('injectHint').textContent = 'ההגדרה שונתה — להריץ בדיקת תקינות מחדש.';
+});
+
+/* ═══════════════════ אתחול ═══════════════════ */
+
+readParams();
+renderCache();
+if (!fsaSupported()) {
+  setDirStatus('הדפדפן/ההקשר לא תומך ב-File System Access API. השמירה תתדרדר ' +
+               'להורדה לתיקיית ההורדות, והטעינה — לקלט קובץ או הדבקה.', 'bad');
+} else {
+  idbGet(IDB_KEY).then(function (h) {
+    if (h) return adoptDir(h, false);
+  }).catch(function () { /* אין ידית שמורה — המצב ההתחלתי תקף */ });
+}
+</script>
+</body>
+</html>

@@ -117,7 +117,7 @@ by `unit-js/90-boot.js`, because it may navigate away.
 
 Two things to get right:
 
-> **`window.XAPI_USING_G`** is set from a regex like `/xapi-720-[ghij]\.js/`. If the CDN library ever
+> **`window.XAPI_USING_G`** is set from a regex like `/xapi-720-[ghijk]\.js/`. If the CDN library ever
 > moves to a new letter, **widen that regex** — otherwise all item-level and video statements go
 > silent with no error. It is now in one place instead of five, which is the point.
 
@@ -144,12 +144,19 @@ through. That is why the entry component opens the unit from `onXapiReady()` rat
 | `completed` (component) | in the routing function that leaves the component |
 | `completed` (unit) | once, in the terminal component |
 | `selected` | a genuine learner *preference* (e.g. video vs. flip-cards), under a `category` |
-| `played` / `paused` | YouTube via the player callback; HTML5 `<video>` via `xapiWireVideos()` |
+| `played` / `paused` | YouTube via the player callback; HTML5 `<video>` via `xapiWireVideos()`, **opt-in only** — an element must carry `data-xapi-report="<item>"` |
 
 Notes worth copying:
 
-- **Hints are usually toggles** (`popup.hidden = !popup.hidden`). Put `requested.1` inside the
-  "just opened" branch, or closing a hint reports a second request.
+- **Hints are usually toggles** (`popup.hidden = !popup.hidden`). Put `xapiRequestedHint()` inside
+  the "just opened" branch, or closing a hint reports a second request. The helper *also* dedupes
+  per question per page load, which the open-branch rule alone does not cover: each overlay closes
+  three ways (its close button, the backdrop, Escape) and all three leave the hint button live, so a
+  learner who opens a hint twice used to report `requested.1` twice.
+- **Decorative video is not content.** `xapiWireVideos()` wires only elements carrying
+  `data-xapi-report`. It used to select every `<video>`, which meant the companion-character clips
+  reported — and not quietly: `.load()` on a playing element emits a `pause` then a `play`, i.e. a
+  fabricated pair on every entry to the screen, including on back-navigation and on resume.
 - **Decorative choices are not `selected`.** An avatar picker is decoration; a learning-format
   choice is a preference. Only the latter is reported.
 - **Narrative interstitials can share an item with the questions they introduce.** That keeps the
@@ -271,6 +278,33 @@ The three still open in `methodica-math-scale-01`:
 3. **Dead code**, uninstrumented: part 01 `s5*` / `s13*` (those screens do not exist),
    `routeAfterBasicPractice()` (navigates out of range), `s16Q2Submit` / `s16CheckBothDone` (never
    wired in the HTML); part 04 `s42*`.
+
+---
+
+## 9a. What changed in the v4 upgrade (2026-09-01)
+
+Reporting-side changes only; the resume side is in [RESUME.md](RESUME.md).
+
+- **Six call-site helpers** in `unit-js/20-xapi.js` replace what used to be a 6–8 line block repeated
+  25 times and a raw one-liner repeated 23 times: `xapiAnswered`, `xapiRequestedHint`,
+  `xapiCompleteComponent`, `xapiCompleteUnit`, plus the answer-text builders `xapiFieldsAnswer`,
+  `xapiMultiAnswer` and `xapiZoneAnswer`. **No statement shape changed** — verb, `success`,
+  `score.scaled` and `student_answer` are byte-identical to before.
+  The point is not tidiness: the `XAPI_Q_RESULTS`-before-the-`try/catch` invariant in §2 is now
+  enforced in one place instead of relied on at 25 sites, and the hint dedupe above became possible
+  at all.
+- **`requested.1` is deduped** per question per page load (`XAPI_HINTS_SENT`).
+- **Video reporting is opt-in** — see the note in §4.
+- **An id-mismatch gate** compares `XAPI_COMP_ID` against `window.METADATA.id` on every load of every
+  part and shouts to the console on a mismatch. `XAPI_ID_PREFIX` is the one value in the shared layer
+  set by inference, and before this gate a wrong slash or capital meant every statement pointed at a
+  catalog object that does not exist, with no error anywhere.
+- **Two loader gates**: a missing `XAPI_METADATA_FILE` exits loudly, and the metadata poll is capped
+  at 10 s. The poll used to spin forever, so a 404 metadata file was a silent timer loop for the
+  whole session with reporting off.
+- **Library `-j` → `-k`**, which adds `stateLastResult720()`. The `XAPI_USING_G` regex widened to
+  `[ghijk]` in the same edit — see the warning in §3.
+- **Tests**: `_test/verify-report.js` and `_test/statement-flow.js`, and `_test/README.md`.
 
 ---
 

@@ -10,7 +10,15 @@
 
 var TOTAL_SCREENS = 3;
 window.lomdaState = { selectedCharacter: null, selectedDesign: null };
-const _savedChar = localStorage.getItem('lomdaCharacter');
+/* Read through the shared getter: from v4 the Kata state document is the source of truth for
+   the character and localStorage is only a synchronous cache (unit-js/40-resume.js). This runs
+   before the first paint, while the document is still two CDN scripts away, so the cache is
+   what the getter returns here — the document overrides it in loader phase A.
+   typeof-guarded so a shared file that failed to load degrades to the old cache-only
+   behaviour rather than throwing at top level and killing the rest of this script. */
+const _savedChar = (typeof getUnitCharacter === 'function')
+  ? getUnitCharacter()
+  : localStorage.getItem('lomdaCharacter');
 if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
 
 /* Final assessment tracking (screens 43-52) */
@@ -116,10 +124,9 @@ function goToAdvanced() {
   /* xAPI: this component is the off-computer class task — the catalog gives it no questions
      (isAssessment: false), so 'completed' carries success but no score: there is nothing to
      grade, only to finish. */
-  try { xapiFinishItems(); } catch (e) {}
-  try { sendCompletedOnce('done', currentPartSlug(), 'onlinelesson', { success: true }); } catch (e) { console.error('[xAPI] completed component 03', e); }
+  xapiCompleteComponent({ success: true });
   /* Resume: point the state document at the component being entered, before navigating. */
-  if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-04');
+  writeForwardState('methodica-math-scale-01-04', '#screen=2');
   window.location.href = '../methodica-math-scale-01-04/index.html' + window.location.search;
 }
 

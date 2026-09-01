@@ -5,7 +5,15 @@
 
 var TOTAL_SCREENS = 11;
 window.lomdaState = { selectedCharacter: null, selectedDesign: null };
-const _savedChar = localStorage.getItem('lomdaCharacter');
+/* Read through the shared getter: from v4 the Kata state document is the source of truth for
+   the character and localStorage is only a synchronous cache (unit-js/40-resume.js). This runs
+   before the first paint, while the document is still two CDN scripts away, so the cache is
+   what the getter returns here — the document overrides it in loader phase A.
+   typeof-guarded so a shared file that failed to load degrades to the old cache-only
+   behaviour rather than throwing at top level and killing the rest of this script. */
+const _savedChar = (typeof getUnitCharacter === 'function')
+  ? getUnitCharacter()
+  : localStorage.getItem('lomdaCharacter');
 if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
 
 /* Final assessment tracking (screens 43-52) */
@@ -80,17 +88,8 @@ function s45Check() {
   var val     = parseFloat((input ? input.value : '').replace(',', ''));
   var correct = (val === 25000);
   s45Attempts++;
-  /* xAPI: item 001 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s45Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [String(val)] } },
-      xapiQ('001', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 001/q1', e); }
-  XAPI_Q_RESULTS['001/q1'] = !!correct;
+  xapiAnswered('001', 'q1', correct, correct || s45Attempts >= 2,
+    String(val));
 
   var fb      = document.getElementById('s45-feedback');
   var fbBold  = document.getElementById('s45-fb-bold');
@@ -154,7 +153,7 @@ function s45ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('001', 'q1')); } catch (e) {}
+      xapiRequestedHint('001', 'q1');
     }
   }
 }
@@ -222,17 +221,8 @@ function s47Check() {
   var correct = (s47Selected.size === S47_CORRECT.size &&
                  Array.from(s47Selected).every(i => S47_CORRECT.has(i)));
   s47Attempts++;
-  /* xAPI: item 001 / q2. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s47Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [Array.from(s47Selected).sort(function(a,b){ return a - b; }).map(function(i){ return xapiAnswerText(document.querySelectorAll('[data-screen="4"] .s47-option')[i]); }).join(' | ')] } },
-      xapiQ('001', 'q2'));
-  } catch (e) { console.error('[xAPI] answered 001/q2', e); }
-  XAPI_Q_RESULTS['001/q2'] = !!correct;
+  xapiAnswered('001', 'q2', correct, correct || s47Attempts >= 2,
+    Array.from(s47Selected).sort(function(a,b){ return a - b; }).map(function(i){ return xapiAnswerText(document.querySelectorAll('[data-screen="4"] .s47-option')[i]); }).join(' | '));
 
   var fb      = document.getElementById('s47-feedback');
   var fbBold  = document.getElementById('s47-fb-bold');
@@ -296,7 +286,7 @@ function s47ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('001', 'q2')); } catch (e) {}
+      xapiRequestedHint('001', 'q2');
     }
   }
 }
@@ -356,7 +346,7 @@ function s49ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('001', 'q3')); } catch (e) {}
+      xapiRequestedHint('001', 'q3');
     }
   }
 }
@@ -372,17 +362,8 @@ function s49Submit() {
 
   var correct = (s49Selected === S49_CORRECT);
   s49Attempts++;
-  /* xAPI: item 001 / q3. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s49Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="6"] .s5-opt')[s49Selected])] } },
-      xapiQ('001', 'q3'));
-  } catch (e) { console.error('[xAPI] answered 001/q3', e); }
-  XAPI_Q_RESULTS['001/q3'] = !!correct;
+  xapiAnswered('001', 'q3', correct, correct || s49Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="6"] .s5-opt')[s49Selected]));
 
   var fb      = document.getElementById('s49-feedback');
   var fbBold  = document.getElementById('s49-fb-bold');
@@ -485,7 +466,7 @@ function s51ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('001', 'q4')); } catch (e) {}
+      xapiRequestedHint('001', 'q4');
     }
   }
 }
@@ -501,17 +482,8 @@ function s51Submit() {
 
   var correct = (s51Selected === S51_CORRECT);
   s51Attempts++;
-  /* xAPI: item 001 / q4. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s51Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="8"] .s5-opt')[s51Selected])] } },
-      xapiQ('001', 'q4'));
-  } catch (e) { console.error('[xAPI] answered 001/q4', e); }
-  XAPI_Q_RESULTS['001/q4'] = !!correct;
+  xapiAnswered('001', 'q4', correct, correct || s51Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="8"] .s5-opt')[s51Selected]));
 
   var fb      = document.getElementById('s51-feedback');
   var fbBold  = document.getElementById('s51-fb-bold');
@@ -570,7 +542,9 @@ function s51Submit() {
 
 function s53Enter() {
   var vid       = document.getElementById('s53-gif');
-  var character = localStorage.getItem('lomdaCharacter') || 'text';
+  var character = ((typeof getUnitCharacter === 'function')
+    ? getUnitCharacter()
+    : localStorage.getItem('lomdaCharacter')) || 'text';
   var charNum   = character === 'video' ? '2' : '1';
 
   if (vid) {
@@ -583,15 +557,11 @@ function s53Enter() {
      item 'completed' carrying peakResult() — so only the component and unit remain.
      The unit statement deliberately carries no result: the library reports unit scope without one,
      and a unit-wide score would have to invent a weighting across five components. */
-  try { xapiFinishItems(); } catch (e) {}
-  try {
-    var _r = peakResult();
-    /* The finale is entered on screen arrival, not on a button, so a learner who backs out of the
-       unit and walks forward again lands here a second time. Both statements are one-shot: 'unit'
-       is a ledger key of its own because it belongs to the unit, not to this component. */
-    sendCompletedOnce('done', currentPartSlug(), 'onlinelesson', _r);
-    sendCompletedOnce('done', 'unit', 'onlinelesson', null, { scope: 'unit' });
-  } catch (e) { console.error('[xAPI] completed component 05 / unit', e); }
+  /* The finale is entered on screen arrival, not on a button, so a learner who backs out of the
+     unit and walks forward again lands here a second time. Both statements are one-shot: 'unit'
+     is a ledger key of its own because it belongs to the unit, not to this component. */
+  xapiCompleteComponent(peakResult());
+  xapiCompleteUnit(null);
 }
 
 

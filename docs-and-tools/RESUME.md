@@ -2,17 +2,38 @@
 
 Resume ("המשך מהמקום שבו הפסקת") is **enabled** in all five components as of 2026-08-06.
 `RESUME_ENABLED = true` in `unit-js/10-identity.js`; that flag is also what switches the loader from
-`xapi-720-i.js` to `xapi-720-j.js`, the build that carries the State API transport.
+`xapi-720-i.js` to `xapi-720-k.js`, the build that carries the State API transport plus diagnostics.
 
 This document describes the mechanism as built. §9 lists what is deliberately *not* restored, §10
 records the verification performed, and §11 is the changelog of the defects fixed on the way here.
+
+> ## v4 (2026-09-01) — parity with `methodica-science-mass-measure-02`
+>
+> This unit is where the shared `unit-js/` layer was invented; the science unit forked it on
+> 2026-08-17 and then hardened it for two weeks. Those fixes are now back-ported. **`§6b` is
+> obsolete and `§10`'s "still to do" list is partly closed — read this box first.**
+>
+> | Change | Effect |
+> |---|---|
+> | `RESUME_STATE_VERSION` **3 → 4** | The document gains `ui` (the chosen character) and `results` (cross-part gates). There is **no migration** — any other `v` is discarded. Approved because this unit has never had a live Kata run, so the field is clean. `migrateV2` and `RESUME_PART_CHAIN` are deleted. |
+> | Character is unit-level state | It lived only in `localStorage`, so a learner continuing the same registration on another machine got the wrong avatar in parts 01 and 05. The document is now the source of truth and `localStorage` is a synchronous cache. Read via `getUnitCharacter()`, written via `setUnitCharacter()`, both `typeof`-guarded at the call sites. |
+> | `#boot-cover` | Screen 0 no longer flashes before the restore jumps. Removed by `dropBootCover()` from every loader exit path, with a dependency-free 800 ms markup safety net above it. |
+> | Loader gates | A missing `XAPI_METADATA_FILE` exits loudly; the metadata poll is capped at 10 s instead of spinning forever; `XAPI_COMP_ID` is checked against `window.METADATA.id` on every load. |
+> | Library **`-j` → `-k`** | Adds `stateLastResult720()` → `{op,status,ok,reason}`. A failed write used to be one bit: 401, 413, 412 and CORS all looked identical. The `XAPI_USING_G` regex widened to `[ghijk]` in the same edit. |
+> | Two-phase loader | Reading the document and the cross-part hop moved **before** the metadata poll; `_resumeReady` deliberately stayed after it. |
+> | `#screen=N` | `applyExecutionState(st, screenOverride)`. The hash selects the screen and **no longer cancels the restore** — that bug lost `XAPI_Q_RESULTS` on cross-part back and routed a passing learner into remediation. |
+> | Back edges | `prev[slug]` is now `{from, hash}`, with a `sessionStorage` layer readable before the document arrives and a hard-coded fallback below that. `goBackToPrevPart()` → **`goBackToPreviousPart(fallbackSlug, fallbackHash)`**; `syncBackButton()` is gone and the button ships visible (see §6a). |
+> | Reset hatch | `initResumeResetHatch()` runs first from `90-boot.js` instead of inside `readUnitState()`, so `?resetState` is honoured before anything reads the query or the cache. It clears the nav-edge map and the character cache too. |
+> | `currentPartSlug()` | Lowercases. A capitalised URL used to produce a second key for the same part. |
+> | Call-site helpers | `xapiAnswered` / `xapiRequestedHint` / `xapiCompleteComponent` / `xapiCompleteUnit` replace 25 duplicated `answered` blocks and 23 raw hint sends. `requested.1` is now deduped per question per page load — reopening a hint used to report every time. |
+> | Tests | `_test/verify-report.js` (445 assertions) and `_test/statement-flow.js` (32) — see `_test/README.md`. |
 
 > **Where the code lives (since 2026-08-09).** The mechanism used to be copied into all five
 > `script.js`. It now has one copy in [`unit-js/`](unit-js/README.md):
 >
 > | Piece | File |
 > |---|---|
-> | the v3 document, the ledger, cross-part back, save/flush | `unit-js/40-resume.js` |
+> | the v4 document, the ledger, cross-part back, unit-level state, save/flush | `unit-js/40-resume.js` |
 > | `goTo()` and `applyExecutionState()` — the replay | `unit-js/30-nav.js` |
 > | the restore *trigger* and the cross-part hop | `unit-js/50-loader.js` |
 > | `initResumeLeaveHandlers()` registration | `unit-js/90-boot.js` |
@@ -49,8 +70,8 @@ carries a ledger of the ones already sent (§8a).
 ## 2. Storage — the xAPI State API
 
 Transport lives in the shared CDN library, not in this repo:
-`https://lomdot.education.gov.il/metodica/720active/common/xapi-720-j.js`. It is `-i` plus a State
-API block; nothing else differs. Three functions on `window`:
+`https://lomdot.education.gov.il/metodica/720active/common/xapi-720-k.js`. It is `-i` plus a State
+API block plus `stateLastResult720()`; nothing else differs. Three functions on `window`:
 
 | Function | Behavior |
 |---|---|
@@ -96,7 +117,7 @@ exercisable on `http://localhost` with no LRS.
 | Answer committed | `flushResumeSave()` at the end of every `sNNSubmit` / `sNNCheck` / `ddqCheck` — **synchronous** | See the race note below. |
 | Leaving the page | `flushResumeSave()` on `beforeunload`, `pagehide`, and a hidden `visibilitychange` | `beforeunload` never fires when a mobile tab is backgrounded and then killed. |
 | Cross-part jump forward | `writeForwardState(destSlug)` | §6. |
-| Cross-part jump back | `goBackToPrevPart()` | §6a. Refuses to navigate if the write fails. |
+| Cross-part jump back | `goBackToPreviousPart()` | §6a. Refuses to navigate if the write fails. |
 | `completed` reported | `markSent()` inside `sendCompletedOnce` — **synchronous** | §8a. Two call sites never navigate afterwards, so nothing else would persist the mark. |
 
 All of them bail out unless `RESUME_ENABLED && _resumeReady && !_restoring`, so nothing is written
@@ -197,31 +218,58 @@ branch, parts 01/04/05 increment before branching. Sources per screen:
 
 ## 5. The restore path at load time
 
-Inside the loader IIFE, immediately after `changeConfig` and **before** the component
-`initialized`:
+**Two phases since v4**, split deliberately.
+
+**Phase A — read-only**, immediately after `getXAPIParameters` and **before** the metadata poll:
 
 ```js
-var _saved = readUnitState();                    // migrates v2, never returns null
+var _saved = readUnitState();                    // never returns null
 if (_saved.part && _saved.part !== currentPartSlug()) {
+  window.__resumeInFlight = true;                // hold the cover across the hop
   window.location.replace('../' + _saved.part + '/index.html' + window.location.search);
   return;                                        // hop, carrying the query string
 }
-_resumeReady = true;
+if (applyUnitProfile(_saved)) resetScreenState(currentScreen);   // the character, repainted
 var _payload = _saved.parts[currentPartSlug()];  // this part's slot, not the whole document
-if (_payload) { applyExecutionState(_payload); _resumed = true; }
-syncBackButton();
+if (!_payload) dropBootCover();                  // a first-time learner waits for nothing
 ```
 
+**Phase B**, after `changeConfig` and **before** the component `initialized`:
+
+```js
+_resumeReady = true;
+if (!_unitState) _unitState = emptyUnitState();
+drainPendingUnitState();                         // this session's choice beats the document
+var _hm = /^#screen=(\d+)$/.exec(window.location.hash);
+if (_payload) { applyExecutionState(_payload, _hm ? parseInt(_hm[1], 10) : undefined); _resumed = true; }
+dropBootCover();
+```
+
+- **Why phase A runs before the poll.** The cover hides screen 0 until it is known what to draw, so
+  its lifetime *is* the learner's wait — and the poll is capped at 10 s. Making a learner stare at a
+  cover for 10 s would be a worse regression than the flash the cover exists to fix. It is safe to
+  run early because `getXAPIParameters` sets `window.slxapi`, `XAPI_REGISTRATION` and
+  `XAPI_DISABLED` **synchronously** before it touches metadata, and `loadState720` works over a raw
+  XHR rather than through `ADL.XAPIWrapper`.
+- **Why `_resumeReady` did NOT move with it.** It is the gate on every write path. Setting it in
+  phase A would open a window in which any `goTo()` arms a save that overwrites `doc.parts[slug]`
+  with a fresh payload — a write *before* the restore, which is precisely what every write path is
+  built to prevent. Phase A therefore only reads; `applyUnitProfile` touches memory and the cache,
+  never the document.
 - Reading **before** the `initialized` is what keeps a hopping session from leaving a statement
   behind for the part it merely passed through. In part 01 the early `return` also skips
   `loadUnitMetadata`, so no unit `initialized` is emitted either.
-- `readUnitState()` always yields a usable document: it migrates a v2 blob (§6b), discards anything
-  older, and otherwise returns a fresh skeleton. `_unitState` is **never** left `null` — the ledger
-  and `captureUnitState` both dereference it from inside swallowing `try/catch` blocks, where a
-  throw would drop a real statement in silence.
+- `readUnitState()` always yields a usable document: it discards any `v` that is not the current one
+  (§6b — there is no migration since v4) and otherwise returns a fresh skeleton. `_unitState` is
+  **never** left `null` — the ledger and `captureUnitState` both dereference it from inside
+  swallowing `try/catch` blocks, where a throw would drop a real statement in silence.
 - `_resumed` is set from whether a **payload** was applied, not from whether a document existed. A
-  v3 document always exists; if it holds nothing for this part, `applyExecutionState` is a no-op and
+  v4 document always exists; if it holds nothing for this part, `applyExecutionState` is a no-op and
   the landing screen still owes its item `initialized`.
+- **The hash is an override, not a veto.** `'#screen=N'` picks the screen; it must not skip
+  `applyExecutionState`. An earlier version did, and cross-part "back" lost the whole restore —
+  including `XAPI_Q_RESULTS`, from which the forward routing is derived, so a learner who had met
+  the 4/5 threshold was sent into remediation.
 - `location.replace` (not `href`) keeps the abandoned part out of the back-stack.
 - On any throw the `catch` still sets `_resumeReady = true` and installs a skeleton document: a
   failed read does not disable saving, and it does not silence reporting either.
@@ -260,7 +308,7 @@ Part 05 is terminal and writes no forward state. Nothing is added to part 01's
 ## 6a. Cross-part back ("חזרה" on the first screen)
 
 The first screen of parts **02, 03, 04 and 05** carries `#back-to-prev-part`, which calls
-`goBackToPrevPart()`. Before v3 the same button existed in 02/03/04 as `goTo(23)` / `goTo(35)` —
+`goBackToPreviousPart()`. Before v3 the same button existed in 02/03/04 as `goTo(23)` / `goTo(35)` —
 leftovers from the pre-split global screen numbering that `goTo`'s range guard swallowed silently,
 so it had never worked. Part 05's first screen had no such button at all; its bar also gained
 `s3-bottom-bar` to lay two buttons out.
@@ -271,21 +319,33 @@ an ordering. It also settles part 03, which is reachable from **both** 01 (at �
 ≥ 2/2): whichever router actually navigated is the one that wrote the edge, so the same button
 resolves to whichever part the learner really came from.
 
-`goBackToPrevPart()` points the document at the destination **before** navigating. That is what
+`goBackToPreviousPart()` points the document at the destination **before** navigating. That is what
 stops the destination's loader seeing a mismatch and hopping straight back — the ping-pong that
 would otherwise re-send `completed` on every cycle. If the synchronous write does not land it
 retries once, and if that fails too it **stays put**, rolls the in-memory pointer back and logs
 `[resume] back: state write failed, staying put`. Navigating on a failed write is the one thing
 that reintroduces the ping-pong.
 
-The button ships `hidden` in the markup and is revealed by `syncBackButton()` once a real forward
-edge exists. `_unitState` only arrives after two CDN scripts and the metadata poll, so anything
-visible before then would flash and vanish; and if the library never loads, hidden is the right
-answer anyway.
+> **Changed in v4.** The button now ships **visible**, and `syncBackButton()` is gone. It became
+> unnecessary once the back target was resolved in three layers — the document, a `sessionStorage`
+> edge map readable synchronously from the moment the script loads, and a hard-coded fallback passed
+> in the `onclick`. Parts 02–05 are only reachable through the forward chain, so a sane target always
+> exists; hiding the button until `_unitState` arrived (two CDN scripts and a metadata poll later)
+> meant a learner clicking in that first second got nothing at all, which is the very bug the edges
+> were added to fix.
 
-## 6b. v2 → v3 migration
+## 6b. Version migration — REMOVED in v4 (2026-09-01)
 
-`RESUME_STATE_VERSION` is **3**. A v2 document is migrated, not discarded — discarding it would
+> **This section is historical.** `RESUME_STATE_VERSION` is now **4**, `migrateV2()` and
+> `RESUME_PART_CHAIN` are deleted, and `readUnitState()` discards any document whose `v` is not the
+> current one. That was approved because this unit has never had a live Kata run, so there are no
+> documents in the field to lose. The deploy-atomically warning at the end of this section still
+> applies in full, and matters more than before: a stale cached `40-resume.js` reading a v4 document
+> **deletes** it. Bump every `?v=` in the same commit as a version bump.
+>
+> The original v2 → v3 text follows, for anyone reading a document written before 2026-09-01.
+
+`RESUME_STATE_VERSION` was **3**. A v2 document was migrated, not discarded — discarding it would
 restart the learner at part 01 with an empty ledger, so every `completed` they had already earned
 would be reported a second time, which is precisely what §8a exists to prevent.
 
@@ -320,7 +380,7 @@ merges into) `parts[currentPartSlug()]` — a merge would leave stale keys alive
 and be repainted.
 
 `captureUnitState()` deliberately does **not** touch `part`. Only `writeForwardState` and
-`goBackToPrevPart` move the landing pointer. A save that reset it to the current slug would undo the
+`goBackToPreviousPart` move the landing pointer. A save that reset it to the current slug would undo the
 one those two just wrote, and the debounced timer left behind by the last `goTo()` would fire
 mid-navigation and bounce the learner back to the part they were leaving.
 
@@ -439,7 +499,7 @@ The Browser-pane preview was unavailable in the session that built this, so veri
   (Part 01 screens 5 and 13 have no markup — pre-existing dead code, and unreachable, so no blob can
   point at them.)
 - `node --check` passes on all five `script.js`.
-- Confirmed against the deployed `xapi-720-j.js`: `sendStatement720` is a top-level `function`
+- Confirmed against the deployed `xapi-720-k.js`: `sendStatement720` is a top-level `function`
   declaration, so the no-op stub genuinely overrides it, and `saveState720Debounced` keys timers per
   `stateId` and closes over the new payload on re-arm. **Re-check both on any library bump** — if
   `sendStatement720` ever becomes `const`/`let`, the stub fails silently and resume re-reports
@@ -453,9 +513,9 @@ The Browser-pane preview was unavailable in the session that built this, so veri
 
 ### v3 verification (2026-08-09) — browser pane, live
 
-A stub library is now checked in at [`_test/xapi-720-j.js`](_test/xapi-720-j.js). It is **not
+A stub library is now checked in at [`_test/xapi-720-k.js`](../_test/xapi-720-k.js). It is **not
 shipped**: the parts only honour `?xapiLib=` on `localhost`, and the filename must keep the
-`xapi-720-j.js` ending because `window.XAPI_USING_G` is set from a regex on it — rename it and
+`xapi-720-k.js` ending because `window.XAPI_USING_G` is set from a regex on it — rename it and
 item-level statements go silent with no error. State and the statement log live in `sessionStorage`
 so both survive cross-part navigation, and `saveState720Debounced` really defers 800 ms so the
 stale-timer race is reproducible. Console helpers: `__stmts()`, `__state()`, `__dupes()`,

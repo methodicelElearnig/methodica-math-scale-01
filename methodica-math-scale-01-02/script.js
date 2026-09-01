@@ -5,7 +5,15 @@
 
 var TOTAL_SCREENS = 9;
 window.lomdaState = { selectedCharacter: null, selectedDesign: null };
-const _savedChar = localStorage.getItem('lomdaCharacter');
+/* Read through the shared getter: from v4 the Kata state document is the source of truth for
+   the character and localStorage is only a synchronous cache (unit-js/40-resume.js). This runs
+   before the first paint, while the document is still two CDN scripts away, so the cache is
+   what the getter returns here — the document overrides it in loader phase A.
+   typeof-guarded so a shared file that failed to load degrades to the old cache-only
+   behaviour rather than throwing at top level and killing the rest of this script. */
+const _savedChar = (typeof getUnitCharacter === 'function')
+  ? getUnitCharacter()
+  : localStorage.getItem('lomdaCharacter');
 if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
 
 /* Final assessment tracking (screens 43-52) */
@@ -92,7 +100,7 @@ function s26ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    try { sendStatement720('requested.1', 'question', null, xapiQ('001', 'q1')); } catch (e) {}
+    xapiRequestedHint('001', 'q1');
   }
 }
 
@@ -118,17 +126,8 @@ function s26Submit() {
   if (!s26Vals[1] || !s26Vals[2] || !s26Vals[3]) return;
 
   var correct = (s26Vals[1] === S26_CORRECT[1] && s26Vals[2] === S26_CORRECT[2] && s26Vals[3] === S26_CORRECT[3]);
-  /* xAPI: item 001 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : ((s26Attempts + 1) >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [[s26Vals[1], s26Vals[2], s26Vals[3]].join(' | ')] } },
-      xapiQ('001', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 001/q1', e); }
-  XAPI_Q_RESULTS['001/q1'] = !!correct;
+  xapiAnswered('001', 'q1', correct, correct || (s26Attempts + 1) >= 2,
+    [s26Vals[1], s26Vals[2], s26Vals[3]].join(' | '));
   var labels  = { 1: '5', 2: '1,000', 3: '5,000' };
 
   var fb      = document.getElementById('s26-feedback');
@@ -297,17 +296,8 @@ function s27Submit() {
   var explanation   = 'הפעולה מורכבת משני שלבים: ​<br>1. נכפול 7 ס"מ ב-5,000 כדי למצוא את המרחק במציאות ונקבל 35,000 ס"מ. ​<br>2. כדי להמיר את הסנטימטרים למטרים, נחלק ב-100 ונקבל 350 מטרים. ​';
   var correctLabels = { 1: '35,000', 2: '350' };
   var isCorrect     = s27Vals[1] === S27_CORRECT[1] && s27Vals[2] === S27_CORRECT[2];
-  /* xAPI: item 002 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(isCorrect ? 'answered.last' : ((s27Attempts + 1) >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!isCorrect, score: { scaled: isCorrect ? 1 : 0 },
-        extensions: { student_answer: [[s27Vals[1], s27Vals[2]].join(' | ')] } },
-      xapiQ('002', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 002/q1', e); }
-  XAPI_Q_RESULTS['002/q1'] = !!isCorrect;
+  xapiAnswered('002', 'q1', isCorrect, isCorrect || (s27Attempts + 1) >= 2,
+    [s27Vals[1], s27Vals[2]].join(' | '));
 
   fb.classList.remove('s5-fb--correct', 's5-fb--incorrect');
 
@@ -382,7 +372,7 @@ function s27ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('002', 'q1')); } catch (e) {}
+      xapiRequestedHint('002', 'q1');
     }
   }
 }
@@ -461,7 +451,7 @@ function s28ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('003', 'q1')); } catch (e) {}
+      xapiRequestedHint('003', 'q1');
     }
   }
 }
@@ -484,17 +474,8 @@ function s28Submit() {
   var hasGimel  = s28Selected.indexOf(2) >= 0;
   var hasAll    = S28_CORRECT.every(function(i) { return s28Selected.indexOf(i) >= 0; });
   var isCorrect = hasAll && !hasGimel;
-  /* xAPI: item 003 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(isCorrect ? 'answered.last' : ((s28Attempts + 1) >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!isCorrect, score: { scaled: isCorrect ? 1 : 0 },
-        extensions: { student_answer: [s28Selected.slice().sort(function(a,b){ return a - b; }).map(function(i){ return xapiAnswerText(document.querySelectorAll('[data-screen="3"] .s5-opt')[i]); }).join(' | ')] } },
-      xapiQ('003', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 003/q1', e); }
-  XAPI_Q_RESULTS['003/q1'] = !!isCorrect;
+  xapiAnswered('003', 'q1', isCorrect, isCorrect || (s28Attempts + 1) >= 2,
+    s28Selected.slice().sort(function(a,b){ return a - b; }).map(function(i){ return xapiAnswerText(document.querySelectorAll('[data-screen="3"] .s5-opt')[i]); }).join(' | '));
 
   var explanation = '<strong>סעיפים א ו-ב</strong> נכונים, כיוון שכפלנו את קנה המידה ב-4 וב-10 בהתאמה.​<br>' +
                     '<strong>סעיף ג</strong> אינו נכון, כיוון ש-1 ס"מ במפה מייצג 50 ס"מ במציאות ולא 50 מטרים. ​<br>' +
@@ -590,7 +571,7 @@ function s29ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('004', 'q1')); } catch (e) {}
+      xapiRequestedHint('004', 'q1');
     }
   }
 }
@@ -609,17 +590,8 @@ function s29Submit() {
   var correct = (numVal === 4);
 
   s29Attempts++;
-  /* xAPI: item 004 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s29Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [answer] } },
-      xapiQ('004', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 004/q1', e); }
-  XAPI_Q_RESULTS['004/q1'] = !!correct;
+  xapiAnswered('004', 'q1', correct, correct || s29Attempts >= 2,
+    answer);
 
   var fb      = document.getElementById('s29-feedback');
   var fbBold  = document.getElementById('s29-fb-bold');
@@ -737,7 +709,7 @@ function s30ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('005', 'q1')); } catch (e) {}
+      xapiRequestedHint('005', 'q1');
     }
   }
 }
@@ -755,17 +727,8 @@ function s30Submit() {
                    s30Vals[3] === S30_CORRECT[3] && s30Vals[4] === S30_CORRECT[4]);
 
   var correctLabels = { 1: '600', 2: 'חילוק', 3: '200', 4: '3' };
-  /* xAPI: item 005 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(isCorrect ? 'answered.last' : ((s30Attempts + 1) >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!isCorrect, score: { scaled: isCorrect ? 1 : 0 },
-        extensions: { student_answer: [[s30Vals[1], s30Vals[2], s30Vals[3], s30Vals[4]].join(' | ')] } },
-      xapiQ('005', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 005/q1', e); }
-  XAPI_Q_RESULTS['005/q1'] = !!isCorrect;
+  xapiAnswered('005', 'q1', isCorrect, isCorrect || (s30Attempts + 1) >= 2,
+    [s30Vals[1], s30Vals[2], s30Vals[3], s30Vals[4]].join(' | '));
 
   var fb     = document.getElementById('s30-feedback');
   var fbBold = document.getElementById('s30-fb-bold');
@@ -899,7 +862,7 @@ function s32ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('006', 'q1')); } catch (e) {}
+      xapiRequestedHint('006', 'q1');
     }
   }
 }
@@ -914,17 +877,8 @@ function s32Submit() {
 
   var rawVal = document.getElementById('s32-answer-input').value.trim();
   var answer = parseFloat(rawVal.replace(',', '.'));
-  /* xAPI: item 006 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720((answer === 25) ? 'answered.last' : ((s32Attempts + 1) >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!(answer === 25), score: { scaled: (answer === 25) ? 1 : 0 },
-        extensions: { student_answer: [rawVal] } },
-      xapiQ('006', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 006/q1', e); }
-  XAPI_Q_RESULTS['006/q1'] = !!(answer === 25);
+  xapiAnswered('006', 'q1', answer === 25, answer === 25 || (s32Attempts + 1) >= 2,
+    rawVal);
   var fb     = document.getElementById('s32-feedback');
   var fbBold = document.getElementById('s32-fb-bold');
   var fbReg  = document.getElementById('s32-fb-regular');
@@ -1037,7 +991,7 @@ function s33ToggleHint() {
     popup.hidden = !popup.hidden;
     if (!popup.hidden) {
       announce('רמז נפתח');
-      try { sendStatement720('requested.1', 'question', null, xapiQ('007', 'q1')); } catch (e) {}
+      xapiRequestedHint('007', 'q1');
     }
   }
 }
@@ -1072,14 +1026,10 @@ function routeAfterAdvancedPractice() {
      so it is the reason the ledger persists its mark synchronously: nothing else would write it,
      and the library's own dedupe lasts only one page load — it cannot survive the reload or the
      back-navigation that now bring the learner through here again. */
-  try { xapiFinishItems(); } catch (e) {}
-  try {
-    var _n = xapiCorrectCount();
-    sendCompletedOnce('done', currentPartSlug(), 'onlinelesson',
-      { success: getBasicPracticeScore() >= 3 && getAdvancedPracticeScore() >= 2,
-        score: { scaled: _n / 7 } });
-  } catch (e) { console.error('[xAPI] completed component 02', e); }
-  if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-03');
+  var _n = xapiCorrectCount();
+  xapiCompleteComponent({ success: getBasicPracticeScore() >= 3 && getAdvancedPracticeScore() >= 2,
+                          score: { scaled: _n / 7 } });
+  writeForwardState('methodica-math-scale-01-03', '#screen=8');
   window.location.href = '../methodica-math-scale-01-03/index.html' + window.location.search;
 }
 
@@ -1089,17 +1039,8 @@ function s33Submit() {
 
   var correct = (s33Selected === S33_CORRECT);
   s33Attempts++;
-  /* xAPI: item 007 / q1. Two attempts allowed — the first wrong answer is an interim
-     'answered'; a correct answer or the second wrong one closes the question. Only
-     'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s33Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="8"] .s5-opt')[s33Selected])] } },
-      xapiQ('007', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 007/q1', e); }
-  XAPI_Q_RESULTS['007/q1'] = !!correct;
+  xapiAnswered('007', 'q1', correct, correct || s33Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="8"] .s5-opt')[s33Selected]));
 
   var fb      = document.getElementById('s33-feedback');
   var fbBold  = document.getElementById('s33-fb-bold');

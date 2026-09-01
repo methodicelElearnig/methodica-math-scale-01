@@ -4,7 +4,15 @@
 
 var TOTAL_SCREENS = 24;
 window.lomdaState = { selectedCharacter: null, selectedDesign: null };
-const _savedChar = localStorage.getItem('lomdaCharacter');
+/* Read through the shared getter: from v4 the Kata state document is the source of truth for
+   the character and localStorage is only a synchronous cache (unit-js/40-resume.js). This runs
+   before the first paint, while the document is still two CDN scripts away, so the cache is
+   what the getter returns here — the document overrides it in loader phase A.
+   typeof-guarded so a shared file that failed to load degrades to the old cache-only
+   behaviour rather than throwing at top level and killing the rest of this script. */
+const _savedChar = (typeof getUnitCharacter === 'function')
+  ? getUnitCharacter()
+  : localStorage.getItem('lomdaCharacter');
 if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
 
 /* Final assessment tracking (screens 43-52) */
@@ -330,8 +338,16 @@ function selectOption(cardEl) {
   });
   cardEl.classList.add('selected');
   cardEl.setAttribute('aria-checked', 'true');
-  window.lomdaState.selectedCharacter = cardEl.dataset.value;
-  localStorage.setItem('lomdaCharacter', cardEl.dataset.value);
+  /* setUnitCharacter writes all three: window.lomdaState, the localStorage cache and the Kata
+     document. It is chosen on this screen, read again in part 05, and therefore unit-level
+     state — it cannot live in parts[], which captureUnitState replaces on every save.
+     If the document has not been read yet the choice is queued and drained in loader phase B. */
+  if (typeof setUnitCharacter === 'function') {
+    setUnitCharacter(cardEl.dataset.value);
+  } else {
+    window.lomdaState.selectedCharacter = cardEl.dataset.value;
+    localStorage.setItem('lomdaCharacter', cardEl.dataset.value);
+  }
   document.getElementById('s0-continue').disabled = false;
 }
 
@@ -904,12 +920,8 @@ function sqSubmit() {
   feedback.hidden = false;
   /* xAPI: item 002 / q1. Single attempt (sqSubmitted latches), so always the last answer.
      Served from screen 3 (cards path) and screen 4 (video path) alike — same metadata item. */
-  try {
-    sendStatement720('answered.last', 'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(opts[sqSelected])] } },
-      xapiQ('002', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 002/q1', e); }
+  xapiAnswered('002', 'q1', correct, true,
+    xapiAnswerText(opts[sqSelected]));
   sqCheckBothDone();
   flushResumeSave();   // see s16Submit
 }
@@ -976,12 +988,8 @@ function sqQ2Submit() {
   feedback.classList.add(allCorrect ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
   /* xAPI: item 002 / q2 — the 4-row unit-conversion matching. Single attempt. */
-  try {
-    sendStatement720('answered.last', 'question',
-      { success: !!allCorrect, score: { scaled: allCorrect ? 1 : 0 },
-        extensions: { student_answer: [_q2Answer] } },
-      xapiQ('002', 'q2'));
-  } catch (e) { console.error('[xAPI] answered 002/q2', e); }
+  xapiAnswered('002', 'q2', allCorrect, true,
+    _q2Answer);
   sqCheckBothDone();
   flushResumeSave();   // see s16Submit
 }
@@ -1040,7 +1048,7 @@ function s16ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    try { sendStatement720('requested.1', 'question', null, xapiQ('004', 'q1')); } catch (e) {}
+    xapiRequestedHint('004', 'q1');
   }
 }
 
@@ -1222,7 +1230,7 @@ function s18ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    try { sendStatement720('requested.1', 'question', null, xapiQ('005', 'q1')); } catch (e) {}
+    xapiRequestedHint('005', 'q1');
   }
 }
 
@@ -1243,13 +1251,8 @@ function s18Submit() {
   /* xAPI: item 005 / q1 (quiz exercise 1). Two attempts allowed — the first wrong answer is an
      interim 'answered'; a correct answer or the second wrong one closes the question. Only
      'answered.last' feeds the component score denominator. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s18Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [answer] } },
-      xapiQ('005', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 005/q1', e); }
+  xapiAnswered('005', 'q1', correct, correct || s18Attempts >= 2,
+    answer);
 
   var feedback  = document.getElementById('s18-feedback');
   var fbBold    = document.getElementById('s18-fb-bold');
@@ -1336,7 +1339,7 @@ function s19ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    try { sendStatement720('requested.1', 'question', null, xapiQ('006', 'q1')); } catch (e) {}
+    xapiRequestedHint('006', 'q1');
   }
 }
 
@@ -1355,13 +1358,8 @@ function s19Submit() {
   s19Attempts++;
 
   /* xAPI: item 006 / q1 (quiz exercise 2, part א). */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s19Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [answer] } },
-      xapiQ('006', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 006/q1', e); }
+  xapiAnswered('006', 'q1', correct, correct || s19Attempts >= 2,
+    answer);
 
   var feedback    = document.getElementById('s19-feedback');
   var fbBold      = document.getElementById('s19-fb-bold');
@@ -1448,7 +1446,7 @@ function s20Select(idx) {
 }
 
 function s20ToggleHint() { var p = document.getElementById('s20-hint-popup'); if (p) { p.hidden = false; announce('רמז נפתח');
-    try { sendStatement720('requested.1', 'question', null, xapiQ('006', 'q2')); } catch (e) {}
+    xapiRequestedHint('006', 'q2');
   } }
 function s20CloseHint()  { var p = document.getElementById('s20-hint-popup'); if (p) { p.hidden = true; announce('רמז נסגר'); } }
 
@@ -1459,13 +1457,8 @@ function s20Submit() {
   s20Attempts++;
   /* xAPI: item 006 / q2 (quiz exercise 2, part ב). Reported before the wrong-answer branch below
      clears s20Selected, which would otherwise lose the learner's answer text. */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s20Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="20"] .s5-opt')[s20Selected])] } },
-      xapiQ('006', 'q2'));
-  } catch (e) { console.error('[xAPI] answered 006/q2', e); }
+  xapiAnswered('006', 'q2', correct, correct || s20Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="20"] .s5-opt')[s20Selected]));
   var feedback    = document.getElementById('s20-feedback');
   var fbBold      = document.getElementById('s20-fb-bold');
   var fbRegular   = document.getElementById('s20-fb-regular');
@@ -1533,7 +1526,7 @@ function s21CheckInput() {
 }
 
 function s21ToggleHint() { var p = document.getElementById('s21-hint-popup'); if (p) { p.hidden = false; announce('רמז נפתח');
-    try { sendStatement720('requested.1', 'question', null, xapiQ('007', 'q1')); } catch (e) {}
+    xapiRequestedHint('007', 'q1');
   } }
 function s21CloseHint()  { var p = document.getElementById('s21-hint-popup'); if (p) { p.hidden = true; announce('רמז נסגר'); } }
 
@@ -1543,14 +1536,8 @@ function s21Submit() {
   var answer = input ? input.value : '';
   var correct = checkRatio(answer, 1, 25000);
   s21Attempts++;
-  /* xAPI: item 007 / q1 (quiz exercise 3). */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s21Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [String(answer).trim()] } },
-      xapiQ('007', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 007/q1', e); }
+  xapiAnswered('007', 'q1', correct, correct || s21Attempts >= 2,
+    String(answer).trim());
   var feedback    = document.getElementById('s21-feedback');
   var fbBold      = document.getElementById('s21-fb-bold');
   var fbRegular   = document.getElementById('s21-fb-regular');
@@ -1632,7 +1619,7 @@ function s22ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    try { sendStatement720('requested.1', 'question', null, xapiQ('008', 'q1')); } catch (e) {}
+    xapiRequestedHint('008', 'q1');
   }
 }
 
@@ -1648,14 +1635,8 @@ function s22Submit() {
   var correct = (s22Selected === S22_CORRECT);
   s22Attempts++;
 
-  /* xAPI: item 008 / q1 (quiz exercise 4). */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s22Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="22"] .s5-opt')[s22Selected])] } },
-      xapiQ('008', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 008/q1', e); }
+  xapiAnswered('008', 'q1', correct, correct || s22Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="22"] .s5-opt')[s22Selected]));
 
   var feedback    = document.getElementById('s22-feedback');
   var fbBold      = document.getElementById('s22-fb-bold');
@@ -1731,12 +1712,8 @@ function s16Submit() {
   feedback.hidden = false;
 
   /* xAPI: item 004 / q1 — the true/false warm-up. Single attempt. */
-  try {
-    sendStatement720('answered.last', 'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(opts[s16Selected])] } },
-      xapiQ('004', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 004/q1', e); }
+  xapiAnswered('004', 'q1', correct, true,
+    xapiAnswerText(opts[s16Selected]));
 
   var contBtn = document.getElementById('s16-continue');
   if (contBtn) {
@@ -2067,7 +2044,7 @@ function s23ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    try { sendStatement720('requested.1', 'question', null, xapiQ('009', 'q1')); } catch (e) {}
+    xapiRequestedHint('009', 'q1');
   }
 }
 
@@ -2084,13 +2061,8 @@ function s23Submit() {
   s23Attempts++;
 
   /* xAPI: item 009 / q1 (quiz exercise 5, the last one before routing). */
-  try {
-    sendStatement720(correct ? 'answered.last' : (s23Attempts >= 2 ? 'answered.last' : 'answered'),
-      'question',
-      { success: !!correct, score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [xapiAnswerText(document.querySelectorAll('[data-screen="23"] .s5-opt')[s23Selected])] } },
-      xapiQ('009', 'q1'));
-  } catch (e) { console.error('[xAPI] answered 009/q1', e); }
+  xapiAnswered('009', 'q1', correct, correct || s23Attempts >= 2,
+    xapiAnswerText(document.querySelectorAll('[data-screen="23"] .s5-opt')[s23Selected]));
 
   var feedback    = document.getElementById('s23-feedback');
   var fbBold      = document.getElementById('s23-fb-bold');
@@ -2168,22 +2140,18 @@ function routeAfterQuiz() {
      5 quiz exercises the learner was told about ("4 מתוך 5"), not the number of metadata
      questions — s19+s20 together are one exercise. Supplying the result explicitly overrides the
      library's all-correct aggregation, which would report success:false at 4/5. */
-  try { xapiFinishItems(); } catch (e) {}
-  try {
-    var _n = getQuizScore();
-    sendCompletedOnce('done', currentPartSlug(), 'onlinelesson',
-      { success: _n >= 4, score: { scaled: _n / 5 } });
-  } catch (e) { console.error('[xAPI] completed component 01', e); }
+  var _n = getQuizScore();
+  xapiCompleteComponent({ success: _n >= 4, score: { scaled: _n / 5 } });
   /* Carry ?slxapi (and ?registration) into the next component — without this the LRS
      configuration is lost and every later part reports nothing. */
   var _q = window.location.search;
   /* Resume: point the state document at the component being entered — inside each branch, because
      the destination differs. Without it the next launch would come back to this finished quiz. */
   if (getQuizScore() >= 4) {
-    if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-03');
+    writeForwardState('methodica-math-scale-01-03', '#screen=23');
     window.location.href = '../methodica-math-scale-01-03/index.html' + _q;
   } else {
-    if (RESUME_ENABLED) writeForwardState('methodica-math-scale-01-02');
+    writeForwardState('methodica-math-scale-01-02', '#screen=23');
     window.location.href = '../methodica-math-scale-01-02/index.html' + _q;
   }
 }
@@ -2355,8 +2323,17 @@ function captureResumeInputs() {
 function capturePartPayload() {
   return {
     currentScreen: currentScreen,
-    lomdaState: { selectedCharacter: window.lomdaState.selectedCharacter,
-                  selectedDesign:    window.lomdaState.selectedDesign },
+    /* Component 01 scores from its own sNNCorrect flags (getQuizScore), not from this map — but
+       xapiAnswered writes it at every answered site, so persist it like the other components do.
+       Without this a resumed learner has restored answers and an empty map, which is a trap for
+       anyone who later switches the score here to xapiCorrectCount(). */
+    qResults: Object.assign({}, XAPI_Q_RESULTS),
+    /* selectedDesign only. The CHARACTER is unit-level state from v4 on and lives in doc.ui —
+       it is chosen here and read again in part 05, and captureUnitState replaces this slot on
+       every save, so a copy here would be a second, shorter-lived source of authority for the
+       same value. Restored by applyUnitProfile in loader phase A instead.
+       selectedDesign genuinely is part-local: nothing outside part 01 reads it. */
+    lomdaState: { selectedDesign: window.lomdaState.selectedDesign },
     frc:  { revealed: frcRevealed.slice(), done: frcDone },
     s4:   { videoEnded: s4VideoEnded },
     sq:   { screen: (typeof sqScreen !== 'undefined' ? sqScreen : null),
@@ -2381,9 +2358,12 @@ function capturePartPayload() {
 
 /* Both restore passes run through here, so they can never drift apart. */
 function applyResumeVars(state) {
+  if (state.qResults) XAPI_Q_RESULTS = Object.assign({}, state.qResults);
+  /* selectedCharacter is deliberately NOT restored here — see capturePartPayload. It is
+     unit-level state, already applied from doc.ui by applyUnitProfile before this runs, and
+     re-assigning it from a part payload would let a stale slot override the newer unit value. */
   if (state.lomdaState) {
-    window.lomdaState.selectedCharacter = state.lomdaState.selectedCharacter;
-    window.lomdaState.selectedDesign    = state.lomdaState.selectedDesign;
+    window.lomdaState.selectedDesign = state.lomdaState.selectedDesign;
   }
   if (state.frc) { frcRevealed = state.frc.revealed || frcRevealed; frcDone = !!state.frc.done; }
   if (state.s4)  { s4VideoEnded = !!state.s4.videoEnded; }

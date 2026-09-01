@@ -7,6 +7,31 @@
   <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
+  <!-- Boot cover. Hides the window in which screen 0 is already visible but the resume document
+       has not been read yet — without it a learner with saved progress sees screen 0, and possibly
+       the wrong avatar, before the restore jumps them elsewhere.
+       A SIBLING of #app, not a child: #app is moved and scaled by scaleApp, and a child would
+       inherit that transform. Inline-styled so a stale CSS cache cannot leave it invisible.
+       Below it is a safety net that depends on no JS file at all: unit-js/50-loader.js removes the
+       cover on every exit path, and this removes it after 800ms if that never happens — which is
+       what stops a broken loader leaving a learner facing a blank page.
+       If bootXAPI has set window.__resumeInFlight (resume is on and a restore is coming), the net
+       waits for it rather than exposing screen 0 mid-restore — up to a hard 6-second ceiling,
+       after which it exposes regardless. The flag is read defensively, so a 50-loader.js that
+       failed to load gives back exactly the 800ms behaviour. -->
+  <div id="boot-cover" style="position:fixed;inset:0;z-index:9999;background:#ffffff"></div>
+  <script>
+  (function () {
+    var t0 = Date.now();
+    function tick() {
+      var c = document.getElementById('boot-cover');
+      if (!c || !c.parentNode) return;
+      if (window.__resumeInFlight && Date.now() - t0 < 6000) { setTimeout(tick, 100); return; }
+      c.parentNode.removeChild(c);
+    }
+    setTimeout(tick, 800);
+  })();
+  </script>
   <main id="app">
 
     <!-- ═══════════════════════════════════════
@@ -46,7 +71,7 @@
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
-        <button class="btn-back-s3" id="back-to-prev-part" type="button" hidden onclick="goBackToPrevPart()">חזרה</button>
+        <button class="btn-back-s3" id="back-to-prev-part" type="button" onclick="goBackToPreviousPart('methodica-math-scale-01-02', '#screen=8')">חזרה</button>
         <button class="btn-continue" id="s24-continue" type="button" onclick="goTo(1)">המשך</button>
       </div>
 
@@ -220,19 +245,19 @@
       </div>
     </div>
   </main>
-  <script src="../unit-js/10-identity.js?v=1"></script>
-  <script src="../unit-js/15-ui.js?v=1"></script>
+  <script src="../unit-js/10-identity.js?v=2"></script>
+  <script src="../unit-js/15-ui.js?v=2"></script>
   <!-- iPad-shaped-viewport gate — must load after scaleApp() is defined and before 90-boot.js
        wires it to the resize listener, so the wrapped version is what gets used -->
   <script src="canvas-tall-gate.js?v=1"></script>
-  <script src="../unit-js/20-xapi.js?v=1"></script>
-  <script src="../unit-js/25-report.js?v=1"></script>
-  <script src="../unit-js/28-feedback-drag.js?v=1"></script>
-  <script src="../unit-js/30-nav.js?v=1"></script>
-  <script src="../unit-js/40-resume.js?v=1"></script>
-  <script src="../unit-js/50-loader.js?v=1"></script>
-  <script src="../unit-js/60-devbridge.js?v=1"></script>
-  <script src="script.js?v=12"></script>
-  <script src="../unit-js/90-boot.js?v=1"></script>
+  <script src="../unit-js/20-xapi.js?v=2"></script>
+  <script src="../unit-js/25-report.js?v=2"></script>
+  <script src="../unit-js/28-feedback-drag.js?v=2"></script>
+  <script src="../unit-js/30-nav.js?v=2"></script>
+  <script src="../unit-js/40-resume.js?v=2"></script>
+  <script src="../unit-js/50-loader.js?v=2"></script>
+  <script src="../unit-js/60-devbridge.js?v=2"></script>
+  <script src="script.js?v=13"></script>
+  <script src="../unit-js/90-boot.js?v=2"></script>
 </body>
 </html>

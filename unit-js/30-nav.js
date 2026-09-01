@@ -47,11 +47,16 @@ function goTo(n) {
   resetScreenState(n);
 
   if (_keep) {
+    /* beginRepaint/endRepaint mark this window as "the painter is re-showing existing feedback",
+       as opposed to a live learner action producing new feedback. Anything with a side effect
+       tied to showing feedback can tell the two apart via resumeIsPainting(). */
+    beginRepaint();
     try {
       applyResumeVars(_keep);
       applyResumeDom(_keep);
       restoreScreenUI(n);
     } catch (e) { console.error('[resume] repaint on nav', e); }
+    finally { endRepaint(); }
   }
 
   nextScreen.focus();
@@ -65,8 +70,15 @@ function goTo(n) {
 /* Replay a saved payload onto this component. Called by ../unit-js/50-loader.js on launch.
 
    The two-pass shape is load-bearing: goTo() runs the screen's sNNEnter(), which resets exactly
-   what was just restored, so the variables are assigned again afterwards and only then painted. */
-function applyExecutionState(st) {
+   what was just restored, so the variables are assigned again afterwards and only then painted.
+
+   ── screenOverride ──
+   '#screen=N' in the URL wins over the document in choosing the SCREEN, but not in restoring the
+   STATE. A version that skipped this function entirely when a hash was present made cross-part
+   "back" lose the whole restore — including XAPI_Q_RESULTS, from which the forward routing is
+   derived, so a learner who had met the threshold was sent into remediation. Always restore; the
+   hash only decides where to land. */
+function applyExecutionState(st, screenOverride) {
   if (!st) return;
   _restoring = true;
   /* Replaying answers must not re-report them. The stub is held across goTo() too, which is what
@@ -77,7 +89,15 @@ function applyExecutionState(st) {
   window.sendStatement720 = function () {};
   try {
     applyResumeVars(st);
-    goTo((typeof st.currentScreen === 'number') ? st.currentScreen : 0);
+    /* Range-checked against TOTAL_SCREENS: goTo() rejects out-of-range and RETURNS, which would
+       leave currentScreen on its previous value and have the painter draw a different screen. A
+       stale hash (a part that got shorter) falls back to the document rather than landing
+       nowhere. */
+    var _n = (typeof screenOverride === 'number' && screenOverride >= 0 &&
+              screenOverride < TOTAL_SCREENS)
+      ? screenOverride
+      : ((typeof st.currentScreen === 'number') ? st.currentScreen : 0);
+    goTo(_n);
     applyResumeVars(st);   // undo the reset that this screen's sNNEnter() just did
     applyResumeDom(st);    // before the painter, which locks/disables the inputs
     restoreScreenUI(currentScreen);
