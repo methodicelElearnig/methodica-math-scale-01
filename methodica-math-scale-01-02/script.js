@@ -502,12 +502,13 @@ function s28Submit() {
   } else {
     s28Attempts++;
     if (s28Attempts === 1) {
-      // first wrong — keep selection, keep interactive
+      // first wrong — keep the selection visible, but the answer must change to resubmit
       fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
       fbReg.innerHTML    = '';
       fb.classList.add('s5-fb--incorrect');
       fb.hidden = false;
       announce('זה לא מדויק, ננסה שוב?');
+      cont.disabled = true;   /* retry lock: s28Select re-enables it when the answer changes */
     } else {
       // second wrong — show all correct/incorrect, lock
       s28Solved = true;
@@ -621,6 +622,7 @@ function s29Submit() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden       = false;
     announce('זה לא מדויק, ננסה שוב?');
+    cont.disabled = true;   /* retry lock: s29CheckInput re-enables it when the answer changes */
   } else {
     s29Solved = true;
     input.disabled  = true;
@@ -917,6 +919,7 @@ function s32Submit() {
       fb.hidden           = false;
       if (hintBtn) hintBtn.hidden = false;
       announce('זה לא מדויק, ננסה שוב?');
+      cont.disabled = true;   /* retry lock: s32CheckInput re-enables it when the answer changes */
     } else {
       // Second wrong — explanation + lock
       s32Solved = true;
@@ -1075,6 +1078,7 @@ function s33Submit() {
     fb.hidden           = false;
     if (hintBtn) hintBtn.hidden = false;
     announce('זה לא מדויק, ננסה שוב?');
+    cont.disabled = true;   /* retry lock: s33Select re-enables it when the answer changes */
   } else {
     s33Solved = true;
     opts.forEach(function(o, i) {
@@ -1458,6 +1462,10 @@ function s28RestoreUI() {
     fbReg.innerHTML    = '';
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
+    /* Retry lock - see the live branch. The selection is kept, so the predicate below would
+       re-enable the button on an unchanged answer. */
+    cont.disabled = true;
+    return;
   }
   cont.disabled = (s28Selected.length === 0);   // the live predicate
 }
@@ -1490,6 +1498,9 @@ function restoreValueScreenUI(cfg) {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (cfg.revealHint && hintBtn) hintBtn.hidden = false;
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    cont.disabled = true;
+    return;
   }
   cont.disabled = !(input && input.value.trim() !== '');   // the live predicate
 }
@@ -1551,6 +1562,8 @@ function s33RestoreUI() {
     cont.disabled = false;
   }
   if (s33Attempts >= 1) {
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    cont.disabled = true;
     fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
     fbReg.textContent  = '';
     fb.classList.add('s5-fb--incorrect');

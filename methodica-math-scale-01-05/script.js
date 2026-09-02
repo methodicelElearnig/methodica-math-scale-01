@@ -120,6 +120,7 @@ function s45Check() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
 
+    btn.disabled = true;   /* retry lock: s45OnInput re-enables it when the answer changes */
   } else {
     s45Done = true;
     if (input) input.disabled = true;
@@ -254,6 +255,7 @@ function s47Check() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
 
+    btn.disabled = true;   /* retry lock: s47Toggle re-enables it when the answer changes */
   } else {
     s47Solved = true;
     checkboxes.forEach(function(cb) {
@@ -397,6 +399,7 @@ function s49Submit() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
 
+    cont.disabled = true;   /* retry lock: s49Select re-enables it when the answer changes */
   } else {
     s49Solved = true;
     opts.forEach(function(o, i) {
@@ -517,6 +520,7 @@ function s51Submit() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
 
+    cont.disabled = true;   /* retry lock: s51Select re-enables it when the answer changes */
   } else {
     s51Solved = true;
     opts.forEach(function(o, i) {
@@ -773,6 +777,9 @@ function s45RestoreUI() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    btn.disabled = true;
+    return;
   }
   s45OnInput();   // the live predicate for the check button
 }
@@ -822,6 +829,9 @@ function s47RestoreUI() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    btn.disabled = true;
+    return;
   }
   s47UpdateCheckBtn();
 }
@@ -863,6 +873,8 @@ function sqRestoreChoiceUI(cfg) {
     cont.disabled = false;
   }
   if (cfg.attempts >= 1) {
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    cont.disabled = true;
     fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
     fbReg.textContent  = '';
     fb.classList.add('s5-fb--incorrect');

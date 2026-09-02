@@ -135,7 +135,7 @@ part added, then verify the difference cannot fire elsewhere. Two worked example
 | `25-report.js` | the whole "מצאתם בעיה?" layer + `initReportModal()` |
 | `28-feedback-drag.js` | `initFeedbackDrag()` — draggable inline feedback |
 | `30-nav.js` | `currentScreen`, `goTo()`, `applyExecutionState()` |
-| `40-resume.js` | the v4 resume core, unit-level state (character/results), the `completed` ledger, cross-part back edges, the boot cover, the reset hatch, save/flush |
+| `40-resume.js` | the v4 resume core, unit-level state (character/results), the four statement ledgers (`done`, `doneItems`, `hints`, `picks`) behind `sendStatementOnce`/`sendCompletedOnce`, cross-part back edges, the boot cover, the reset hatch, save/flush |
 | `50-loader.js` | `bootXAPI()` — CDN loader, the three gates, the capped metadata poll, the two-phase resume hop, `onXapiReady()` |
 | `60-devbridge.js` | `initDevBridge()` — the `index_dev.html` postMessage bridge (not deployed) |
 | `90-boot.js` | the startup sequence — the only side effects |

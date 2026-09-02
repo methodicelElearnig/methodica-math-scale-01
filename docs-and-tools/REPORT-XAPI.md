@@ -181,13 +181,19 @@ Reference values from `methodica-math-scale-01`:
 | 01 | `getQuizScore() / 5` — 4 of 5 → `scaled 0.8, success true` |
 | 02 | correct / 7; `success` requires **both** stated gates (`basic >= 3` **and** `advanced >= 2`) |
 | 03 | `{ success: true }`, **no score** — off-computer class task, nothing to grade |
-| 04 | correct / 5 |
+| 04 | `xapiCorrectCount() / 5`; **`success` requires `>= 4`** — undocumented until 2026-09-02, and stated nowhere on screen: the learner is told "3 שאלות מתקדמות", while the denominator counts the 5 סעיפים inside them. Left as built by decision; see §10 |
 | 05 | the שאלת-שיא rule from the item's own `informationToBot`: **≥ 3 of 4 passes**, supplied via `peakResult()` so item and component agree |
 
 **Report `completed` on failure paths too.** A component the learner does not clear must still be
 reported, or the whole attempt goes unrecorded. In this unit part 02 emits `completed` on both
-branches and simply does not navigate when the gate is not met — routing a failed learner is the
-host platform's job, via the component's `recommendedAfterFail`.
+branches — routing a failed learner is the host platform's job, via the component's
+`recommendedAfterFail`.
+
+> ⚠️ **Corrected 2026-09-02.** This paragraph used to end "and simply does not navigate when the
+> gate is not met". That was never true of the code: `routeAfterBasicPractice()` is `goTo(6)` with
+> no branch, and `routeAfterAdvancedPractice()` navigates to part 03 unconditionally — so a learner
+> who answers 0 of 4 advances and is congratulated. The gate exists only in the `success` boolean
+> and in the on-screen promise. Left as built by decision; see §10.
 
 ---
 
@@ -308,7 +314,103 @@ Reporting-side changes only; the resume side is in [RESUME.md](RESUME.md).
 
 ---
 
-## 10. Reference — `methodica-math-scale-01` as built
+## 9b. What changed on 2026-09-02
+
+A five-point audit re-checked the defect classes that had been found and fixed in
+`methodica-science-mass-measure-02`. Three were already closed by the v4 upgrade; these were not.
+
+- **`requested.1` now dedupes across page loads, not just within one.** `XAPI_HINTS_SENT` is per
+  page load, and **every cross-part חזרה is a fresh page load** — so a learner who went back and
+  reopened a hint reported it again, in ordinary use rather than only after a manual refresh. The
+  keys now also live in the state document under `hints`, through the same
+  `sendStatementOnce` the `completed` ledger uses, with the same fail-open and
+  bail-out-while-restoring invariants ([RESUME.md](RESUME.md) §8a). `XAPI_HINTS_SENT` stays in
+  front of it as an in-memory fast path.
+- **The `selected` statement on part 01 screen 2 is idempotent.** Screen 2 had no painter, so every
+  resume onto it forced the learner to re-pick and emitted a second `selected`. It now goes through
+  a `picks` ledger keyed on the chosen value, so re-picking the same option is silent while a real
+  change of mind still reports.
+- **Part 01's YouTube `played`/`paused` carry a question object.** They were going out as
+  `objectType: 'question'` with no `objectId` and no `questionId` — the very defect that had been
+  fixed inside `xapiWireVideos` and never applied here, because YouTube drives that screen and
+  never touches the helper. They now carry `xapiQ('002','q1')`, and a `played` only reports after a
+  real pause, strictly alternating, so buffering and seek churn no longer inflate the count.
+- **A second identical submission can no longer be reported.** 19 of the 22 two-attempt questions
+  left the check button live after a wrong non-final attempt, so pressing it again on an
+  **unchanged** answer sent a second `answered` — `answered.last`, with a byte-identical
+  `student_answer` — and consumed the learner's last attempt. An accidental double-click was enough.
+  Every retry branch now re-locks the button until the answer changes; see
+  [RESUME.md](RESUME.md) §4a.
+- **Tests**: 445 → 550 assertions, every new one negative-tested. The new groups are the retry lock
+  (both halves), the latch guards that `xapiAnswered` depends on, hint-ledger persistence including
+  fail-open, the screen 2 pick, and the YouTube anchoring.
+
+---
+
+## 10. Known open decisions — checked, reported, deliberately not changed
+
+Found by the five-point audit of 2026-09-02 and left as built **by decision**, because each is a
+content or pedagogy call rather than a wiring bug. They are recorded here so the next person meets
+them in the repo instead of rediscovering them in the field.
+
+### 11.1 Part 02's stated gate is not enforced
+
+`index.html:55` promises ענו נכון על 3 שאלות ומעלה (75%) כדי להתקדם.
+`routeAfterBasicPractice()` (`script.js`) is `goTo(6)` with no branch, so 0 of 4 advances and
+screen 6 greets them with יופי של עבודה.
+
+The open question that blocked the fix: **what a learner below 3/4 does next.** They reach part 02
+only by having already failed part 01, and every question is locked after its final attempt, so
+there is nothing left to retry in place. Three options were costed — don't navigate and let the
+platform route via `recommendedAfterFail`; send them back to part 01 (risks a 01→02→01 loop); or
+reset and replay part 02 (needs an explicit re-attempt design, because it means unlatching the
+guards that prevent double reporting). None was chosen.
+
+### 11.2 Part 02's `success` carries a gate the learner is never told about
+
+`success` is `getBasicPracticeScore() >= 3 && getAdvancedPracticeScore() >= 2`. Nothing on screen
+mentions a threshold for the two advanced exercises. A learner who clears the stated 3/4 but misses
+one advanced exercise is reported `success:false` while the UI moves them on with no indication.
+
+### 11.3 Part 02's score is on a third scale
+
+`score.scaled` is `xapiCorrectCount() / 7` over sub-questions, while the learner counts 4 exercises
+(screens 4 and 5 are א/ב of one). So there is no on-screen score that maps cleanly onto the
+reported one: a learner told they scored 75% can arrive at the LRS as 0.571 or 0.857 depending on
+*which* question they missed.
+
+### 11.4 Part 04 states no threshold at all
+
+See the §5 table. `success` is decided on 4 of 5 סעיפים; the learner is told there are 3
+שאלות. "4" is not expressible in the units they were given. **Decision: leave both the code and
+the screen; document the pass mark** — done, in §5.
+
+### 11.5 Part 05's finale has no failure variant
+
+`#s53-success` (`index.html:556-559`) is never toggled and there is no `#s53-fail`. A learner who
+scores 0 of 4 on the שאלת שיא is reported `success:false` and still sees
+כל הכבוד! השלמת את היחידה בהצלחה! with the happy-character video. The reinforcement screen
+that part 05's own metadata routes a failure to — item `-04-005` — has no markup in part 04 either
+(§9.1), so the failure path does not exist in either component. The threshold itself is sound and
+agrees everywhere (3 of 4, in the instruction, in `PEAK_PASS_MIN`, in both `completed` statements
+and in the metadata).
+
+### 11.6 The unit `completed` carries no result
+
+`xapiCompleteUnit(null)` in part 05. This contradicts the rule at the top of §5 — *always supply an
+explicit result, because the library's own aggregation is an all-correct AND and would report
+`success:false` for any partial pass.* So the one statement Kata reads as the unit outcome most
+likely reports failure for very nearly every real learner, while the final screen tells all of them
+they succeeded.
+
+The fix is one argument — `xapiCompleteUnit(peakResult())` — if the decision is taken that unit
+success means the שאלת שיא result. It was deliberately **not** taken, because "what does success
+for the whole unit mean" is a content decision: the alternative is a weighting across all five
+components, which nothing currently defines.
+
+---
+
+## 11. Reference — `methodica-math-scale-01` as built
 
 | Part | Items | Questions | `answered` sites | `requested` | Component `completed` fires in |
 |---|---|---|---|---|---|

@@ -7,6 +7,22 @@ Resume ("המשך מהמקום שבו הפסקת") is **enabled** in all five co
 This document describes the mechanism as built. §9 lists what is deliberately *not* restored, §10
 records the verification performed, and §11 is the changelog of the defects fixed on the way here.
 
+> ## 2026-09-02 — the retry lock, and two ledgers
+>
+> A five-point audit re-checked the defect classes fixed in the science unit. The screen-0 flash,
+> the decorative-video reporting and the per-page-load hint dedupe were already closed by v4. Three
+> things were not:
+>
+> | Change | Effect |
+> |---|---|
+> | **The retry lock** | 19 of the 22 two-attempt questions left the check button live after a wrong non-final attempt, so pressing it again on an **unchanged** answer sent a second `answered` (`answered.last`, byte-identical `student_answer`) and consumed the learner's last attempt — an accidental double-click was enough. Every retry branch now re-locks the button until the answer changes, and **every painter mirrors that**. See §4a. |
+> | `hints` in the document | `requested.1` deduped only within a page load, and every cross-part חזרה **is** a page load — so hints re-reported in ordinary use. The keys now ride in the state document through the same `sendStatementOnce` as the `completed` ledger. |
+> | Screen 2 has a painter, `selected` has a ledger | Part 01 screen 2 was the one screen whose answer was saved but never repainted, so every resume onto it forced a re-pick and emitted another `selected`. Now painted, and the statement is keyed on the chosen value in a `picks` ledger — re-picking the same option is silent, a genuine change still reports. |
+>
+> The boot-cover failsafe ceiling also went **6 s → 11 s**: the loader's own metadata poll is capped
+> at 10 s, so on a slow network the 6 s net lifted the cover mid-restore and reproduced the very
+> screen-0 flash the cover exists to prevent.
+
 > ## v4 (2026-09-01) — parity with `methodica-science-mass-measure-02`
 >
 > This unit is where the shared `unit-js/` layer was invented; the science unit forked it on
@@ -206,11 +222,46 @@ branch, parts 01/04/05 increment before branching. Sources per screen:
 | 01 s16 | `s16Selected === S16_CORRECT` (no `s16Correct` exists) |
 | 04 s39/s40/s41, 05 s45/s47/s49/s51 | `XAPI_Q_RESULTS['<item>/<q>']` — no `Correct` variable exists |
 
+### 4a. The retry lock — the painter must not re-open the door (2026-09-02)
+
+The two-axis rule above ends "recompute the check button from the same predicate the live code
+uses". That predicate changed on 2026-09-02, and the painters had to change with it.
+
+**What was wrong.** After a wrong non-final attempt, 19 of the 22 two-attempt questions left the
+check button enabled with the learner's answer still selected. Pressing it again — changing
+nothing — spent the second attempt and sent a second `answered`, as `answered.last`, carrying a
+byte-identical `student_answer`. Reproduced in the browser on part 04 screens 1 and 3. Two costs,
+and the learner-facing one is worse than the data one: a double-click silently destroys the second
+chance and reveals the answer.
+
+Three questions were already right and are the model — part 02's `s26`, `s27` and `s30` clear the
+answer and disable the button, so `s26Pick` can only re-enable it once every row is refilled.
+
+**The rule now.** A wrong non-final attempt ends with the check button `disabled = true`. The
+answer stays visible — the learner should see what they tried — and the screen's own
+`sNNSelect` / `sNNCheckInput` / `sNNOnInput` / `s47Toggle` / `ddqDrop` handler re-enables it as soon
+as the answer actually changes. Nothing else was touched: the feedback, the revealed hint button and
+the attempt counter behave exactly as before.
+
+> ⚠️ **Both halves are load-bearing.** A painter that recomputes the button from "is an answer
+> present" hands a resumed learner a live button on an unchanged answer — which re-opens the hole
+> from the other side. So the `attempts >= 1` branch of every painter now sets `disabled = true`
+> and returns, rather than falling through to the presence predicate. Three painters needed
+> particular care: `s40RestoreUI`, `s45RestoreUI` and `s47RestoreUI` end by *calling* the live
+> predicate helper (`s40OnInput`, `s45OnInput`, `s47UpdateCheckBtn`), and `s39RestoreUI` opens with
+> `ddqRender()`, which itself ends in `ddqUpdateCheckBtn()` — so for the drag board the lock has to
+> be applied **after** the render, not before it.
+
+`_test/verify-report.js` asserts both halves for all 22 questions and fails the build if a retry
+branch or a painter loses its lock. It counts the branches too: `s32` in part 02 spells its retry
+branch `if (s32Attempts < 2)` rather than `=== 1`, and a sweep that matched only the common form
+missed it on the first pass.
+
 ### Painter coverage
 
 | Part | Screens repainted | Notes |
 |---|---|---|
-| 01 | 16, 18, 19, 20, 21, 22, 23 | Screens 3 and 4 are handled by the pre-existing `sqRestoreUI()`. Screen 16's painter **must** rebind `onclick` — `s16Submit` has no solved-guard that forwards, so without it the continue button is a dead end. The quiz nav dots repaint themselves from `s18QuizResults` via `s18UpdateNav`/`s23UpdateNav`. |
+| 01 | 2, 16, 18, 19, 20, 21, 22, 23 | Screen 2 (the video-vs-cards pick) re-marks the chosen card and re-enables the continue button; it must NOT enable it for an unrecognised value, or `advanceFromS2` navigates on a design the screen cannot express. Screens 3 and 4 are handled by the pre-existing `sqRestoreUI()`. Screen 16's painter **must** rebind `onclick` — `s16Submit` has no solved-guard that forwards, so without it the continue button is a dead end. The quiz nav dots repaint themselves from `s18QuizResults` via `s18UpdateNav`/`s23UpdateNav`. |
 | 02 | 1, 2, 3, 4, 5, 7, 8 | Every screen except the two interstitials. Dropdown rows restore their label text from the captured DOM text (see §7); the final-wrong branch overwrites them with the correct labels. Nav bars repaint from `sNNSolved`/`sNNCorrect`. |
 | 03 | 2 | The free-text reflection. `applyResumeDom()` puts the value back after `s35Enter()` blanks it, then `s35OnInput()` re-derives the widget and the continue button. |
 | 04 | 1, 2, 3, 4, 5 | Screen 3 (drag-and-drop) replays the board through the existing `ddqRender()`, re-adds `s39-correct`, and repaints the per-target ✓/✗ badges from `ddqTargetResults`. It deliberately does **not** call `s39ShowFeedbackGated()`: that gate would make the learner re-scroll an explanation they already passed, and can strand them if `scrollHeight` is mismeasured before webfonts settle. |
@@ -365,14 +416,23 @@ Item-level marks cannot be recovered, so a migrating learner may re-send one rou
 
 ```js
 {
-  v: 3,
+  v: 4,
   part: '<slug the learner should land on>',
   parts: { '<slug>': { currentScreen, …that part's payload }, … },   // every part, retained
-  prev:  { '<slug>': '<slug it was entered FROM>' },                 // back-edges (§6a)
+  prev:  { '<slug>': { from: '<slug>', hash: '#screen=N' } },        // back-edges (§6a)
   done:  { '<slug>': true, unit: true },                             // component/unit 'completed' sent
-  doneItems: { '<slug>#<itemId>': true }                             // item 'completed' sent
+  doneItems: { '<slug>#<itemId>': true },                            // item 'completed' sent
+  hints: { '<itemId>/<qKey>': true },                                // 'requested.1' sent (2026-09-02)
+  picks: { 'learning-type/<value>': true },                          // one-off 'selected' sent
+  ui:      { character: '<Character1|Character2|text>' },            // unit-level, NOT per part
+  results: {}                                                        // cross-part gates; empty in this unit
 }
 ```
+
+The four ledgers (`done`, `doneItems`, `hints`, `picks`) all go through `sendStatementOnce`, so they
+share one implementation of the three invariants in §8a. `ui` and `results` are deliberately not
+inside `parts[]`: `captureUnitState` replaces the current part's slot on every save, so anything
+parked there would be destroyed on the next part's first screen change.
 
 `capturePartPayload()` returns this part's payload alone; `captureUnitState()` **replaces** (never
 merges into) `parts[currentPartSlug()]` — a merge would leave stale keys alive, most visibly part
@@ -464,11 +524,17 @@ start and the learner repeats that one interaction:
 > A question answered wrong once but not yet solved keeps its interim "try again" state and stays
 > answerable. Everything below still lands at its screen start.
 
+> **Note (2026-09-02).** Screen 2 (the video vs. flip-cards pick) left this list — it now has a
+> painter, and its `selected` statement a ledger. It was the only screen whose answer was captured
+> but never repainted, and the forced re-pick was emitting a duplicate statement each time.
+>
+> Hint requests are no longer in this list either: the `requested.1` ledger lives in the document
+> (§7), so reopening a hint after a reload or a cross-part חזרה reports nothing. The hint popup's
+> **open state** is still not restored, which is a different thing and still deliberate.
+
 - Part 01 screens 7–14 (the guided worked example): screens 8/9/10 keep **no JS state at all**, so
   restoring their "answered" look would need new variables. Screen 1's scroll gate and screen 7's
   3-second timer likewise re-arm.
-- Part 01 screen 2 (video vs. flip-cards choice) — `resetScreenState` nulls `selectedDesign` and the
-  second pass restores the variable, but the learner re-picks to proceed.
 - Ruler positions (01 s18, 04 s41), video playback position, hint-popup open state, scroll offsets.
 - Per-selection saves. `sNNSelect` / `sNNPick` / `ddqDrop` do **not** save: every write is a
   synchronous network round trip, and the screen-change plus commit hooks already bound the loss.
@@ -601,6 +667,28 @@ Two adjacent bugs were fixed at the same time, both in scope by agreement:
 - **Part 05 zeroed `finalAssessmentScore.correct`** on every unguarded entry to screen 2. The
   variable is write-only in that component (`peakResult()` scores from `XAPI_Q_RESULTS`), but the
   reset became a live trap once restored state could put the learner back there.
+
+### Fixed on 2026-09-02
+
+Found by re-running the science unit's five-point defect list against this unit. The resume
+mechanism itself held up — all 25 graded questions were already value-saved, repainted and
+re-locked, including the drag board and every dropdown — so these are the edges around it.
+
+1. **A second identical submission was possible, and was reported.** See §4a. 19 of 22 questions;
+   the fix is in both the live retry branches and the painters that mirror them.
+2. **Part 01 screen 2 had no painter**, so every resume onto it forced a re-pick and emitted
+   another `selected`. Now painted, and the statement goes through the `picks` ledger.
+3. **The hint ledger did not survive a page load**, so `requested.1` re-reported after any refresh
+   or cross-part חזרה. Now in the document under `hints`.
+4. **The boot-cover ceiling (6 s) was shorter than the loader's own metadata cap (10 s)**, so a slow
+   network lifted the cover mid-restore — the original screen-0 flash, in the one case where it was
+   most likely. Now 11 s.
+5. **Part 01's YouTube `played`/`paused` had no question object** and no churn filter. Anchored to
+   `xapiQ('002','q1')` and made strictly alternating. (Reporting-side; also in REPORT-XAPI.md §9b.)
+
+Not fixed, by decision, and recorded in [REPORT-XAPI.md](REPORT-XAPI.md) §10: part 02's unenforced
+gate and its two extra scales, part 04's unstated threshold, part 05's missing failure screen, and
+the unit `completed` carrying `null`.
 
 ## 12. Reference
 

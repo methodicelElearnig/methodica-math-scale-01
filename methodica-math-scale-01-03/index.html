@@ -16,8 +16,11 @@
        cover on every exit path, and this removes it after 800ms if that never happens — which is
        what stops a broken loader leaving a learner facing a blank page.
        If bootXAPI has set window.__resumeInFlight (resume is on and a restore is coming), the net
-       waits for it rather than exposing screen 0 mid-restore — up to a hard 6-second ceiling,
-       after which it exposes regardless. The flag is read defensively, so a 50-loader.js that
+       waits for it rather than exposing screen 0 mid-restore — up to a hard 11-second ceiling,
+       after which it exposes regardless. 11s and not 6s because 50-loader.js polls for the
+       metadata for up to 10s (METADATA_POLL_MAX) on top of two serial CDN scripts: a 6s ceiling
+       lifted the cover while the restore was still coming, which on a slow network reproduced the
+       exact screen-0 flash the cover exists to prevent. The flag is read defensively, so a 50-loader.js that
        failed to load gives back exactly the 800ms behaviour. -->
   <div id="boot-cover" style="position:fixed;inset:0;z-index:9999;background:#ffffff"></div>
   <script>
@@ -26,7 +29,7 @@
     function tick() {
       var c = document.getElementById('boot-cover');
       if (!c || !c.parentNode) return;
-      if (window.__resumeInFlight && Date.now() - t0 < 6000) { setTimeout(tick, 100); return; }
+      if (window.__resumeInFlight && Date.now() - t0 < 11000) { setTimeout(tick, 100); return; }
       c.parentNode.removeChild(c);
     }
     setTimeout(tick, 800);
@@ -245,19 +248,19 @@
       </div>
     </div>
   </main>
-  <script src="../unit-js/10-identity.js?v=2"></script>
-  <script src="../unit-js/15-ui.js?v=2"></script>
+  <script src="../unit-js/10-identity.js?v=3"></script>
+  <script src="../unit-js/15-ui.js?v=3"></script>
   <!-- iPad-shaped-viewport gate — must load after scaleApp() is defined and before 90-boot.js
        wires it to the resize listener, so the wrapped version is what gets used -->
   <script src="canvas-tall-gate.js?v=1"></script>
-  <script src="../unit-js/20-xapi.js?v=2"></script>
-  <script src="../unit-js/25-report.js?v=2"></script>
-  <script src="../unit-js/28-feedback-drag.js?v=2"></script>
-  <script src="../unit-js/30-nav.js?v=2"></script>
-  <script src="../unit-js/40-resume.js?v=2"></script>
-  <script src="../unit-js/50-loader.js?v=2"></script>
-  <script src="../unit-js/60-devbridge.js?v=2"></script>
+  <script src="../unit-js/20-xapi.js?v=3"></script>
+  <script src="../unit-js/25-report.js?v=3"></script>
+  <script src="../unit-js/28-feedback-drag.js?v=3"></script>
+  <script src="../unit-js/30-nav.js?v=3"></script>
+  <script src="../unit-js/40-resume.js?v=3"></script>
+  <script src="../unit-js/50-loader.js?v=3"></script>
+  <script src="../unit-js/60-devbridge.js?v=3"></script>
   <script src="script.js?v=13"></script>
-  <script src="../unit-js/90-boot.js?v=2"></script>
+  <script src="../unit-js/90-boot.js?v=3"></script>
 </body>
 </html>

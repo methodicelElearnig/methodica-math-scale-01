@@ -188,17 +188,36 @@ var XAPI_HINTS_SENT = {};
    twice reported 'requested.1' twice. The check lives here rather than at the call sites because
    there are 23 of them across four components and every one goes through this function.
 
-   ── Scope: one page load ──
-   The map is cleared on reload, so a learner who refreshes and reopens the same hint reports
-   again. That is a deliberate trade (the alternative is holding these keys in the state
-   document). The restore itself is not at risk: applyExecutionState replaces sendStatement720
-   with a no-op for as long as _restoring is set. */
+   ── Scope: the whole unit attempt ──
+   XAPI_HINTS_SENT alone is cleared on reload, which used to mean a learner who refreshed and
+   reopened the same hint reported 'requested.1' a second time. Every cross-part 'חזרה' is also a
+   fresh page load, so this happened in normal use and not only on a manual refresh. The keys now
+   live in the state document too, under `hints`, through the same sendStatementOnce the
+   'completed' ledger uses — so they survive a reload, a cross-part hop and a tab close.
+   XAPI_HINTS_SENT stays in front of it as the in-memory fast path, so a repeat click costs no
+   document read.
+
+   Two orderings matter:
+   - The memory latch is set only when sendStatementOnce reports the key SETTLED. While a restore
+     is in flight it returns false and sends nothing, so latching there would swallow the
+     learner's first real hint of the session.
+   - Both latches sit after the XAPI_USING_G guard, so neither records a statement that never
+     left. */
 function xapiRequestedHint(item, qKey){
   var _k = item + '/' + qKey;
   if (XAPI_HINTS_SENT[_k]) return;
-  XAPI_HINTS_SENT[_k] = true;
   if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
-  try { sendStatement720('requested.1', 'question', null, xapiQ(item, qKey)); } catch (e) {}
+  try {
+    if (typeof sendStatementOnce === 'function') {
+      /* Fails OPEN: with no document alreadySent() is false, so the hint is still reported. */
+      if (sendStatementOnce('hints', _k, 'requested.1', 'question', null, xapiQ(item, qKey))) {
+        XAPI_HINTS_SENT[_k] = true;
+      }
+      return;
+    }
+    sendStatement720('requested.1', 'question', null, xapiQ(item, qKey));
+    XAPI_HINTS_SENT[_k] = true;
+  } catch (e) { console.error('[xAPI] requested ' + _k, e); }
 }
 
 /* The component 'completed'. Closes the open item first, then reports through the ledger.

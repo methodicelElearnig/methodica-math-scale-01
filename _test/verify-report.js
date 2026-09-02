@@ -88,8 +88,9 @@ const failures = [];
 let passes = 0;
 
 function ok(tag, what, cond, detail) {
-  if (cond) { passes++; return; }
+  if (cond) { passes++; return true; }
   failures.push('[' + tag + '] ' + what + (detail ? '  —  ' + detail : ''));
+  return false;
 }
 
 function readJSON(p) {
@@ -762,6 +763,193 @@ function checkVideoAllowlist() {
     /querySelectorAll\('video\[data-xapi-report\]'\)/.test(x));
 }
 
+/* ══════════════ 15. The retry lock ══════════════
+   A wrong non-final attempt must leave the check button dead until the answer changes. Without
+   it the learner can press "צדקתי?" again on an UNCHANGED answer, which burns their last attempt
+   and sends a second `answered` carrying an identical student_answer. Reproduced in the browser
+   on 2026-09-02 across every 2-attempt question; 18 of the 22 were affected.
+
+   Two halves, and BOTH are needed: the live retry branch, and the painter that mirrors it. A
+   painter that recomputes the button from "is an answer present" hands a resumed learner a live
+   button on an unchanged answer, i.e. re-opens the same hole. */
+
+/* s42* in component 04 is dead code with no markup — see the dead-code list in RESUME.md. */
+const KNOWN_DEAD_QUESTIONS = new Set(['04/s42']);
+
+function branchBodyAt(src, openBraceIdx) {
+  let depth = 0, j = openBraceIdx;
+  while (j < src.length) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}') { depth--; if (depth === 0) break; }
+    j++;
+  }
+  return src.slice(openBraceIdx, j);
+}
+
+function checkRetryLock() {
+  /* ── half 1: the live branches ── */
+  let seen = 0;
+  for (const c of COMPONENTS) {
+    const src = fs.readFileSync(path.join(BASE, PART_DIR(c), 'script.js'), 'utf8');
+    /* Both spellings are in use: `=== 1` in four components, `< 2` for s32 in component 02.
+       Matching only the first form is how s32 was missed on the first pass. */
+    for (const m of src.matchAll(/(\w+?)Attempts\s*(?:===\s*1|<\s*2)\s*\)\s*\{/g)) {
+      const name = m[1];
+      if (KNOWN_DEAD_QUESTIONS.has(c + '/' + name)) continue;
+      const body = branchBodyAt(src, src.indexOf('{', m.index + m[0].length - 1));
+      seen++;
+      ok('retry-lock', c + '/' + name + ' retry branch re-locks the check button',
+        /\.disabled\s*=\s*true/.test(body),
+        'no ".disabled = true" in the attempt-1 branch');
+    }
+  }
+  ok('retry-lock', 'every 2-attempt question was inspected', seen === 22,
+    seen + ' retry branches found, expected 22');
+
+  /* ── half 2: the painters that mirror them ── */
+  const PAINTERS = [
+    ['01', 'restoreValueScreenUI'],  ['01', 'restoreChoiceScreenUI'], ['01', 's20RestoreUI'],
+    ['02', 'restoreValueScreenUI'],  ['02', 's33RestoreUI'], ['02', 's28RestoreUI'],
+    ['04', 'restoreChoiceScreenUI'], ['04', 's39RestoreUI'], ['04', 's40RestoreUI'],
+    ['05', 'sqRestoreChoiceUI'],     ['05', 's45RestoreUI'], ['05', 's47RestoreUI'],
+  ];
+  for (const [c, fn] of PAINTERS) {
+    const src = fs.readFileSync(path.join(BASE, PART_DIR(c), 'script.js'), 'utf8');
+    const at = src.search(new RegExp('function\\s+' + fn + '\\s*\\('));
+    if (!ok('retry-lock', c + '/' + fn + ' exists', at !== -1)) continue;
+    const fnBody = branchBodyAt(src, src.indexOf('{', at));
+    const am = fnBody.match(/(?:cfg\.attempts|\w+Attempts)\s*>=\s*1\s*\)\s*\{/);
+    if (!ok('retry-lock', c + '/' + fn + ' has an attempts>=1 branch', !!am)) continue;
+    const block = branchBodyAt(fnBody, fnBody.indexOf('{', am.index + am[0].length - 1));
+    ok('retry-lock', c + '/' + fn + ' repaints the retry lock',
+      /\.disabled\s*=\s*true/.test(block),
+      'the painter leaves the check button live on an unchanged answer');
+  }
+}
+
+/* ══════════════ 16. Every commitment is latched ══════════════
+   xapiAnswered() has no dedupe of its own, and it must not: a learner's SECOND attempt is a real
+   answer and has to report. So the only thing standing between a resume and a replayed `answered`
+   is a latch early-return at the top of each committing function. Nothing checked that those
+   guards exist, which is exactly the kind of omission that reappears when a question is added. */
+
+function checkLatchGuards() {
+  let checked = 0;
+  for (const c of COMPONENTS) {
+    const src = fs.readFileSync(path.join(BASE, PART_DIR(c), 'script.js'), 'utf8');
+    for (const m of src.matchAll(/function\s+(\w+)\s*\([^)]*\)\s*\{/g)) {
+      const name = m[1];
+      const body = branchBodyAt(src, m.index + m[0].length - 1);
+      const firstCommit = body.search(/xapiAnswered\s*\(/);
+      if (firstCommit === -1) continue;
+      if (KNOWN_DEAD_QUESTIONS.has(c + '/' + name.replace(/(Submit|Check).*$/, ''))) continue;
+      checked++;
+      /* A guard is `if (<something>Solved|Done|Submitted|Checked) { ... return; }` standing
+         BEFORE the first commitment. Position is the whole point: a guard after the send would
+         not stop the send. */
+      /* Both spellings count: `if (x) { ...; return; }` and the brace-less
+         `if (sqSelected === null || sqSubmitted) return;`. Requiring braces rejected three
+         perfectly good guards in component 01. */
+      const guards = [...body.matchAll(/if\s*\([^)]*(?:Solved|Done|Submitted|Checked)[^)]*\)\s*(?:\{[^{}]*\breturn\b[^{}]*\}|[^;{}]*\breturn\b[^;]*;)/g)]
+        .map(g => g.index)
+        .filter(i => i < firstCommit);
+      ok('latch', c + '/' + name + ' latches before it reports',
+        guards.length > 0,
+        'xapiAnswered at offset ' + firstCommit + ' with no preceding latch guard');
+    }
+  }
+  ok('latch', 'committing functions were found to check', checked >= 20,
+    checked + ' found');
+}
+
+/* ══════════════ 17. The hint ledger outlives the page ══════════════
+   XAPI_HINTS_SENT alone is per page load, so before this the learner reported `requested.1`
+   again after any refresh — and every cross-part "חזרה" is a fresh page load, so it happened in
+   ordinary use. The keys now also sit in the state document under `hints`. */
+
+function checkHintLedgerPersists() {
+  const r = fs.readFileSync(path.join(BASE, 'unit-js', '40-resume.js'), 'utf8');
+  const x = fs.readFileSync(path.join(BASE, 'unit-js', '20-xapi.js'), 'utf8');
+
+  ok('hint', 'emptyUnitState declares a hints ledger', /hints:\s*\{\}/.test(r));
+  ok('hint', 'readUnitState back-fills hints by presence', /doc\.hints\s*=\s*doc\.hints\s*\|\|\s*\{\}/.test(r));
+  ok('hint', 'sendStatementOnce carries the invariants for any verb',
+    /function\s+sendStatementOnce\s*\(\s*ledger\s*,\s*key\s*,\s*verb\s*,/.test(r));
+  ok('hint', 'sendStatementOnce bails out entirely while restoring',
+    /function\s+sendStatementOnce[\s\S]{0,200}?if\s*\(_restoring\)\s*return\s+false;/.test(r));
+  ok('hint', 'sendCompletedOnce still goes through it',
+    /function\s+sendCompletedOnce[\s\S]{0,220}?sendStatementOnce\(\s*ledger\s*,\s*key\s*,\s*'completed'/.test(r));
+  ok('hint', 'xapiRequestedHint routes through the hints ledger',
+    /sendStatementOnce\(\s*'hints'\s*,\s*_k\s*,\s*'requested\.1'/.test(x));
+  /* The memory latch must be set only when the ledger reports the key settled, and only after
+     the XAPI_USING_G guard — otherwise a statement that never left is recorded as sent. */
+  const fn = x.slice(x.indexOf('function xapiRequestedHint'));
+  const body = fn.slice(0, fn.indexOf('\n}\n') + 1);
+  ok('hint', 'the memory latch is set after the USING_G guard',
+    body.indexOf('XAPI_USING_G') < body.indexOf('XAPI_HINTS_SENT[_k] = true'));
+  ok('hint', 'the memory latch is gated on the ledger reporting settled',
+    /if\s*\(sendStatementOnce\([\s\S]{0,140}?\)\)\s*\{\s*\n?\s*XAPI_HINTS_SENT\[_k\]\s*=\s*true;/.test(body));
+
+  /* Behavioural: a document that already records the hint must suppress a fresh page load's
+     first click — the case a per-page-load map cannot cover. */
+  const { dom, val, exec } = loadComponent('01');
+  exec('window.XAPI_USING_G = true; window.__sent = []; window.sendStatement720 = function (v) { window.__sent.push(v); };');
+  exec('window.METADATA = { subContent: [] };');
+  exec("_unitState = { v: 4, part: 'x', parts: {}, prev: {}, done: {}, doneItems: {}, hints: { '004/q1': true }, picks: {}, ui: {}, results: {} };");
+  exec("xapiRequestedHint('004', 'q1');");
+  ok('hint', 'a hint already in the document is not reported again after a reload',
+    val('window.__sent.length') === 0, String(val('window.__sent.length')));
+  /* Fail OPEN: with no document at all the hint must still report. A blocked or absent state
+     document must never be able to silence a statement. */
+  exec('_unitState = null; XAPI_HINTS_SENT = {};');
+  exec("xapiRequestedHint('004', 'q1');");
+  ok('hint', 'with no state document the hint still reports (fail open)',
+    val('window.__sent.length') === 1, String(val('window.__sent.length')));
+  dom.window.close();
+}
+
+/* ══════════════ 18. Screen 2's pick is painted and reported once ══════════════ */
+
+function checkLearningTypePick() {
+  const src = fs.readFileSync(path.join(BASE, PART_DIR('01'), 'script.js'), 'utf8');
+  ok('pick', 'screen 2 has a painter', /function\s+s2RestoreUI\s*\(/.test(src));
+  ok('pick', 'restoreScreenUI dispatches screen 2',
+    /if\s*\(n\s*===\s*2\)\s*s2RestoreUI\(\)/.test(src));
+  ok('pick', "the painter does not mutate state or send",
+    (() => {
+      const at = src.search(/function\s+s2RestoreUI\s*\(/);
+      const body = branchBodyAt(src, src.indexOf('{', at));
+      return !/sendStatement|selectedDesign\s*=|announce\s*\(/.test(body);
+    })());
+  ok('pick', "advanceFromS2 reports 'selected' through the picks ledger",
+    /sendStatementOnce\(\s*'picks'\s*,\s*'learning-type\/'\s*\+\s*_pick\s*,\s*'selected'/.test(src));
+  const r = fs.readFileSync(path.join(BASE, 'unit-js', '40-resume.js'), 'utf8');
+  ok('pick', 'emptyUnitState declares a picks ledger', /picks:\s*\{\}/.test(r));
+}
+
+/* ══════════════ 19. The YouTube path is anchored and filtered ══════════════
+   xapiWireVideos was fixed to carry xapiQ() and to filter churn; component 01's YouTube player
+   never went through that helper and kept the old un-anchored, unfiltered form. */
+
+function checkYouTubeReporting() {
+  const src = fs.readFileSync(path.join(BASE, PART_DIR('01'), 'script.js'), 'utf8');
+  const at = src.search(/function\s+s4OnPlayerStateChange\s*\(/);
+  ok('video', 'component 01 has the YouTube state handler', at !== -1);
+  if (at === -1) return;
+  const body = branchBodyAt(src, src.indexOf('{', at));
+  for (const verb of ['played', 'paused']) {
+    const m = body.match(new RegExp("sendStatement720\\('" + verb + "'[\\s\\S]{0,160}?\\)\\s*;"));
+    ok('video', "the YouTube '" + verb + "' carries a question object",
+      !!m && /xapiQ\('002',\s*'q1'\)/.test(m[0]),
+      m ? m[0].replace(/\s+/g, ' ') : 'not found');
+  }
+  ok('video', "'played' only reports after a real pause",
+    /PLAYING\s*&&\s*s4PausedOnce/.test(body));
+  ok('video', 'the pause/play pair strictly alternates',
+    /s4PausedOnce\s*=\s*false;/.test(body),
+    'a one-way latch still reports a played per seek');
+}
+
 /* ══════════════ run ══════════════ */
 
 function main() {
@@ -779,6 +967,11 @@ function main() {
   checkDeployContract();
   checkHintDedupe();
   checkVideoAllowlist();
+  checkRetryLock();
+  checkLatchGuards();
+  checkHintLedgerPersists();
+  checkLearningTypePick();
+  checkYouTubeReporting();
 
   console.log('');
   console.log('passed: ' + passes);

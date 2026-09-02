@@ -22,6 +22,8 @@ let frcRevealed = [false, false, false];
 let frcDone = false;
 
 let s4VideoEnded = false;
+/* Set on the first real pause, so a 'played' only reports after one - see s4OnPlayerStateChange. */
+let s4PausedOnce = false;
 let s4YTPlayer = null;
 let s4PlayerReady = false;
 
@@ -83,8 +85,27 @@ function s4OnPlayerStateChange(e) {
   try {
     if (window.XAPI_USING_G && typeof sendStatement720 === 'function' && s4YTPlayer) {
       var _t = (typeof s4YTPlayer.getCurrentTime === 'function') ? s4YTPlayer.getCurrentTime() : 0;
-      if (e.data === YT.PlayerState.PLAYING)     sendStatement720('played', 'question', null, { time: _t });
-      else if (e.data === YT.PlayerState.PAUSED) sendStatement720('paused', 'question', null, { time: _t });
+      /* Both statements carry the question object. Screen 4 is the video path through item
+         002 (see SCREEN_TO_SUBCONTENT), and xapiWireVideos anchors video statements the
+         same way. Without it these went out as objectType 'question' with no objectId and
+         no questionId - nothing to hang off. That was fixed inside xapiWireVideos and never
+         applied here, because YouTube drives this screen and never touches that helper.
+         s4PausedOnce is the same noise filter xapiWireVideos uses: YouTube emits
+         BUFFERING -> PLAYING on every seek and on autoplay recovery, so without it a single
+         viewing reports 'played' several times. The flag is CLEARED on each reported 'played',
+         making the pair strictly alternating - slightly stricter than xapiWireVideos, whose
+         latch is one-way and therefore still reports a 'played' per seek once the learner has
+         paused at least once. Worth aligning that helper the next time it is touched; it is
+         dormant today (no element in this unit carries data-xapi-report). */
+      if (e.data === YT.PlayerState.PAUSED) {
+        s4PausedOnce = true;
+        sendStatement720('paused', 'question', null,
+          Object.assign({ time: _t }, xapiQ('002', 'q1')));
+      } else if (e.data === YT.PlayerState.PLAYING && s4PausedOnce) {
+        s4PausedOnce = false;
+        sendStatement720('played', 'question', null,
+          Object.assign({ time: _t }, xapiQ('002', 'q1')));
+      }
     }
   } catch (err) {}
   if (e.data === YT.PlayerState.ENDED) {
@@ -378,9 +399,19 @@ function advanceFromS2() {
      (The screen-0 avatar choice stays unreported: it is decoration, not a learning preference.) */
   try {
     var _card = document.querySelector('[data-screen="2"] .option-card.selected');
-    sendStatement720('selected', 'onlinelesson',
-      { response: xapiAnswerText(_card) || String(window.lomdaState.selectedDesign) },
-      { category: 'learning-type' });
+    var _pick = String(window.lomdaState.selectedDesign);
+    var _res  = { response: xapiAnswerText(_card) || _pick };
+    /* Once per distinct choice, through the same ledger as 'completed' and the hints.
+       Until screen 2 had a painter, every resume onto it forced the learner to re-pick and
+       emitted a second 'selected'. Keying on the chosen value rather than on the screen is
+       deliberate: re-picking the SAME option stays silent, while a learner who genuinely
+       changes their mind still reports it. Fails open like every other ledger call. */
+    if (typeof sendStatementOnce === 'function') {
+      sendStatementOnce('picks', 'learning-type/' + _pick, 'selected', 'onlinelesson', _res,
+        { category: 'learning-type' });
+    } else {
+      sendStatement720('selected', 'onlinelesson', _res, { category: 'learning-type' });
+    }
   } catch (e) { console.error('[xAPI] selected learning-type', e); }
   goTo(window.lomdaState.selectedDesign === 'video' ? 4 : 3);
 }
@@ -1286,6 +1317,7 @@ function s18Submit() {
     feedback.hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
     document.getElementById('s18-hint-btn').hidden = false;
+    continueBtn.disabled = true;   /* retry lock: s18CheckInput re-enables it when the answer changes */
   } else {
     s18Solved = true;
     s18QuizResults[1] = 'wrong';
@@ -1392,6 +1424,7 @@ function s19Submit() {
     feedback.hidden = false;
     document.getElementById('s19-hint-btn').hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
+    continueBtn.disabled = true;   /* retry lock: s19CheckInput re-enables it when the answer changes */
   } else {
     s19Solved = true;
     s18QuizResults[2] = 'wrong';
@@ -1479,6 +1512,7 @@ function s20Submit() {
     fbBold.textContent = 'זה לא מדוייק, ננסה שוב?'; fbRegular.innerHTML = '';
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
+    continueBtn.disabled = true;   /* retry lock: s20Select re-enables it when the answer changes */
   } else {
     s20Solved = true; s18QuizResults[3] = 'wrong';
     opts.forEach(function(o,i){ o.disabled=true; o.classList.toggle('is-correct',i===S20_CORRECT); o.classList.toggle('is-incorrect',i===s20Selected&&i!==S20_CORRECT); });
@@ -1556,6 +1590,7 @@ function s21Submit() {
     feedback.classList.add('s5-fb--incorrect'); feedback.hidden = false;
     document.getElementById('s21-hint-btn').hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
+    continueBtn.disabled = true;   /* retry lock: s21CheckInput re-enables it when the answer changes */
   } else {
     s21Solved = true; s18QuizResults[4] = 'wrong';
     fbBold.textContent = 'זו טעות, בואו נדייק'; fbRegular.innerHTML = explanation;
@@ -1671,6 +1706,7 @@ function s22Submit() {
     feedback.hidden = false;
     document.getElementById('s22-hint-btn').hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
+    continueBtn.disabled = true;   /* retry lock: s22Select re-enables it when the answer changes */
   } else {
     s22Solved = true;
     s18QuizResults[5] = 'wrong';
@@ -2096,6 +2132,7 @@ function s23Submit() {
     feedback.hidden = false;
     document.getElementById('s23-hint-btn').hidden = false;
     announce('זה לא מדוייק, ננסה שוב?');
+    continueBtn.disabled = true;   /* retry lock: s23Select re-enables it when the answer changes */
   } else {
     s23Solved = true;
     s18QuizResults[6] = 'wrong';
@@ -2405,8 +2442,35 @@ function applyResumeDom(st) {
    mutation, no statements, no announce(), and never s18QuizResults. The quiz nav dots need no
    painting: sNNEnter() calls s18UpdateNav()/s23UpdateNav(), which build them from s18QuizResults,
    restored by the second assignment pass. */
+/* Screen 2 painter - the "how do you want to learn" choice (video vs flip cards).
+   selectedDesign is in the resume payload, but resetScreenState(2) strips '.selected',
+   nulls the variable and disables the continue button, so without this painter a resumed
+   learner was forced to pick again - and each re-pick emitted another 'selected'
+   statement. The second applyResumeVars pass has already put selectedDesign back by the
+   time this runs. Mirrors selectDesign's DOM writes ONLY: no state mutation, no statement,
+   no announce(). */
+function s2RestoreUI() {
+  var chosen = window.lomdaState && window.lomdaState.selectedDesign;
+  if (!chosen) return;
+  var hit = null;
+  document.querySelectorAll('[data-screen="2"] .option-card').forEach(function (c) {
+    var on = (c.dataset.value === chosen);
+    c.classList.toggle('selected', on);
+    c.setAttribute('aria-checked', on ? 'true' : 'false');
+    if (on) hit = c;
+  });
+  /* An unrecognised value must not enable the button: advanceFromS2 would then navigate on
+     a design this screen cannot express. */
+  if (!hit) return;
+  var cont = document.getElementById('s2-continue');
+  if (cont) cont.disabled = false;
+  var clickHint = document.getElementById('s2-click-hint');
+  if (clickHint) clickHint.classList.add('is-hidden');
+}
+
 function restoreScreenUI(n) {
   try {
+    if (n === 2)  s2RestoreUI();
     if (n === 16) s16RestoreUI();
     if (n === 18) s18RestoreUI();
     if (n === 19) s19RestoreUI();
@@ -2497,6 +2561,13 @@ function restoreValueScreenUI(cfg) {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
+    /* Retry lock, mirroring the live branch. A wrong non-final attempt leaves the check
+       button dead until the answer actually changes; the screen's own input/select handler
+       re-enables it. Recomputing from the answer's presence here would hand a resumed
+       learner a LIVE button on an UNCHANGED answer - the second identical submission the
+       lock exists to prevent, which also silently burns their last attempt. */
+    cont.disabled = true;
+    return;
   }
   cont.disabled = !(input && input.value.trim().length > 0);   // the live predicate
 }
@@ -2562,6 +2633,8 @@ function s20RestoreUI() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    cont.disabled = true;
   }
 }
 
@@ -2607,6 +2680,8 @@ function restoreChoiceScreenUI(cfg) {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    cont.disabled = true;
   }
 }
 

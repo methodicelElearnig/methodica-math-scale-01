@@ -6,7 +6,7 @@
 
 | File | What it does |
 |---|---|
-| `verify-report.js` | **Structure.** 445 assertions. Loads the real `index.html`, `script.js` and every `unit-js/*.js` of all five components into jsdom, runs the script tags in document order from disk, and asserts against what actually ran. It does not call the code in isolation — it runs it. |
+| `verify-report.js` | **Structure.** 550 assertions. Loads the real `index.html`, `script.js` and every `unit-js/*.js` of all five components into jsdom, runs the script tags in document order from disk, and asserts against what actually ran. It does not call the code in isolation — it runs it. |
 | `statement-flow.js` | **Behaviour.** 32 assertions. Which statements actually leave the lomda when a learner does a thing, in what order, with what result — and, more importantly, which ones do **not** leave when the same screen is reached again by resume or by the back button. |
 | `xapi-720-k.js` | A local stand-in for the CDN library, backed by `sessionStorage`. Loaded in the browser via `?xapiLib=`, and executed directly by both harnesses. |
 

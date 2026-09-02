@@ -97,6 +97,8 @@ function emptyUnitState() {
     prev:  {},                 // slug → {from, hash}: where it was entered from, back to which screen
     done:  {},                 // component slug (or 'unit') → its 'completed' has been sent
     doneItems: {},             // '<slug>#<itemId>' → that item's 'completed' has been sent
+    hints: {},                 // '<itemId>/<qKey>' → that hint's 'requested.1' has been sent
+    picks: {},                 // one-off learner choices whose 'selected' has been sent
     /* ── Unit-level state (v4) ──
        These two are NOT per part and therefore do not live in parts[]: captureUnitState replaces
        the current part's slot on every save, so anything parked there would be destroyed on the
@@ -134,6 +136,8 @@ function readUnitState() {
   doc.prev      = doc.prev      || {};
   doc.done      = doc.done      || {};
   doc.doneItems = doc.doneItems || {};
+  doc.hints     = doc.hints     || {};
+  doc.picks     = doc.picks     || {};
   /* These must be present objects rather than undefined: their EXISTENCE is what tells the
      getters "the document is the authority, do not fall back to localStorage". Without it a reset
      document would hand back the character from a stale cache — a reset that is not a reset. */
@@ -330,7 +334,11 @@ function dropBootCover() {
    3. The mark is persisted SYNCHRONOUSLY right here. Some callers send without navigating
       afterwards, so nothing else would ever write it.
 
-   'initialized' is never suppressed — the platform asks for it on every entry. */
+   'initialized' is never suppressed — the platform asks for it on every entry.
+
+   sendStatementOnce carries these invariants for ANY verb; sendCompletedOnce is the 'completed'
+   case of it. Hint requests go through the same path (xapiRequestedHint in 20-xapi.js), so a
+   hint reported once stays reported across a reload, a cross-part hop and a tab close. */
 function alreadySent(ledger, key) {
   return !!(_unitState && _unitState[ledger] && _unitState[ledger][key]);
 }
@@ -342,11 +350,19 @@ function markSent(ledger, key) {
   try { persistUnitState(captureUnitState()); } catch (e) { console.error('[resume] ledger', e); }
 }
 
-function sendCompletedOnce(ledger, key, objectType, result, opts) {
-  if (_restoring) return;
-  if (alreadySent(ledger, key)) return;
-  sendStatement720('completed', objectType, result || null, opts);
+/* Returns whether the key is SETTLED — either sent just now, or already in the ledger. false
+   means the call was suppressed because a restore is in flight, so the caller must not latch
+   anything of its own either (invariant 1). */
+function sendStatementOnce(ledger, key, verb, objectType, result, opts) {
+  if (_restoring) return false;
+  if (alreadySent(ledger, key)) return true;
+  sendStatement720(verb, objectType, result || null, opts);
   markSent(ledger, key);
+  return true;
+}
+
+function sendCompletedOnce(ledger, key, objectType, result, opts) {
+  sendStatementOnce(ledger, key, 'completed', objectType, result, opts);
 }
 
 /* ── Cross-part back edges ───────────────────────────────────────────

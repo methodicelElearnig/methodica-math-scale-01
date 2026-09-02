@@ -186,6 +186,7 @@ function s38Submit() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden           = false;
     if (hintBtn) hintBtn.hidden = false;
+    cont.disabled = true;   /* retry lock: s38Select re-enables it when the answer changes */
   } else {
     s38Solved = true;
     opts.forEach(function(o, i) {
@@ -312,6 +313,7 @@ function s37Submit() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden           = false;
     if (hintBtn) hintBtn.hidden = false;
+    cont.disabled = true;   /* retry lock: s37Select re-enables it when the answer changes */
   } else {
     s37Solved = true;
     opts.forEach(function(o, i) {
@@ -637,6 +639,7 @@ function ddqCheck() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
 
+    btn.disabled = true;   /* retry lock: ddqDrop re-enables it when the answer changes */
   } else {
     /* Second wrong — capture what user had before revealing */
     var targetResults = {};
@@ -785,6 +788,7 @@ function s40Check() {
     if (hintBtn) hintBtn.hidden = false;
     if (input) { input.disabled = false; }
 
+    btn.disabled = true;   /* retry lock: s40OnInput re-enables it when the answer changes */
   } else {
     s40Done = true;
     if (input) input.disabled = true;
@@ -930,6 +934,7 @@ function s41Submit() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
 
+    cont.disabled = true;   /* retry lock: s41Select re-enables it when the answer changes */
   } else {
     s41Solved = true;
     opts.forEach(function(o, i) {
@@ -1349,6 +1354,8 @@ function restoreChoiceScreenUI(cfg) {
     cont.disabled = false;
   }
   if (cfg.attempts >= 1) {
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    cont.disabled = true;
     fbBold.textContent = 'זה לא מדויק, ננסה שוב?';
     fbReg.textContent  = '';
     fb.classList.add('s5-fb--incorrect');
@@ -1421,6 +1428,9 @@ function s40RestoreUI() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
+    /* Retry lock - see the live branch, and restoreValueScreenUI for the reasoning. */
+    btn.disabled = true;
+    return;
   }
   s40OnInput();   // the live predicate for the check button
 }
@@ -1449,8 +1459,12 @@ function s39RestoreUI() {
       fb.classList.add('s5-fb--incorrect', 's5-fb--try-again');
       fb.hidden = false;
       if (hintBtn) hintBtn.hidden = false;
+      /* Retry lock - see the live branch. ddqRender() above ends in ddqUpdateCheckBtn(),
+         which re-enables the button because the board is still fully filled, so the lock
+         has to be re-applied AFTER it. Any drop calls ddqRender() again and lifts it. */
+      btn.disabled = true;
     }
-    return;   // ddqRender already set the check button from the live all-filled predicate
+    return;   // otherwise ddqRender already set the button from the all-filled predicate
   }
 
   var correct = (XAPI_Q_RESULTS['002/q2'] === true);
