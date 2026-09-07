@@ -26,6 +26,11 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const BASE     = process.argv[2] || path.join(__dirname, '..');
+
+/* BASE is the CONTENT under test and may be a deployment package, which correctly contains
+   no _test/. This harness's own stub is not content, so it resolves from here — otherwise a
+   package run throws at load rather than running. Same reasoning as verify-report.js. */
+const HARNESS_DIR = __dirname;
 const UNIT     = 'methodica-math-scale-01';
 const PART_DIR = c => UNIT + '-' + c;
 
@@ -79,7 +84,7 @@ function boot(c, opts) {
   }
 
   /* The library, exactly as ?xapiLib= would deliver it on localhost. */
-  exec(fs.readFileSync(path.join(BASE, '_test', 'xapi-720-k.js'), 'utf8'));
+  exec(fs.readFileSync(path.join(HARNESS_DIR, 'xapi-720-k.js'), 'utf8'));
   exec('window.XAPI_USING_G = true; window.__reset();');
   /* The component metadata, so xapiQ() resolves real question ids. */
   exec('window.METADATA = ' + fs.readFileSync(path.join(BASE, 'metadata', PART_DIR(c) + '.json'), 'utf8').replace(/^﻿/, '') + ';');
