@@ -633,9 +633,10 @@ function partBoot() {
     ['', '_workout'].forEach(function(v) {
       var img = new Image(); img.src = './assets/images/' + c + v + '.png';
     });
-    ['Happy', 'Sad'].forEach(function(mood) {
-      var gif = new Image(); gif.src = './assets/images/' + c + ' GIF ' + mood + '.gif';
-    });
+    /* The ' GIF Happy/Sad.gif' preload that stood here named four files that do not
+       exist -- there is not a single .gif anywhere in this unit -- so it was four
+       guaranteed 404s on every boot. The animations it was reaching for are component
+       04's .mp4 files, which nothing references either. */
   });
 
   resetScreenState(currentScreen);

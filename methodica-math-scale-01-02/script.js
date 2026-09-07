@@ -1142,10 +1142,10 @@ var XAPI_EVAL_ITEMS = { '001': 1, '002': 1, '003': 1, '004': 1, '005': 1, '006':
 function partBoot() {
   var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
   var other = char === 'Character1' ? 'Character2' : 'Character1';
+  /* Base pose only. The _holdhands variant exists in component 01, not here, so
+     preloading it was two guaranteed 404s on every boot of this component. */
   [char, other].forEach(function(c) {
-    ['', '_holdhands'].forEach(function(v) {
-      var img = new Image(); img.src = './assets/images/' + c + v + '.png';
-    });
+    var img = new Image(); img.src = './assets/images/' + c + '.png';
   });
 
   document.querySelectorAll('.option-card').forEach(card => {
