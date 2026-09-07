@@ -110,6 +110,10 @@ function applyExecutionState(st, screenOverride) {
   /* xapiOnScreen() latched xapiCurrentItem during the stubbed goTo without emitting anything.
      Clearing the latch is what lets the resumed screen report its item 'initialized' exactly
      once — and there is no prior item to close on a fresh page load. */
+  /* Before anything can close an item: tell the library about the answers just restored but
+     deliberately not re-sent, or it drops their 'completed'. See xapiSeedAnsweredFromResume()
+     in ../unit-js/20-xapi.js for why the library needs telling at all. */
+  try { xapiSeedAnsweredFromResume(); } catch (e) {}
   xapiCurrentItem = null;
   try { xapiOnScreen(currentScreen); } catch (e) {}
 }

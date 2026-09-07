@@ -203,6 +203,12 @@ function itemScope() {
   if (crossPair) {
     b.exec('goTo(' + crossPair[0] + ');');
     b.exec('window.__reset();');
+    /* A learner reaches the next item by ANSWERING this one -- forward navigation is gated on
+       it -- and the library (and the stub, which now models it) defers an item's 'completed'
+       until an 'answered' for that item has passed through in this page load. This walk
+       teleports with goTo(), so it has to declare the precondition it always relied on, or the
+       close it is checking for never happens. */
+    b.exec('window.xapiItemAnswered[xapiItemId("' + crossPair[2] + '")] = true;');
     b.exec('goTo(' + crossPair[1] + ');');
     eq('scope', 'crossing an item boundary closes one and opens the next (screens ' +
       crossPair[0] + '->' + crossPair[1] + ')',
@@ -334,6 +340,28 @@ function restoreIsSilent() {
   ok('restore', 'and the painted DOM shows it',
     r.val("document.getElementById('s18-answer-input').value") === '24',
     String(r.val("document.getElementById('s18-answer-input').value")));
+
+  /* -- An item answered BEFORE the reload must still close after it --
+     xapi-720-k.js defers an item's 'completed' until an 'answered' for that item has passed
+     through in THIS page load, and a restore deliberately re-sends none. So without
+     xapiSeedAnsweredFromResume() (../unit-js/20-xapi.js, called at the end of
+     applyExecutionState) this close is silently DROPPED -- while sendStatementOnce, having
+     called the sender, still marks the ledger sent. The statement is then lost for good: the
+     lomda never asks again and the library has no retry of any kind. The trigger is the
+     ordinary path -- answer, leave, come back, continue.
+
+     Found live against Kata on 07.09.26 in methodica-math-ratio-01, and invisible to this
+     suite until _test/xapi-720-k.js learned the guard -- so keep both halves: deleting the
+     stub's guard makes this assertion vacuous rather than failing.
+
+     s18Submit reports item 005; screen 19 belongs to the next item, so this crossing closes
+     005. Nothing has been closed up to here (asserted above), so every 'completed' below
+     belongs to this crossing. */
+  r.exec('goTo(19);');
+  const closed = r.stmts().filter(x => x.verb === 'completed').map(x => x.opts.objectId);
+  ok('restore', 'an item answered before the reload still closes after it',
+    closed.length === 1 && /-01-005\/$/.test(String(closed[0])),
+    'closed ' + closed.length + ': ' + closed.join(','));
 
   r.dom.window.close();
 }

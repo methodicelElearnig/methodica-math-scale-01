@@ -7,8 +7,8 @@
 | File | What it does |
 |---|---|
 | `verify-report.js` | **Structure.** 550 assertions. Loads the real `index.html`, `script.js` and every `unit-js/*.js` of all five components into jsdom, runs the script tags in document order from disk, and asserts against what actually ran. It does not call the code in isolation — it runs it. |
-| `statement-flow.js` | **Behaviour.** 32 assertions. Which statements actually leave the lomda when a learner does a thing, in what order, with what result — and, more importantly, which ones do **not** leave when the same screen is reached again by resume or by the back button. |
-| `xapi-720-k.js` | A local stand-in for the CDN library, backed by `sessionStorage`. Loaded in the browser via `?xapiLib=`, and executed directly by both harnesses. |
+| `statement-flow.js` | **Behaviour.** 33 assertions. Which statements actually leave the lomda when a learner does a thing, in what order, with what result — and, more importantly, which ones do **not** leave when the same screen is reached again by resume or by the back button. |
+| `xapi-720-k.js` | A local stand-in for the CDN library, backed by `sessionStorage`. Loaded in the browser via `?xapiLib=`, and executed directly by both harnesses. It also models the real library's **deferral guard** — an item's `completed` is dropped, with no queue and no retry, unless an `answered` for that item passed through in the same page load. Keep it: without the guard the suite is blind to a whole class of permanently lost statements, which is how one survived every assertion here until it was found live against Kata. |
 
 ## Running
 

@@ -76,6 +76,46 @@ function _xapiIsEval(item){
   return (typeof XAPI_EVAL_ITEMS !== 'undefined') && !!XAPI_EVAL_ITEMS[item];
 }
 
+/* ── Re-arm the library's per-page-load 'answered' memory after a restore ──────────────
+   xapi-720-k.js gates an item's 'completed' on xapiItemAnswered[itemId], a map it fills ONLY
+   from an 'answered' passing through in the SAME page load:
+
+       if (sttmContext?.expectsAnswer && !xapiItemAnswered[_cid]) {
+           console.log("[XAPI] item left unanswered — deferring 'completed': " + _cid);
+           return;          // "deferring" is a DROP — there is no queue, flush or retry
+
+   That guard is right within a session: it stops a learner who leaves a question backwards
+   through goBack() from emitting a resultless 'completed' that would then block the real,
+   scored one. But a resume deliberately does NOT re-send the answers it restores, so without
+   the seeding below the library treats every previously answered item as unanswered and drops
+   its 'completed' — while sendStatementOnce, having called the sender, marks the ledger sent.
+   The lomda then never asks again, the library never retries, and the statement is lost for
+   good. Verified live against Kata on 07.09.26: the ledger said sent while the library's own
+   xapiCompletedObjects was still empty.
+
+   Seeding puts the library back where it would have been had the learner never left. It emits
+   nothing itself — it only unblocks the guard, and the 'completed' that follows carries the
+   explicit result xapiItemResult() supplies, so nothing rides on the library's own scoring.
+
+   Only items with a RECORDED ANSWER are seeded, so an item the learner never answered is still
+   deferred and the goBack protection above is preserved.
+
+   ⚠️ Must run after applyResumeVars (which repopulates XAPI_Q_RESULTS) and before any item
+   boundary can be crossed. applyExecutionState calls it as its last act. */
+function xapiSeedAnsweredFromResume(){
+  if (!window.XAPI_USING_G) return;
+  /* A silent no-op here would reintroduce the bug invisibly, so say so: the map is a plain
+     global today, and would stop being reachable if the library moved it to const/let. */
+  if (!window.xapiItemAnswered) {
+    console.warn('[xAPI] xapiItemAnswered unreachable — item "completed" will be dropped after a resume');
+    return;
+  }
+  Object.keys(XAPI_Q_RESULTS).forEach(function(k){
+    var item = k.split('/')[0];
+    if (item) window.xapiItemAnswered[xapiItemId(item)] = true;
+  });
+}
+
 /* Item-level initialized/completed pairs, driven from goTo(). Paging inside one item emits
    nothing; the item closes when the learner enters a screen belonging to a different item. */
 function xapiOnScreen(screen){

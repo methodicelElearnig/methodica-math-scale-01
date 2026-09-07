@@ -73,11 +73,34 @@
     return window.location.pathname.split('/').filter(Boolean).slice(-2)[0] || '';
   }
 
+  /* מפת הפריטים שכבר נענו בטעינת הדף הזו — בדיוק מה שהספרייה האמיתית
+     מחזיקה, ומה ש-xapiSeedAnsweredFromResume() ב-20-xapi.js זורע מחדש אחרי
+     שחזור. חייב להיות על window — הזריעה נגשת אליו בדיוק כך. */
+  window.xapiItemAnswered = window.xapiItemAnswered || {};
+
   /* חייב להיות נגיש כ-window property: applyExecutionState ב-40-resume.js
      דורך עליו ב-no-op לרוחב ה-goTo של השחזור, וקריאות ב-20-xapi.js הן bare
      ולכן נפתרות דרך ה-window. אם הספרייה האמיתית תעבור ל-const/let, ה-stub
      הזה יישבר בשקט וה-resume ידווח מחדש הכול. */
   window.sendStatement720 = function (verb, objectType, result, opts) {
+    /* הספרייה האמיתית מסירה את הסיומת לפני כל בדיקה:
+       sttmType = sttmRowType.split(".")[0]. לכן 'answered.last' נספר גם הוא. */
+    var sttmType = String(verb).split('.')[0];
+    if (sttmType === 'answered' && opts && opts.parentId) {
+      window.xapiItemAnswered[opts.parentId] = true;
+    }
+
+    /* ── שער הדחייה של הספרייה האמיתית ──
+       פריט שמצפה לתשובה ולא נענה בטעינה הזו — ה-'completed' שלו נזרק. אין
+       תור ואין ניסיון חוזר: ה-return הזה הוא איבוד לצמיתות. בלי חיקוי השער
+       כאן ה-stub סלחני מהספרייה, והחבילה עיוורת לבאג הזה לגמרי — כך הוא
+       חמק מכל הטענות עד שנמצא בבדיקה חיה מול Kata ב-07.09.26. */
+    if (sttmType === 'completed' && opts && opts.objectId != null &&
+        opts.expectsAnswer && !window.xapiItemAnswered[opts.objectId]) {
+      console.log('[stub] item left unanswered — deferring completed ' + opts.objectId);
+      return;
+    }
+
     var log = readLog();
     log.push({
       verb: verb,
