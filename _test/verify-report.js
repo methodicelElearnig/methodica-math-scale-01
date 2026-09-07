@@ -958,6 +958,161 @@ function checkYouTubeReporting() {
 
 /* ══════════════ run ══════════════ */
 
+/* ══════════════ The asset contract ══════════════
+   Every failure mode here is SILENT in a browser. A missing font renders in a fallback face
+   that looks plausible; a missing <img> renders as nothing at all. There is no exception and
+   no console message beyond a 404 nobody is watching.
+
+   Nothing else in this file could see any of it. The JSDOM instances are built with default
+   `resources`, so jsdom never fetches a stylesheet, an image or a video — it only hand-executes
+   <script src>. Before this section existed, every asset in the unit could have moved without
+   one assertion changing.
+
+   Three rules specific to this unit:
+
+   1. Case. fs.existsSync is not enough: Windows resolves any casing and the CDN does not, so
+      every path segment is checked against the real directory listing.
+   2. The dynamic families. Five preload loops build names as
+      './assets/images/' + c + variant + '.png', one base path per family. A static sweep cannot
+      see those, and they are exactly what a partial hoist would break, so the variant arrays are
+      expanded and checked explicitly below.
+   3. canvas-tall-gate.js. Every index.html loads it before script.js, and until 2026-09-07 the
+      string appeared in no test and no document in this repo — so nothing would have noticed if
+      it stopped shipping. package-allowlist.ps1 now lists it; this pins it from the other side. */
+
+/* Resolve `url` from `fromDir`, confirming every segment exists with EXACTLY that case.
+   Returns '' when it resolves, or the first segment that does not match. */
+function resolveExact(fromDir, url) {
+  const clean = url.split('?')[0].split('#')[0];
+  let dir = fromDir;
+  const segs = clean.split('/').filter(s => s !== '' && s !== '.');
+  for (let i = 0; i < segs.length; i++) {
+    if (segs[i] === '..') { dir = path.dirname(dir); continue; }
+    let names;
+    try { names = fs.readdirSync(dir); } catch (e) { return segs.slice(0, i + 1).join('/'); }
+    if (!names.includes(segs[i])) return segs.slice(0, i + 1).join('/');
+    dir = path.join(dir, segs[i]);
+  }
+  return '';
+}
+
+const ASSET_RE = /\.(png|jpe?g|gif|svg|mp4|webm|woff2?|ttf)$/i;
+
+/* Block comments only. The comment left where the phantom .gif preload used to be names the
+   very string the assertion below looks for, and stripping // as well would truncate any
+   'https://…' literal. */
+const stripBlockComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
+
+/* The variant arrays each component's preloadCharacterAvatars() actually iterates. Keep in
+   step with the loops in the five script.js — that is the point of the assertion. */
+const PRELOAD_VARIANTS = {
+  '01': ['', '_binoculars', '_roller', '_popcorn', '_cards', '_holdhands', '_workout'],
+  '02': [''],
+  '03': [''],
+  '04': [''],
+  '05': ['', '_workout'],
+};
+
+function checkAssetContract() {
+  /* ── the shared root ── */
+  const fontsDir = path.join(BASE, 'unit-assets', 'fonts');
+  const faces = fs.existsSync(fontsDir)
+    ? fs.readdirSync(fontsDir).filter(f => /\.ttf$/i.test(f)) : [];
+  ok('assets', 'unit-assets/fonts holds the seven Assistant faces', faces.length === 7,
+    faces.length + ': ' + faces.join(','));
+  ok('assets', 'unit-assets/img holds the hoisted Ruller.png',
+    fs.existsSync(path.join(BASE, 'unit-assets', 'img', 'Ruller.png')));
+
+  /* ── no component may re-grow its own copy of either ── */
+  for (const c of COMPONENTS) {
+    const d = path.join(BASE, PART_DIR(c), 'assets', 'fonts');
+    const local = fs.existsSync(d) ? fs.readdirSync(d).filter(f => /\.ttf$/i.test(f)) : [];
+    ok('assets', c + ' has no local copy of the Assistant faces', local.length === 0,
+      local.join(','));
+    ok('assets', c + ' has no local copy of Ruller.png',
+      !fs.existsSync(path.join(BASE, PART_DIR(c), 'assets', 'images', 'Ruller.png')));
+  }
+
+  /* ── every literal asset reference resolves, with exact case ── */
+  const skipDirs = ['.git', '_test', 'docs-and-tools', 'metadata-from', 'translation', 'node_modules'];
+  const files = [];
+  (function walk(d) {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) { if (!skipDirs.includes(e.name)) walk(p); }
+      else if (/\.(html|js|css)$/.test(e.name) && e.name !== 'index_dev.html') files.push(p);
+    }
+  })(BASE);
+
+  let refs = 0;
+  for (const f of files) {
+    const txt = fs.readFileSync(f, 'utf8');
+    const found = new Set();
+    for (const re of [/url\(\s*['"]?([^'")]+)['"]?\s*\)/g, /(?:src|href)="([^"]+)"/g,
+                      /'((?:\.\.\/)*\.?\/?(?:unit-)?assets\/[^']+)'/g]) {
+      for (const m of txt.matchAll(re)) {
+        const u = m[1].trim();
+        /* component 01 loads the YouTube iframe API — third-party, nothing to resolve */
+        if (/^data:|^https?:|^\/\//.test(u)) continue;
+        if (!ASSET_RE.test(u.split('?')[0])) continue;
+        found.add(u);
+      }
+    }
+    for (const u of found) {
+      refs++;
+      const bad = resolveExact(path.dirname(f), u);
+      ok('assets', path.relative(BASE, f).replace(/\\/g, '/') + ' -> ' + u,
+        bad === '', bad ? 'no such path (exact case): ' + bad : '');
+    }
+  }
+  /* A floor, not a target: it guards against the sweep silently matching nothing after a
+     regex edit and then reporting a clean run over zero references. */
+  ok('assets', 'the sweep actually found references', refs > 80, String(refs));
+
+  /* ── the dynamic preload families ──
+     Every name these loops build must exist. Two did not until 2026-09-07: 02 preloaded a
+     _holdhands variant that lives only in 01, and 05 preloaded four ' GIF Happy/Sad.gif'
+     files that exist nowhere in this unit. */
+  for (const c of COMPONENTS) {
+    const dir = path.join(BASE, PART_DIR(c), 'assets', 'images');
+    for (const ch of ['Character1', 'Character2']) {
+      for (const v of PRELOAD_VARIANTS[c]) {
+        ok('assets', c + ' preloads ' + ch + v + '.png and it exists',
+          fs.existsSync(path.join(dir, ch + v + '.png')));
+      }
+    }
+    const src = stripBlockComments(
+      fs.readFileSync(path.join(BASE, PART_DIR(c), 'script.js'), 'utf8'));
+    ok('assets', c + ' preloads no .gif (this unit contains none)',
+      !/\.gif'/.test(src), (src.match(/'[^']*\.gif'/) || [''])[0]);
+  }
+
+  /* ── canvas-tall-gate.js: shipped, and loaded before script.js ── */
+  for (const c of COMPONENTS) {
+    ok('assets', c + '/canvas-tall-gate.js exists',
+      fs.existsSync(path.join(BASE, PART_DIR(c), 'canvas-tall-gate.js')));
+    const html = fs.readFileSync(path.join(BASE, PART_DIR(c), 'index.html'), 'utf8');
+    const gate = html.indexOf('canvas-tall-gate.js');
+    const main = html.indexOf('src="script.js');
+    ok('assets', c + ' loads canvas-tall-gate.js before script.js',
+      gate > -1 && main > -1 && gate < main, 'gate@' + gate + ' script@' + main);
+  }
+
+  /* ── per-component cache-busters ──
+     checkDeployContract() only looks at ../unit-js/. These three are per-component and were
+     unguarded; in the sibling unit the same gap left styles.css referenced bare, which would
+     have served a cached stylesheet pointing at fonts that no longer exist. */
+  for (const c of COMPONENTS) {
+    const html = fs.readFileSync(path.join(BASE, PART_DIR(c), 'index.html'), 'utf8');
+    for (const [label, re] of [['styles.css', /href="styles\.css(\?v=\d+)?"/],
+                               ['script.js', /src="script\.js(\?v=\d+)?"/],
+                               ['canvas-tall-gate.js', /src="canvas-tall-gate\.js(\?v=\d+)?"/]]) {
+      const m = html.match(re);
+      ok('assets', c + '/' + label + ' carries a ?v=', !!(m && m[1]), m ? m[0] : 'not referenced');
+    }
+  }
+}
+
 function main() {
   checkLoadAndSharedLayer();
   checkBootCover();
@@ -971,6 +1126,7 @@ function main() {
   checkResetHatch();
   checkCommitmentFlush();
   checkDeployContract();
+  checkAssetContract();
   checkHintDedupe();
   checkVideoAllowlist();
   checkRetryLock();

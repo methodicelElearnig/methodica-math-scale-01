@@ -6,7 +6,7 @@
 
 | File | What it does |
 |---|---|
-| `verify-report.js` | **Structure.** 550 assertions. Loads the real `index.html`, `script.js` and every `unit-js/*.js` of all five components into jsdom, runs the script tags in document order from disk, and asserts against what actually ran. It does not call the code in isolation — it runs it. |
+| `verify-report.js` | **Structure.** 731 assertions. Loads the real `index.html`, `script.js` and every `unit-js/*.js` of all five components into jsdom, runs the script tags in document order from disk, and asserts against what actually ran. It does not call the code in isolation — it runs it. |
 | `statement-flow.js` | **Behaviour.** 33 assertions. Which statements actually leave the lomda when a learner does a thing, in what order, with what result — and, more importantly, which ones do **not** leave when the same screen is reached again by resume or by the back button. |
 | `xapi-720-k.js` | A local stand-in for the CDN library, backed by `sessionStorage`. Loaded in the browser via `?xapiLib=`, and executed directly by both harnesses. It also models the real library's **deferral guard** — an item's `completed` is dropped, with no queue and no retry, unless an `answered` for that item passed through in the same page load. Keep it: without the guard the suite is blind to a whole class of permanently lost statements, which is how one survived every assertion here until it was found live against Kata. |
 
@@ -51,6 +51,7 @@ path as the first argument — without one they assume their own parent director
 | Back edges | All three layers in priority order (document → sessionStorage → hard-coded fallback); `writeForwardState` records both; a failed state write leaves the landing pointer alone. |
 | The reset hatch | `?resetState` strips itself from the URL, keeps the rest of the query, raises the flag, and clears both the character cache and the nav-edge map. |
 | **Flush before return** | Brace-matched over every function: a function that commits an answer must flush, and no `return` may sit between the commitment and the flush. |
+| Asset contract | Every asset reference in every shipped html/js/css resolves from its own file's directory, **with exact case** — `fs.existsSync` is not enough, because Windows resolves any casing and the CDN does not. Plus the five preload loops that build names at runtime (`'./assets/images/' + c + variant + '.png'`), which a static sweep cannot see and which a partial hoist would break; and `canvas-tall-gate.js`, which every `index.html` loads before `script.js` and which appeared in no test or document until 2026-09-07. jsdom fetches no stylesheet, image or video, so before this section the whole asset tree could have moved without one assertion changing. |
 | Deploy contract | `?v=` identical across all five `index.html`; every cross-part path lowercase; every cross-part navigation carries the query string; the library letter is listed in the `XAPI_USING_G` regex; no identifier declared in both layers. |
 | Hint dedupe | Reopening a hint reports `requested.1` once; a different question still reports. |
 | Video | Only `data-xapi-report` elements are wired. |

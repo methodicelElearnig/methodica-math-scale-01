@@ -42,7 +42,7 @@ records the verification performed, and §11 is the changelog of the defects fix
 > | Reset hatch | `initResumeResetHatch()` runs first from `90-boot.js` instead of inside `readUnitState()`, so `?resetState` is honoured before anything reads the query or the cache. It clears the nav-edge map and the character cache too. |
 > | `currentPartSlug()` | Lowercases. A capitalised URL used to produce a second key for the same part. |
 > | Call-site helpers | `xapiAnswered` / `xapiRequestedHint` / `xapiCompleteComponent` / `xapiCompleteUnit` replace 25 duplicated `answered` blocks and 23 raw hint sends. `requested.1` is now deduped per question per page load — reopening a hint used to report every time. |
-> | Tests | `_test/verify-report.js` (550 assertions) and `_test/statement-flow.js` (33) — see `_test/README.md`. |
+> | Tests | `_test/verify-report.js` (731 assertions) and `_test/statement-flow.js` (33) — see `_test/README.md`. |
 
 > **Where the code lives (since 2026-08-09).** The mechanism used to be copied into all five
 > `script.js`. It now has one copy in [`unit-js/`](unit-js/README.md):
