@@ -34,6 +34,12 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const BASE       = process.argv[2] || path.join(__dirname, '..');
+
+/* BASE is the CONTENT under test and may be a deployment package. This harness's own
+   files are not content: a package correctly contains no _test/, so resolving the stub
+   from BASE made the one assertion below fail on every package run for a reason that
+   was the exclusion working. The stub belongs to the harness, so it resolves from here. */
+const HARNESS_DIR = __dirname;
 const UNIT       = 'methodica-math-scale-01';
 const COMPONENTS = ['01', '02', '03', '04', '05'];
 const PART_DIR   = c => UNIT + '-' + c;
@@ -706,7 +712,7 @@ function checkDeployContract() {
   ok('lib', 'the library letter is listed in the XAPI_USING_G regex',
     !!lib && !!rx && rx.includes(lib), 'loads -' + lib + ', regex [' + rx + ']');
   ok('lib', 'the test stub matches a letter the regex knows',
-    fs.existsSync(path.join(BASE, '_test', 'xapi-720-' + lib + '.js')),
+    fs.existsSync(path.join(HARNESS_DIR, 'xapi-720-' + lib + '.js')),
     '_test/xapi-720-' + lib + '.js');
 
   /* No identifier declared at top level in BOTH layers. let/const is a loud
