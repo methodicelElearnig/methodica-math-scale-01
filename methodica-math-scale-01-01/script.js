@@ -224,10 +224,8 @@ function resetScreenState(n) {
     const src2 = char === 'text'
       ? './assets/images/Character1_roller.png'
       : './assets/images/Character2_roller.png';
-    document.getElementById('s1-char-img-1').src = src1;
-    document.getElementById('s1-char-img-1').alt = 'דמות עם משקפת';
-    document.getElementById('s1-char-img-2').src = src2;
-    document.getElementById('s1-char-img-2').alt = 'דמות עם סרגל';
+    setImgSrc(document.getElementById('s1-char-img-1'), src1, 'דמות עם משקפת');
+    setImgSrc(document.getElementById('s1-char-img-2'), src2, 'דמות עם סרגל');
     setScale(1000);
 
     const inner = document.querySelector('[data-screen="1"] .hook-card-inner');
@@ -285,14 +283,12 @@ function resetScreenState(n) {
 
     const char = window.lomdaState.selectedCharacter;
     const isChar1 = char === 'text';
-    document.getElementById('s2-char-a').src = isChar1
+    setImgSrc(document.getElementById('s2-char-a'), isChar1
       ? './assets/images/Character1_popcorn.png'
-      : './assets/images/Character2_popcorn.png';
-    document.getElementById('s2-char-a').alt = 'דמות עם פופקורן';
-    document.getElementById('s2-char-b').src = isChar1
+      : './assets/images/Character2_popcorn.png', 'דמות עם פופקורן');
+    setImgSrc(document.getElementById('s2-char-b'), isChar1
       ? './assets/images/Character1_cards.png'
-      : './assets/images/Character2_cards.png';
-    document.getElementById('s2-char-b').alt = 'דמות עם קלפים';
+      : './assets/images/Character2_cards.png', 'דמות עם קלפים');
 
     const clickHint = document.getElementById('s2-click-hint');
     if (clickHint) {
@@ -310,10 +306,9 @@ function resetScreenState(n) {
   if (n === 6) {
     var s6Img = document.getElementById('s6-char-img');
     if (s6Img) {
-      s6Img.src = window.lomdaState.selectedCharacter === 'text'
+      setImgSrc(s6Img, window.lomdaState.selectedCharacter === 'text'
         ? './assets/images/Character1_holdhands.png'
-        : './assets/images/Character2_holdhands.png';
-      s6Img.alt = 'דמויות מחזיקות ידיים';
+        : './assets/images/Character2_holdhands.png', 'דמויות מחזיקות ידיים');
     }
   }
   if (n === 7) { s7Enter(); }
@@ -327,19 +322,17 @@ function resetScreenState(n) {
   if (n === 15) {
     var s15Img = document.getElementById('s15-char-img');
     if (s15Img) {
-      s15Img.src = window.lomdaState.selectedCharacter === 'text'
+      setImgSrc(s15Img, window.lomdaState.selectedCharacter === 'text'
         ? './assets/images/Character1_workout.png'
-        : './assets/images/Character2_workout.png';
-      s15Img.alt = 'דמות מתאמנת';
+        : './assets/images/Character2_workout.png', 'דמות מתאמנת');
     }
   }
   if (n === 17) {
     var s17Img = document.getElementById('s17-char-img');
     if (s17Img) {
-      s17Img.src = window.lomdaState.selectedCharacter === 'text'
+      setImgSrc(s17Img, window.lomdaState.selectedCharacter === 'text'
         ? './assets/images/Character1.png'
-        : './assets/images/Character2.png';
-      s17Img.alt = 'דמות מלווה';
+        : './assets/images/Character2.png', 'דמות מלווה');
     }
   }
   if (n === 16) { s16Enter(); }
@@ -458,10 +451,9 @@ function frcEnter() {
 
   var charImg3 = document.getElementById('s3-char-img');
   if (charImg3) {
-    charImg3.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg3, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1_roller.png'
-      : './assets/images/Character2_roller.png';
-    charImg3.alt = 'דמות מלווה';
+      : './assets/images/Character2_roller.png', 'דמות מלווה');
   }
   var s3body = document.getElementById('s3-body');
   var charWidget3 = document.getElementById('s3-char-widget');
@@ -500,9 +492,11 @@ function setScale(ratio) {
         ? './assets/images/Football yard med zoom.jpg'
         : './assets/images/Football yard.jpg';
 
-    if (!img.src.endsWith(newSrc.replace('./', ''))) {
-      img.src = newSrc;
-    }
+    /* The guard that used to sit here compared a raw path against img.src, which reads back
+       percent-encoded ('Football%20yard.jpg'), so it never matched and every click re-requested a
+       0.6MB photo — and re-flashed the previous zoom level while it downloaded. setImgSrc does
+       that comparison on resolved URLs, so it is both correct and idempotent. */
+    setImgSrc(img, newSrc);
   }
 
   document.querySelectorAll('.scale-input').forEach(inp => {
@@ -544,17 +538,15 @@ function s4Enter() {
 
   var charImg = document.getElementById('s4-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1_popcorn.png'
-      : './assets/images/Character2_popcorn.png';
-    charImg.alt = 'דמות עם פופקורן';
+      : './assets/images/Character2_popcorn.png', 'דמות עם פופקורן');
   }
   var charImgRoller = document.getElementById('s4-char-img-roller');
   if (charImgRoller) {
-    charImgRoller.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImgRoller, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1_roller.png'
-      : './assets/images/Character2_roller.png';
-    charImgRoller.alt = 'דמות עם סרגל';
+      : './assets/images/Character2_roller.png', 'דמות עם סרגל');
   }
 
   var s4body = document.getElementById('s4-body');
@@ -636,10 +628,9 @@ function s5Enter() {
   // Set character image based on chosen character
   var charImg = document.getElementById('s5-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
-    charImg.alt = 'דמות מלווה';
+      : './assets/images/Character2.png', 'דמות מלווה');
   }
 
   // Reset check and continue buttons
@@ -1052,10 +1043,9 @@ function s16Enter() {
 
   var charImg = document.getElementById('s16-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1_workout.png'
-      : './assets/images/Character2_workout.png';
-    charImg.alt = 'דמות מלווה';
+      : './assets/images/Character2_workout.png', 'דמות מלווה');
   }
 
   var contBtn = document.getElementById('s16-continue');
@@ -1229,10 +1219,9 @@ function s18Enter() {
   s18InitRuler();
   var charImg = document.getElementById('s18-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
-    charImg.alt = 'דמות מלווה';
+      : './assets/images/Character2.png', 'דמות מלווה');
   }
   var input = document.getElementById('s18-answer-input');
   if (input) { input.value = ''; input.disabled = false; }
@@ -1534,10 +1523,9 @@ function s21Enter() {
   s21Attempts = 0; s21Solved = false; s21Correct = false;
   var charImg = document.getElementById('s21-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState && window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState && window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
-    charImg.alt = 'דמות מלווה';
+      : './assets/images/Character2.png', 'דמות מלווה');
   }
   var input = document.getElementById('s21-answer-input');
   if (input) { input.value = ''; input.disabled = false; }
@@ -1831,10 +1819,9 @@ function s16Q2Continue() {
 function s7Enter() {
   var charImg = document.getElementById('s7-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
-    charImg.alt = 'דמות מלווה';
+      : './assets/images/Character2.png', 'דמות מלווה');
   }
 
   var cont = document.getElementById('s7-continue');
@@ -1935,10 +1922,9 @@ function s10Answer(answer, btn) {
 function s12Enter() {
   var charImg = document.getElementById('s12-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
-    charImg.alt = 'דמות מלווה';
+      : './assets/images/Character2.png', 'דמות מלווה');
   }
 }
 
@@ -2262,13 +2248,15 @@ var XAPI_EVAL_ITEMS = { '002': 1, '004': 1, '005': 1, '006': 1, '007': 1, '008':
    Called by ../unit-js/90-boot.js, the single place startup side effects run from.
    These used to be a top-level IIFE and DOMContentLoaded handlers. */
 function partBoot() {
+  /* Chosen family only, serialised, and not before the load event. This used to fire fourteen
+     requests -- BOTH families, every pose, ~18MB -- in one synchronous burst, before the avatar
+     the learner was actually looking at had even been requested. On the HTTP/1.1 links this runs
+     over that is a six-deep queue in front of the visible image: the preload was lengthening the
+     wrong-image flash, not covering it. The other family is never shown -- the choice is made
+     once on screen 0 and carried in the state document -- so preloading it bought nothing. */
   var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
-  var other = char === 'Character1' ? 'Character2' : 'Character1';
-  [char, other].forEach(function(c) {
-    ['', '_binoculars', '_roller', '_popcorn', '_cards', '_holdhands', '_workout'].forEach(function(v) {
-      var img = new Image(); img.src = './assets/images/' + c + v + '.png';
-    });
-  });
+  preloadImages(['', '_binoculars', '_roller', '_popcorn', '_cards', '_holdhands', '_workout']
+    .map(function (v) { return './assets/images/' + char + v + '.png'; }));
 
   document.querySelectorAll('[data-screen="0"] .option-card').forEach(card => {
     card.addEventListener('keydown', function (e) {
@@ -2315,6 +2303,13 @@ function partBoot() {
       });
     }
   });
+
+  /* Paint the landing screen from the chosen character, exactly as component 05 has always
+     done. Without it this component kept whatever avatar family the markup hardcoded: the
+     loader's own repaint is the document-truth pass, but it needs the state read to have
+     succeeded, so with resume off, offline, or on a failed read there was nothing at all.
+     Idempotent, and it runs behind the boot cover. */
+  resetScreenState(currentScreen);
 }
 
 /* ═══════════════════════════════════════════════════════════════════

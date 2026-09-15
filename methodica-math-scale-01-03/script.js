@@ -46,9 +46,9 @@ function resetScreenState(n) {
 function s24Enter() {
   var charImg = document.getElementById('s24-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
+      : './assets/images/Character2.png');
   }
 }
 
@@ -63,9 +63,9 @@ function s35Enter() {
   if (cont) cont.disabled = true;
   var charImg = document.getElementById('s35-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
+      : './assets/images/Character2.png');
   }
 }
 
@@ -82,9 +82,9 @@ function s35OnInput() {
 function s34Enter() {
   var charImg = document.getElementById('s34-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
+      : './assets/images/Character2.png');
   }
 }
 
@@ -134,9 +134,10 @@ function goToAdvanced() {
    Called by ../unit-js/90-boot.js, which is the single place side effects are started from.
    Everything here used to run from top-level statements and DOMContentLoaded handlers. */
 function partBoot() {
-  ['Character1', 'Character2'].forEach(function(c) {
-    var img = new Image(); img.src = './assets/images/' + c + '.png';
-  });
+  /* Chosen family only, serialised, and after the load event -- see component 01's partBoot.
+     This preloaded BOTH families unconditionally; the other one is never shown. */
+  var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
+  preloadImages(['./assets/images/' + char + '.png']);
 
   /* ── Keyboard accessibility ── */
   document.querySelectorAll('.option-card').forEach(card => {
@@ -176,6 +177,13 @@ function partBoot() {
       });
     }
   });
+
+  /* Paint the landing screen from the chosen character, exactly as component 05 has always
+     done. Without it this component kept whatever avatar family the markup hardcoded: the
+     loader's own repaint is the document-truth pass, but it needs the state read to have
+     succeeded, so with resume off, offline, or on a failed read there was nothing at all.
+     Idempotent, and it runs behind the boot cover. */
+  resetScreenState(currentScreen);
 }
 
 

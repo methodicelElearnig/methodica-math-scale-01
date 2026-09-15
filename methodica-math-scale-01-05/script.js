@@ -28,15 +28,10 @@ function closeLomda() {
 
 function resetScreenState(n) {
   if (n === 0)  {
+    /* This screen carried the hand-rolled version of the hide-swap-reveal dance; setImgSrc in
+       15-ui.js is that code generalised, and now every component uses it. */
     var _c7 = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
-    var _img7 = document.getElementById('s43-char-img');
-    if (_img7) {
-      _img7.style.opacity = '0';
-      var _newSrc7 = './assets/images/' + _c7 + '_workout.png';
-      _img7.onload = function() { _img7.style.opacity = '1'; };
-      _img7.src = _newSrc7;
-      if (_img7.complete) _img7.style.opacity = '1';
-    }
+    setImgSrc(document.getElementById('s43-char-img'), './assets/images/' + _c7 + '_workout.png');
   }
   if (n === 2)  { s45Enter(); }
   if (n === 4)  { s47Enter(); }
@@ -552,6 +547,8 @@ function s53Enter() {
   var charNum   = character === 'video' ? '2' : '1';
 
   if (vid) {
+    /* A <video>, not an <img>: setImgSrc must not be used here — it reveals on the 'load' event,
+       which a video element never fires, so the element would stay at opacity 0 forever. */
     vid.src = './assets/videos/Character' + charNum + ' VID Happy.mp4';
     vid.play();
   }
@@ -627,17 +624,15 @@ var XAPI_ITEM_RESULT = { '001': peakResult };
    Called by ../unit-js/90-boot.js, the single place startup side effects run from.
    These used to be a top-level IIFE and DOMContentLoaded handlers. */
 function partBoot() {
+  /* The ' GIF Happy/Sad.gif' preload that stood here named four files that do not
+     exist -- there is not a single .gif anywhere in this unit -- so it was four
+     guaranteed 404s on every boot. The animations it was reaching for are component
+     04's .mp4 files, which nothing references either.
+     Chosen family only, serialised, and after the load event -- see component 01's partBoot. */
   var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
-  var other = char === 'Character1' ? 'Character2' : 'Character1';
-  [char, other].forEach(function(c) {
-    ['', '_workout'].forEach(function(v) {
-      var img = new Image(); img.src = './assets/images/' + c + v + '.png';
-    });
-    /* The ' GIF Happy/Sad.gif' preload that stood here named four files that do not
-       exist -- there is not a single .gif anywhere in this unit -- so it was four
-       guaranteed 404s on every boot. The animations it was reaching for are component
-       04's .mp4 files, which nothing references either. */
-  });
+  preloadImages(['', '_workout'].map(function (v) {
+    return './assets/images/' + char + v + '.png';
+  }));
 
   resetScreenState(currentScreen);
 }

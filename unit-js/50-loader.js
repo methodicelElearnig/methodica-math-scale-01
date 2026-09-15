@@ -138,11 +138,19 @@ function bootXAPI() {
                Called unconditionally rather than only when there is a payload: a learner whose
                document has no slot for this part never enters applyExecutionState at all, and
                would miss the alignment. */
-            if (applyUnitProfile(_saved)) {
-              /* Screen 0 was already painted by the init block in script.js using the previous
-                 character. Repaint here, behind the cover, before it is removed. */
-              try { resetScreenState(currentScreen); } catch (e) {}
-            }
+            try { applyUnitProfile(_saved); } catch (e) {}
+            /* Screen 0 was painted by the markup with ONE hardcoded avatar family, and by
+               partBoot() with the localStorage guess. Repaint it here, from the document — the
+               source of truth — behind the cover.
+
+               UNCONDITIONAL: this used to run only when applyUnitProfile() returned true, i.e.
+               only when the document disagreed with what memory already held. But it returns
+               false whenever the two agree, which is the normal same-machine case — and
+               components 02/03/04 never ran resetScreenState(0) at boot at all. Their screen 0
+               therefore kept the markup's Character1 for the whole visit: not a flash, a
+               permanently wrong avatar for every Character2 learner arriving fresh at those parts.
+               All five screen-0 bodies are idempotent repaints, so running it always is safe. */
+            try { resetScreenState(currentScreen); } catch (e) {}
             _payload = _saved.parts[currentPartSlug()];
 
             /* ── No payload → no screen to restore → no reason to hold the cover ──
@@ -153,7 +161,7 @@ function bootXAPI() {
                dropBootCover also clears __resumeInFlight, so the safety net returns to its normal
                800ms behaviour. If there IS a payload the flag stays set and the cover is held
                until phase B. */
-            if (!_payload) dropBootCover();
+            if (!_payload) dropBootCoverWhenPainted();
           } catch (e) {
             console.error('[resume] read', e);
             dropBootCover();
@@ -238,8 +246,11 @@ function bootXAPI() {
                character was aligned in phase A and the target screen was painted in phase B.
                Called whether resume is off or there was no payload, so it is not inside any
                branch. The markup safety net (inline script, 800ms) sits above this and covers
-               any path that does not reach here at all. */
-            dropBootCover();
+               any path that does not reach here at all.
+               ...Painted is not the same as REQUESTED: phase B assigned the src, which only starts
+               the download. The WhenPainted variant waits for those bytes, with a hard ceiling, so
+               the cover cannot lift over a stale frame. Error paths keep the plain call. */
+            dropBootCoverWhenPainted();
 
             try { sendStatement720('initialized', 'onlinelesson'); } catch (e) {}
             try { xapiWireVideos(); } catch (e) {}

@@ -320,6 +320,64 @@ function dropBootCover() {
   } catch (e) {}
 }
 
+/* ── Holding the cover until the active screen's images are actually ready ──
+   dropBootCover() above stays synchronous: every error path needs the cover down NOW, and
+   _test/verify-report.js calls it and asserts on the next line that the cover is gone. This is the
+   NORMAL-path variant.
+
+   Why it exists: 50-loader.js dropped the cover in the SAME synchronous task in which
+   resetScreenState() had assigned the avatar's src. Assigning src does not repaint — it STARTS a
+   download — so the cover lifted over an <img> still compositing its previous, wrong frame. The
+   comment at 50-loader.js:142 ("repaint here, behind the cover, before it is removed") described
+   an intention the code could not keep. This makes it true.
+
+   ⚠️ This is the one function in the unit that can leave a learner facing a blank white page, so
+   it fails OPEN in every direction: a 404, a hung connection, no active screen, an exception while
+   collecting the images — all of them land on dropBootCover() regardless. The ceiling is armed
+   FIRST, before anything that can throw.
+
+   1200ms, well under the markup safety net's own ceiling: the net is the last resort and must
+   never be the thing that rescues the normal path. If the images are not in by then the learner
+   sees the screen with holes in it — the same outcome as before this change, and strictly better
+   than more white. */
+var BOOT_COVER_IMG_WAIT_MS = 1200;
+
+function dropBootCoverWhenPainted() {
+  var done = false;
+  function finish() { if (done) return; done = true; dropBootCover(); }
+
+  try { setTimeout(finish, BOOT_COVER_IMG_WAIT_MS); } catch (e) { finish(); return; }
+
+  try {
+    var scr = document.querySelector('.screen.active');
+    if (!scr) { finish(); return; }
+
+    var pending = [];
+    scr.querySelectorAll('img').forEach(function (im) {
+      /* .complete is already true for a decoded image and for one with no src at all.
+         getClientRects() is empty inside a display:none subtree — the zoom overlays and the
+         hidden character widgets must not add their download to every learner's wait.
+         (getClientRects, not offsetParent: offsetParent is null for position:fixed.) */
+      if (!im.complete && im.getAttribute('src') && im.getClientRects().length) pending.push(im);
+    });
+    if (!pending.length) { finish(); return; }
+
+    var left = pending.length;
+    pending.forEach(function (im) {
+      /* addEventListener, NOT im.onload — setImgSrc owns those two properties on these very
+         elements, and assigning them here would silently cancel its reveal and leave the avatar
+         at opacity 0 forever. */
+      function settle() {
+        im.removeEventListener('load', settle);
+        im.removeEventListener('error', settle);
+        if (--left <= 0) finish();
+      }
+      im.addEventListener('load', settle);
+      im.addEventListener('error', settle);   /* a 404 must not hold the cover */
+    });
+  } catch (e) { finish(); }
+}
+
 /* ── The 'completed' ledger ──────────────────────────────────────────
    One 'completed' per component, per item, per unit attempt — the back button makes every
    finished screen re-reachable, and the library's own dedupe only spans a single page load.

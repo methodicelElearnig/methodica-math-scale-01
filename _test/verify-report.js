@@ -83,6 +83,7 @@ const SHARED_FNS = [
   'readUnitState', 'captureUnitState', 'persistUnitState', 'emptyUnitState',
   'applyExecutionState', 'scheduleResumeSave', 'flushResumeSave',
   'initResumeLeaveHandlers', 'initResumeResetHatch', 'dropBootCover',
+  'dropBootCoverWhenPainted', 'setImgSrc', 'preloadImages',
   'getUnitCharacter', 'setUnitCharacter', 'getUnitResult', 'setUnitResult',
   'applyUnitProfile', 'drainPendingUnitState', 'recordForwardEdge',
   'previousPartHref', 'goBackToPreviousPart', 'writeForwardState',

@@ -213,9 +213,9 @@ function s26Submit() {
 function s25Enter() {
   var charImg = document.getElementById('s25-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
+      : './assets/images/Character2.png');
   }
 }
 
@@ -817,9 +817,9 @@ function s30Submit() {
 function s31Enter() {
   var charImg = document.getElementById('s31-char-img');
   if (charImg) {
-    charImg.src = window.lomdaState.selectedCharacter === 'text'
+    setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
       ? './assets/images/Character1.png'
-      : './assets/images/Character2.png';
+      : './assets/images/Character2.png');
   }
 }
 
@@ -1140,13 +1140,11 @@ var XAPI_EVAL_ITEMS = { '001': 1, '002': 1, '003': 1, '004': 1, '005': 1, '006':
    Called by ../unit-js/90-boot.js, the single place startup side effects run from.
    These used to be a top-level IIFE and DOMContentLoaded handlers. */
 function partBoot() {
-  var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
-  var other = char === 'Character1' ? 'Character2' : 'Character1';
   /* Base pose only. The _holdhands variant exists in component 01, not here, so
-     preloading it was two guaranteed 404s on every boot of this component. */
-  [char, other].forEach(function(c) {
-    var img = new Image(); img.src = './assets/images/' + c + '.png';
-  });
+     preloading it was two guaranteed 404s on every boot of this component.
+     Chosen family only, serialised, and after the load event -- see component 01's partBoot. */
+  var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
+  preloadImages(['./assets/images/' + char + '.png']);
 
   document.querySelectorAll('.option-card').forEach(card => {
     card.addEventListener('keydown', function (e) {
@@ -1185,6 +1183,13 @@ function partBoot() {
       });
     }
   });
+
+  /* Paint the landing screen from the chosen character, exactly as component 05 has always
+     done. Without it this component kept whatever avatar family the markup hardcoded: the
+     loader's own repaint is the document-truth pass, but it needs the state read to have
+     succeeded, so with resume off, offline, or on a failed read there was nothing at all.
+     Idempotent, and it runs behind the boot cover. */
+  resetScreenState(currentScreen);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
