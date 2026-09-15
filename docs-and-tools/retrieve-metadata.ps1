@@ -318,6 +318,14 @@ function ConvertTo-JsonArray {
     return ,@($Value)
 }
 
+# Since 2026-09-15 a uniqueKey is a full IRI (720 v2.5 p.11), not a bare slug. Anywhere
+# a key used to be appended to a prefix to rebuild an id, an already-absolute key must be
+# taken as the id itself — otherwise the two concatenate into "<prefix>/https://…".
+function Test-AbsoluteIri {
+    param([string] $Value)
+    return ($Value -match '^https?://')
+}
+
 # "…/part-01/index.html" -> "…/part-01" (drops a trailing file name, if any).
 function Get-ContentId {
     param([string] $Ref)
@@ -366,7 +374,8 @@ function New-ItemFileBody {
         $out
     }
     return [ordered]@{
-        id               = "$ComponentId/$($Item.uniqueKey)"
+        id               = if (Test-AbsoluteIri $Item.uniqueKey) { [string] $Item.uniqueKey }
+                           else { "$ComponentId/$($Item.uniqueKey)" }
         title            = $Item.title
         informationToBot = $Item.informationToBot
         contentType      = $Item.contentType
@@ -380,7 +389,8 @@ function New-ComponentFileBody {
 
     $compId = Get-ContentId $Comp.hostedContentRef
     if (-not $compId) {
-        $compId = "$UrlPrefix/$($Comp.uniqueKey)"
+        $compId = if (Test-AbsoluteIri $Comp.uniqueKey) { [string] $Comp.uniqueKey }
+                  else { "$UrlPrefix/$($Comp.uniqueKey)" }
         Write-Warn ("Component {0} has no hostedContentRef — id rebuilt as {1}" -f $Comp.uniqueKey, $compId)
     }
 
@@ -510,7 +520,9 @@ Write-Log ("WROTE   {0}" -f (Split-Path -Leaf $unitPath))
 foreach ($comp in $components) {
     $before = $script:counts.items
     $body   = New-ComponentFileBody $comp $unitId $urlPrefix
-    $path   = Join-Path $OutDir "$($comp.uniqueKey).json"
+    # The key is an IRI now, which is not a legal filename — name the file by its slug,
+    # the same way send-metadata.ps1 finds it on the way back in.
+    $path   = Join-Path $OutDir ("{0}.json" -f (Get-Slug $comp.uniqueKey))
     Write-JsonFile $path $body
     $script:counts.components++
     Write-Log ("WROTE   {0} ({1} items)" -f (Split-Path -Leaf $path), ($script:counts.items - $before))

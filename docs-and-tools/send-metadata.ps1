@@ -216,6 +216,15 @@ function Get-Slug {
     return (($Url.TrimEnd('/')) -split '/')[-1]
 }
 
+# Percent-encode a key for a query string. Component and item keys are full IRIs (720
+# v2.5 p.11), so they contain '/' and CANNOT travel in a URL path segment — the server
+# decodes %2F before routing, which is why the old /components/{key} routes 404 on them.
+# In a query parameter %2F is ordinary data. See Documentation/KATA/KATA-API.md.
+function Enc {
+    param([string] $Value)
+    return [uri]::EscapeDataString($Value)
+}
+
 # -ApiKey > $env:KATA_API_KEY > the git-ignored key file. Returns '' if none is set.
 function Resolve-ApiKey {
     if ($ApiKey)            { return $ApiKey.Trim() }
@@ -415,7 +424,10 @@ function New-ComponentBody {
     # separate PATCH pass after every component exists — see the Main section.
 
     $body = [ordered]@{
-        uniqueKey              = $slug
+        # The full IRI, verbatim from metadata/ — NOT $slug. 720 v2.5 p.11 requires the
+        # catalogue row itself to carry an IRI, and Kata reports `identifier_not_iri` on
+        # any key that is a bare slug. $slug remains the lookup key for overrides above.
+        uniqueKey              = $Comp.id
         title                  = $Comp.title
         componentPurpose       = $purpose
         isAssessment           = [bool] $Comp.isAssessment
@@ -446,7 +458,9 @@ function New-ItemBody {
         throw "Invalid mediaFormat '$($Item.mediaFormat)' at $slug — expected one of: $($ValidMediaFormat -join ', ')."
     }
     $body = [ordered]@{
-        uniqueKey        = $slug
+        # The full IRI, verbatim from metadata/ — see the note in New-ComponentBody.
+        # $slug is kept above only for the enum error messages.
+        uniqueKey        = $Item.id
         title            = $Item.title
         informationToBot = $Item.informationToBot
         contentType      = $contentType
@@ -504,48 +518,67 @@ if (-not $unitOk) {
     }
     $comps = $comps | Sort-Object { [int] $_.order }
 
+    # Component and item keys are full IRIs, so every route below is the query-string form
+    # (/api/v1/component?componentKey=…). The plural /components/{key} routes carry the key
+    # as a path segment and 404 on anything containing '/'. The unit key is still a slug
+    # (v2.5 §2.7 exempts the content unit), so its routes are unchanged.
     foreach ($comp in $comps) {
-        $compKey   = Get-Slug $comp.id
+        $compKey   = $comp.id
+        $compSlug  = Get-Slug $comp.id      # for readable log labels only
+        $compEnc   = Enc $compKey
         $compBody  = New-ComponentBody $comp
         $compPatch = Remove-Key $compBody 'uniqueKey'
-        $compOk = Send-Entity -Label "component $compKey" `
-            -GetPath "/api/v1/components/$compKey" `
+        $compOk = Send-Entity -Label "component $compSlug" `
+            -GetPath "/api/v1/component?componentKey=$compEnc" `
             -CreateMethod 'POST' -CreatePath "/api/v1/content-units/$unitKey/components" -CreateBody $compBody `
-            -PatchPath "/api/v1/components/$compKey" -PatchBody $compPatch
+            -PatchPath "/api/v1/component?componentKey=$compEnc" -PatchBody $compPatch
 
         if (-not $compOk) {
-            Write-Log "Component $compKey failed — skipping its items." 'ERROR'
+            Write-Log "Component $compSlug failed — skipping its items." 'ERROR'
             continue
         }
 
         $order = 0
         foreach ($item in @($comp.subContent)) {
             $order++
-            $itemKey   = Get-Slug $item.id
+            $itemKey   = $item.id
+            $itemSlug  = Get-Slug $item.id
+            $itemEnc   = Enc $itemKey
             $itemBody  = New-ItemBody $item $order
             $itemPatch = Remove-Key $itemBody 'uniqueKey'
-            [void] (Send-Entity -Label "item $itemKey" `
-                -GetPath "/api/v1/components/$compKey/items/$itemKey" `
-                -CreateMethod 'POST' -CreatePath "/api/v1/components/$compKey/items" -CreateBody $itemBody `
-                -PatchPath "/api/v1/components/$compKey/items/$itemKey" -PatchBody $itemPatch)
+            [void] (Send-Entity -Label "item $itemSlug" `
+                -GetPath "/api/v1/component/item?componentKey=$compEnc&itemKey=$itemEnc" `
+                -CreateMethod 'POST' -CreatePath "/api/v1/component/items?componentKey=$compEnc" -CreateBody $itemBody `
+                -PatchPath "/api/v1/component/item?componentKey=$compEnc&itemKey=$itemEnc" -PatchBody $itemPatch)
         }
     }
 
     # 4) recommendedAfterFail — second pass, now that every component exists so
     #    forward references (e.g. part 01 -> part 02) resolve.
+    $slugToIri = @{}
+    foreach ($c in $comps) { $slugToIri[(Get-Slug $c.id)] = $c.id }
+
     foreach ($comp in $comps) {
         if (-not $comp.recommendedAfterFail) { continue }
-        $compKey = Get-Slug $comp.id
-        $keys    = @($comp.recommendedAfterFail | ForEach-Object { Get-Slug $_ })
-        $r = Invoke-Kata 'PATCH' "/api/v1/components/$compKey" ([ordered]@{ recommendedAfterFail = $keys })
+        $compSlug = Get-Slug $comp.id
+        $compEnc  = Enc $comp.id
+        # A reference is a component KEY, so it must now be that component's IRI. This unit
+        # stores these as bare slugs in metadata/ (other units store full IRIs), so resolve
+        # either shape against the component ids rather than assuming one.
+        $keys = @($comp.recommendedAfterFail | ForEach-Object {
+            $s = Get-Slug ([string] $_)
+            if ($slugToIri.ContainsKey($s)) { $slugToIri[$s] }
+            else { Write-Log ("recommendedAfterFail on {0} names '{1}', not a component of this unit" -f $compSlug, $_) 'ERROR'; [string] $_ }
+        })
+        $r = Invoke-Kata 'PATCH' "/api/v1/component?componentKey=$compEnc" ([ordered]@{ recommendedAfterFail = $keys })
         if ($DryRun -or ($r.Code -match '^2\d\d$')) {
             $script:counts.updated++
-            Write-Log ("LINKED  component {0} recommendedAfterFail -> [{1}] (HTTP {2})" -f $compKey, ($keys -join ', '), $r.Code)
+            Write-Log ("LINKED  component {0} recommendedAfterFail -> [{1}] (HTTP {2})" -f $compSlug, (($keys | ForEach-Object { Get-Slug $_ }) -join ', '), $r.Code)
         } else {
             $script:counts.failed++
             $snippet = ($r.Body -replace '\s+', ' ')
             if ($snippet.Length -gt 400) { $snippet = $snippet.Substring(0, 400) + '…' }
-            Write-Log ("FAILED  recommendedAfterFail on {0} (HTTP {1}) {2}" -f $compKey, $r.Code, $snippet) 'ERROR'
+            Write-Log ("FAILED  recommendedAfterFail on {0} (HTTP {1}) {2}" -f $compSlug, $r.Code, $snippet) 'ERROR'
         }
     }
 }
