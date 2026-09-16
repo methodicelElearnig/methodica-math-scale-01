@@ -61,7 +61,7 @@ has no enum-mapping tables. *(Note that the Title-Case vocabularies still docume
 
 | Metadata | Rebuilt from KATA |
 |---|---|
-| `id` (full URL) | component `hostedContentRef` minus `/index.html`; the unit's `id` and each item's `id` are derived from that same prefix. Falls back to `-IdBase` with a warning if no component has one. |
+| `id` (full URL) | the entity's own `uniqueKey`, which **is** the id since the 2026-09-15 IRI migration — for components, items and the URL prefix alike. Falls back to component `hostedContentRef` minus `/index.html` for a pre-migration row (with a warning), then to `-IdBase`. ⚠️ Until 2026-09-16 `hostedContentRef` came first, which put a `720` content path where a `720active` identifier belongs and produced `id` DRIFT rows that were not drift. |
 | unit `title` (string) | `title.Hebrew` (`$TitleLangKey`) |
 | component `learningUnitId` | the unit's `id` URL (KATA returns the bare key) |
 | component `manufacture` | the `$Manufacture` constant, `'methodica'` — KATA returns the provider display name (`מתודיקה`) instead. Set `$Manufacture = $null` to pass KATA's value through. |

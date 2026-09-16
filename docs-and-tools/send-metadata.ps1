@@ -72,6 +72,20 @@ if (-not $MetadataDir) { $MetadataDir = Join-Path $RepoRoot 'metadata' }
 $LogFile = Join-Path $RepoRoot 'send-metadata.log'
 
 # ── (2) PER-UNIT — usually fine as-is ───────────────────────────────────────
+# Where the CONTENT is served from, for hostedContentRef — the field Kata launches the
+# component from. It must resolve.
+#
+# ⚠️ DELIBERATELY NOT DERIVED FROM $Comp.id. Until 2026-09-16 this script built the ref as
+#   ($Comp.id.TrimEnd('/')) + '/index.html'
+# and an id lives under 720active/ while the content is served from 720/. The split is
+# correct by design — 720 v2.5 p.11 says an id "אינו חייב להוביל בפועל לדף אינטרנט פעיל",
+# and no clause ties an id to a serving URL — so deriving one from the other produced a
+# launch URL that serves 0 bytes. Kata currently holds the correct 720/ values, which means
+# the next live run of this script would have overwritten a working launch path with a dead
+# one, for every component of this unit.
+#
+# Take this from the unit's own DEPLOY.md deploy target. No trailing slash.
+$ContentBaseUrl = 'https://lomdot.education.gov.il/metodica/720/math/scale/01'
 # Title language key: wraps a string title into the API object, e.g.
 #   "מדידת מסה" -> { "Hebrew": "מדידת מסה" }. Change only for non-Hebrew content.
 $TitleLangKey = 'Hebrew'
@@ -439,8 +453,9 @@ function New-ComponentBody {
         languages              = @($Comp.languages)
         skills                 = @($Comp.skills)
         estimatedTimeInMinutes = [int] $Comp.estimatedTimeInMinutes
-        # "כתובת תוכן מתארח" — the component's hosted URL (folder + /index.html).
-        hostedContentRef       = ($Comp.id.TrimEnd('/')) + '/index.html'
+        # "כתובת תוכן מתארח" — the component's hosted URL (folder + /index.html), built from
+        # $ContentBaseUrl and NOT from $Comp.id. See the CONFIG note on $ContentBaseUrl.
+        hostedContentRef       = $ContentBaseUrl.TrimEnd('/') + '/' + $slug + '/index.html'
     }
     if ($mastery) { $body.masteryLevel = $mastery }
     return $body

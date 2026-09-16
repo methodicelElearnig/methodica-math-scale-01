@@ -387,11 +387,14 @@ function New-ItemFileBody {
 function New-ComponentFileBody {
     param($Comp, [string] $UnitId, [string] $UrlPrefix)
 
-    $compId = Get-ContentId $Comp.hostedContentRef
+    # The uniqueKey IS the id since the IRI migration, so prefer it. It used to rebuild
+    # the id from hostedContentRef — a CONTENT address under 720/, while the id lives
+    # under 720active/ — which is what produced the phantom `id` DRIFT rows. See step 5.
+    $compId = if (Test-AbsoluteIri ([string] $Comp.uniqueKey)) { [string] $Comp.uniqueKey }
+              else { Get-ContentId $Comp.hostedContentRef }
     if (-not $compId) {
-        $compId = if (Test-AbsoluteIri $Comp.uniqueKey) { [string] $Comp.uniqueKey }
-                  else { "$UrlPrefix/$($Comp.uniqueKey)" }
-        Write-Warn ("Component {0} has no hostedContentRef — id rebuilt as {1}" -f $Comp.uniqueKey, $compId)
+        $compId = "$UrlPrefix/$($Comp.uniqueKey)"
+        Write-Warn ("Component {0} has neither an IRI uniqueKey nor a hostedContentRef — id rebuilt as {1}" -f $Comp.uniqueKey, $compId)
     }
 
     $afterFail = @(foreach ($r in (ConvertTo-JsonArray $Comp.recommendedAfterFail)) { "$UrlPrefix/$(Get-Slug ([string] $r))/" })
@@ -501,14 +504,30 @@ if ($null -ne $unit.componentCount -and [int] $unit.componentCount -ne $componen
 }
 if ($components.Count -eq 0) { Write-Warn 'Unit has no components — writing the unit file only.' }
 
-# 5) Rebuild the URL prefix the `id` fields need, from any component's hostedContentRef.
-$sample = $components | Where-Object { $_.hostedContentRef } | Select-Object -First 1
+# 5) Rebuild the URL prefix the `id` fields need, from any component's uniqueKey.
+#
+# ⚠️ 2026-09-16: this took the prefix from hostedContentRef, and that is where the
+# false drift came from. hostedContentRef is a CONTENT address and lives under 720/;
+# an id is an IDENTIFIER and lives under 720active/. The prefix built from the content
+# address then produced a 720/ unit id sitting above 720active/ item ids in the same
+# file, and verify-metadata.ps1 reported `id` DRIFT rows that were not drift.
+# Since the IRI migration the component uniqueKey IS an absolute id, so it is the
+# authority. hostedContentRef survives only as the fallback for a catalogue row that
+# predates the migration and still carries a bare slug.
+$sample = $components | Where-Object { Test-AbsoluteIri ([string] $_.uniqueKey) } | Select-Object -First 1
 if ($sample) {
-    $sampleId  = Get-ContentId $sample.hostedContentRef
+    $sampleId  = ([string] $sample.uniqueKey).TrimEnd('/')
     $urlPrefix = $sampleId.Substring(0, $sampleId.LastIndexOf('/'))
 } else {
-    $urlPrefix = $IdBase.TrimEnd('/')
-    Write-Warn ("No component carries a hostedContentRef — rebuilding id URLs from -IdBase ({0})." -f $urlPrefix)
+    $sample = $components | Where-Object { $_.hostedContentRef } | Select-Object -First 1
+    if ($sample) {
+        $sampleId  = Get-ContentId $sample.hostedContentRef
+        $urlPrefix = $sampleId.Substring(0, $sampleId.LastIndexOf('/'))
+        Write-Warn ("No component uniqueKey is an absolute IRI — prefix rebuilt from hostedContentRef ({0}). Pre-migration catalogue row? The ids below may name the CONTENT path rather than the identifier path." -f $urlPrefix)
+    } else {
+        $urlPrefix = $IdBase.TrimEnd('/')
+        Write-Warn ("No component carries a uniqueKey IRI or a hostedContentRef — rebuilding id URLs from -IdBase ({0})." -f $urlPrefix)
+    }
 }
 $unitId = "$urlPrefix/$UnitKey"
 
