@@ -296,20 +296,28 @@ function xapiCompleteUnit(result){
    play whenever .load() or a src swap happens, i.e. a fabricated paused/played pair on every
    entry to the screen, including on back-navigation and on resume.
    Only elements carrying data-xapi-report are wired now, its value being the item suffix (e.g.
-   data-xapi-report="003" data-xapi-q="q1"). No element in this unit carries it, so video
+   data-xapi-report="003"). No element in this unit carries it, so video
    reporting is off in practice — the mechanism stays ready for real content video.
-   ── objectId ──
-   The previous version sent objectType 'question' with no objectId and no questionId, so those
-   statements had no question to hang off. They now carry xapiQ() like every other question-scoped
-   statement. */
+   ── objectId: the ITEM, not the question (15.09.26) ──
+   Reported by the test team: these statements went out against the PART. Carrying xapiQ() was
+   never enough. The library builds object.id from sttmContext.objectId, else from a questionId
+   but ONLY for answered/selected/requested, else from window.METADATA.id. played/paused are in
+   neither allowlist, so the questionId and parentId were discarded and the component id was sent
+   (xapi-720-k.js, the object block). They now pass objectId: xapiItemId(item) — the same helper
+   that anchors item initialized/completed.
+   xapiQ() and data-xapi-q are gone from this path: the object is the ITEM, and a video item need
+   not carry a question at all (mass-measure-01's item 006 has none).
+   ⚠️ MOE's own "דוגמאות XAPI" §6/§7 show a COMPONENT id in object for Played/Paused. We follow
+   the test team, because a component-level video event cannot say which video. Written
+   confirmation from MOE is still open — ask it together with the same question for 'requested'. */
 function xapiWireVideos(){
   if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
   document.querySelectorAll('video[data-xapi-report]').forEach(function(v){
     if (v.__xapiWired) return; v.__xapiWired = true;
     var item = v.getAttribute('data-xapi-report');
-    var qKey = v.getAttribute('data-xapi-q') || 'q1';
+    var ctx  = { objectId: xapiItemId(item) };   // the ITEM this video belongs to
     var pausedOnce = false;
-    v.addEventListener('pause', function(){ if (v.ended || v.currentTime === 0) return; pausedOnce = true; try { sendStatement720('paused', 'question', null, Object.assign({ time: v.currentTime }, xapiQ(item, qKey))); } catch (e) {} });
-    v.addEventListener('play',  function(){ if (!pausedOnce) return; try { sendStatement720('played', 'question', null, Object.assign({ time: v.currentTime }, xapiQ(item, qKey))); } catch (e) {} });
+    v.addEventListener('pause', function(){ if (v.ended || v.currentTime === 0) return; pausedOnce = true; try { sendStatement720('paused', 'question', null, Object.assign({ time: v.currentTime }, ctx)); } catch (e) {} });
+    v.addEventListener('play',  function(){ if (!pausedOnce) return; try { sendStatement720('played', 'question', null, Object.assign({ time: v.currentTime }, ctx)); } catch (e) {} });
   });
 }

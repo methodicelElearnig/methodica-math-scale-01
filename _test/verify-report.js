@@ -935,8 +935,14 @@ function checkLearningTypePick() {
 }
 
 /* ══════════════ 19. The YouTube path is anchored and filtered ══════════════
-   xapiWireVideos was fixed to carry xapiQ() and to filter churn; component 01's YouTube player
-   never went through that helper and kept the old un-anchored, unfiltered form. */
+   xapiWireVideos was fixed to filter churn; component 01's YouTube player never went through
+   that helper and kept the old unfiltered form.
+
+   15.09.26 — the anchor changed from the question to the ITEM. Both producers used to pass
+   xapiQ(), and both still reported against the COMPONENT, because the library's questionId
+   branch is allowlisted to answered/selected/requested and played/paused fall through it to
+   METADATA.id. objectId is the only key it honours for these verbs. This file can only read
+   the source; the emitted statement is asserted in 720-common-lib/_test/video-object-id.js. */
 
 function checkYouTubeReporting() {
   const src = fs.readFileSync(path.join(BASE, PART_DIR('01'), 'script.js'), 'utf8');
@@ -946,8 +952,11 @@ function checkYouTubeReporting() {
   const body = branchBodyAt(src, src.indexOf('{', at));
   for (const verb of ['played', 'paused']) {
     const m = body.match(new RegExp("sendStatement720\\('" + verb + "'[\\s\\S]{0,160}?\\)\\s*;"));
-    ok('video', "the YouTube '" + verb + "' carries a question object",
-      !!m && /xapiQ\('002',\s*'q1'\)/.test(m[0]),
+    ok('video', "the YouTube '" + verb + "' carries the ITEM as its object",
+      !!m && /objectId:\s*xapiItemId\('002'\)/.test(m[0]),
+      m ? m[0].replace(/\s+/g, ' ') : 'not found');
+    ok('video', "the YouTube '" + verb + "' no longer passes xapiQ() — the library drops it here",
+      !!m && !/xapiQ\(/.test(m[0]),
       m ? m[0].replace(/\s+/g, ' ') : 'not found');
   }
   ok('video', "'played' only reports after a real pause",

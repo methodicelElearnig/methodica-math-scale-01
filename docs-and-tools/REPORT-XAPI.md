@@ -144,7 +144,7 @@ through. That is why the entry component opens the unit from `onXapiReady()` rat
 | `completed` (component) | in the routing function that leaves the component |
 | `completed` (unit) | once, in the terminal component |
 | `selected` | a genuine learner *preference* (e.g. video vs. flip-cards), under a `category` |
-| `played` / `paused` | YouTube via the player callback; HTML5 `<video>` via `xapiWireVideos()`, **opt-in only** — an element must carry `data-xapi-report="<item>"` |
+| `played` / `paused` | YouTube via the player callback; HTML5 `<video>` via `xapiWireVideos()`, **opt-in only** — an element must carry `data-xapi-report="<item>"`. The object is the **item** (`objectId`), not the question — see §9b |
 
 Notes worth copying:
 
@@ -330,11 +330,16 @@ A five-point audit re-checked the defect classes that had been found and fixed i
   resume onto it forced the learner to re-pick and emitted a second `selected`. It now goes through
   a `picks` ledger keyed on the chosen value, so re-picking the same option is silent while a real
   change of mind still reports.
-- **Part 01's YouTube `played`/`paused` carry a question object.** They were going out as
-  `objectType: 'question'` with no `objectId` and no `questionId` — the very defect that had been
-  fixed inside `xapiWireVideos` and never applied here, because YouTube drives that screen and
-  never touches the helper. They now carry `xapiQ('002','q1')`, and a `played` only reports after a
-  real pause, strictly alternating, so buffering and seek churn no longer inflate the count.
+- **Part 01's YouTube `played`/`paused` carry the ITEM as their object.** A `played` also only
+  reports after a real pause, strictly alternating, so buffering and seek churn no longer inflate
+  the count.
+  ⚠️ **Corrected 15.09.26.** This entry used to say they carried a *question* object, because
+  the call site passed `xapiQ('002','q1')`. They did not. The library resolves `object.id` from
+  `sttmContext.objectId`, else from a `questionId` **but only for `answered`/`selected`/
+  `requested`**, else from `METADATA.id` — so both statements went out against the **component**,
+  which is what the test team reported. They now pass `objectId: xapiItemId('002')`, the only key
+  the library honours for these verbs. MOE's own דוגמאות XAPI §6/§7 show a component id here;
+  we follow the test team and the written confirmation is still open.
 - **A second identical submission can no longer be reported.** 19 of the 22 two-attempt questions
   left the check button live after a wrong non-final attempt, so pressing it again on an
   **unchanged** answer sent a second `answered` — `answered.last`, with a byte-identical

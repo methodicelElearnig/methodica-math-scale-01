@@ -85,26 +85,36 @@ function s4OnPlayerStateChange(e) {
   try {
     if (window.XAPI_USING_G && typeof sendStatement720 === 'function' && s4YTPlayer) {
       var _t = (typeof s4YTPlayer.getCurrentTime === 'function') ? s4YTPlayer.getCurrentTime() : 0;
-      /* Both statements carry the question object. Screen 4 is the video path through item
-         002 (see SCREEN_TO_SUBCONTENT), and xapiWireVideos anchors video statements the
-         same way. Without it these went out as objectType 'question' with no objectId and
-         no questionId - nothing to hang off. That was fixed inside xapiWireVideos and never
-         applied here, because YouTube drives this screen and never touches that helper.
+      /* Both statements carry the ITEM object. Screen 4 is the video path through item 002
+         (see SCREEN_TO_SUBCONTENT), and xapiWireVideos anchors video statements the same way.
+
+         ⚠️ 15.09.26 - this used to pass Object.assign({ time }, xapiQ('002','q1')) and the
+         comment here claimed the statements carried the question object. They did not. The
+         library builds object.id from sttmContext.objectId, else from a questionId but ONLY
+         for answered/selected/requested, else from window.METADATA.id. played/paused are in
+         neither allowlist, so the resolved questionId and parentId were discarded and these
+         went out against the PART - which is what the test team reported. objectId is the
+         only key the library honours for these verbs, and it now carries the item.
+         xapiQ() is gone from this path deliberately: the object is the item, not the question.
+         (MOE's דוגמאות XAPI §6/§7 actually show a COMPONENT id here; we follow the test
+         team and the confirmation from MOE is still open.)
+
          s4PausedOnce is the same noise filter xapiWireVideos uses: YouTube emits
          BUFFERING -> PLAYING on every seek and on autoplay recovery, so without it a single
          viewing reports 'played' several times. The flag is CLEARED on each reported 'played',
          making the pair strictly alternating - slightly stricter than xapiWireVideos, whose
          latch is one-way and therefore still reports a 'played' per seek once the learner has
-         paused at least once. Worth aligning that helper the next time it is touched; it is
-         dormant today (no element in this unit carries data-xapi-report). */
+         paused at least once. It is dormant here today (no element in this unit carries
+         data-xapi-report); methodica-science-mass-measure-01's YouTube handler was given this
+         same latch in the 15.09.26 change. */
       if (e.data === YT.PlayerState.PAUSED) {
         s4PausedOnce = true;
         sendStatement720('paused', 'question', null,
-          Object.assign({ time: _t }, xapiQ('002', 'q1')));
+          { time: _t, objectId: xapiItemId('002') });
       } else if (e.data === YT.PlayerState.PLAYING && s4PausedOnce) {
         s4PausedOnce = false;
         sendStatement720('played', 'question', null,
-          Object.assign({ time: _t }, xapiQ('002', 'q1')));
+          { time: _t, objectId: xapiItemId('002') });
       }
     }
   } catch (err) {}

@@ -683,8 +683,10 @@ re-locked, including the drag board and every dropdown — so these are the edge
 4. **The boot-cover ceiling (6 s) was shorter than the loader's own metadata cap (10 s)**, so a slow
    network lifted the cover mid-restore — the original screen-0 flash, in the one case where it was
    most likely. Now 11 s.
-5. **Part 01's YouTube `played`/`paused` had no question object** and no churn filter. Anchored to
-   `xapiQ('002','q1')` and made strictly alternating. (Reporting-side; also in REPORT-XAPI.md §9b.)
+5. **Part 01's YouTube `played`/`paused` were unanchored** and had no churn filter. Made strictly
+   alternating, and anchored to item `002` via `objectId: xapiItemId('002')` — the `xapiQ('002','q1')
+   written here first was discarded by the library, which is the 15.09.26 correction.
+   (Reporting-side; also in REPORT-XAPI.md §9b.)
 
 Not fixed, by decision, and recorded in [REPORT-XAPI.md](REPORT-XAPI.md) §10: part 02's unenforced
 gate and its two extra scales, part 04's unstated threshold, part 05's missing failure screen, and
