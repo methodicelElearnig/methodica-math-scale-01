@@ -523,7 +523,10 @@ function goBackToPreviousPart(fallbackSlug, fallbackHash) {
 function hideCrossPartBack() {
   if (DEV_NAV) return;
   var b = document.getElementById('back-to-prev-part');
-  if (b) { b.hidden = true; b.setAttribute('aria-hidden', 'true'); }
+  /* Inline display:none as well as the attribute: the button's own rule (.btn-back-s3 { display:flex })
+     is an author rule and beats the UA's [hidden] { display:none } — seen live on 16/09, the
+     button stayed on screen with hidden === true. */
+  if (b) { b.hidden = true; b.style.display = 'none'; b.setAttribute('aria-hidden', 'true'); }
 }
 
 /* Points the document at the component the learner is about to enter, so the next launch resumes

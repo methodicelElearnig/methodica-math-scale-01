@@ -634,8 +634,9 @@ function checkPlatformRouting() {
     ok('routing', c + ': xapiCompleteUnit no longer exists', val('typeof xapiCompleteUnit') === 'undefined');
     ok('routing', c + ': xapiEndComponent is defined', val('typeof xapiEndComponent') === 'function');
     if (c !== '01') {
-      ok('routing', c + ': #back-to-prev-part is hidden by hideCrossPartBack',
-        val("document.getElementById('back-to-prev-part').hidden") === true);
+      ok('routing', c + ': #back-to-prev-part is hidden by hideCrossPartBack — attribute AND display',
+        val("document.getElementById('back-to-prev-part').hidden") === true &&
+        val("getComputedStyle(document.getElementById('back-to-prev-part')).display") === 'none');
       exec("_resumeReady = true; _unitState = emptyUnitState(); _unitState.part = 'sentinel';");
       const errsBefore = consoleErrors.length;
       exec("goBackToPreviousPart('" + UNIT + "-01', '#screen=1');");
@@ -649,7 +650,9 @@ function checkPlatformRouting() {
   /* The flag's two conditions, live. */
   const flag = (search) => {
     const { dom, val } = loadComponent('04', { search });
-    const r = { DEV_NAV: val('DEV_NAV'), backHidden: val("document.getElementById('back-to-prev-part').hidden") };
+    const r = { DEV_NAV: val('DEV_NAV'),
+                backHidden: val("document.getElementById('back-to-prev-part').hidden") === true &&
+                            val("getComputedStyle(document.getElementById('back-to-prev-part')).display") === 'none' };
     dom.window.close();
     return r;
   };
