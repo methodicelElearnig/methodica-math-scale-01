@@ -91,8 +91,10 @@ top-level side effects, and its order is load-bearing:
    `goTo(n)` call anywhere then reaches the wrapper too. Anything installed after it is bypassed.
 3. **`partBoot()` before `bootXAPI()`** — a component's own wiring must be in place before a resume
    can replay onto it.
-4. **`bootXAPI()` last**, exactly as every `script.js` used to end. It may
-   `window.location.replace()` to another component, and nothing after it would run.
+3b. **`hideCrossPartBack()`** — the first-screen "חזרה" is hidden unless `DEV_NAV` (the platform
+   owns routing since 2026-09-16; `docs-and-tools/REPORT-XAPI.md` §12).
+4. **`bootXAPI()` last**, exactly as every `script.js` used to end. (Until 2026-09-16 it could
+   `window.location.replace()` to another component — the resume hop, now removed.)
 
 No `DOMContentLoaded` wrapper is needed: `90-boot.js` sits immediately before `</body>`.
 
@@ -129,14 +131,14 @@ part added, then verify the difference cannot fire elsewhere. Two worked example
 
 | File | What it holds |
 |---|---|
-| `10-identity.js` | `XAPI_ID_PREFIX`, `window.XAPI_UNIT_ID`, `shortId()`, `RESUME_ENABLED` |
+| `10-identity.js` | `XAPI_ID_PREFIX`, `window.XAPI_UNIT_ID`, `shortId()`, `RESUME_ENABLED`, `DEV_NAV` (`?dev=1` and no `?registration` — the only state in which the unit navigates between parts) |
 | `15-ui.js` | `announce`, `scaleApp`, image zoom, `initA11yWiring`, `s5FbClose`, `checkRatio`, `updateNavBar` |
-| `20-xapi.js` | item scope and question ids — `xapiOnScreen`, `xapiQ`, `xapiFinishItems`, `xapiWireVideos`, `xapiItemResult` — plus the call-site helpers `xapiAnswered`, `xapiRequestedHint`, `xapiCompleteComponent`, `xapiCompleteUnit` and the answer-text builders |
+| `20-xapi.js` | item scope and question ids — `xapiOnScreen`, `xapiQ`, `xapiFinishItems`, `xapiWireVideos`, `xapiItemResult` — plus the call-site helpers `xapiAnswered`, `xapiRequestedHint`, `xapiCompleteComponent`, `xapiEndComponent` (report, then disable the button — every former route function ends here) and the answer-text builders |
 | `25-report.js` | the whole "מצאתם בעיה?" layer + `initReportModal()` |
 | `28-feedback-drag.js` | `initFeedbackDrag()` — draggable inline feedback |
 | `30-nav.js` | `currentScreen`, `goTo()`, `applyExecutionState()` |
-| `40-resume.js` | the v4 resume core, unit-level state (character/results), the four statement ledgers (`done`, `doneItems`, `hints`, `picks`) behind `sendStatementOnce`/`sendCompletedOnce`, cross-part back edges, the boot cover, the reset hatch, save/flush |
-| `50-loader.js` | `bootXAPI()` — CDN loader, the three gates, the capped metadata poll, the two-phase resume hop, `onXapiReady()` |
+| `40-resume.js` | the v4 resume core, unit-level state (character/results), the four statement ledgers (`done`, `doneItems`, `hints`, `picks`) behind `sendStatementOnce`/`sendCompletedOnce`, cross-part back edges (`?dev=1` only) and `hideCrossPartBack`, the boot cover, the reset hatch, save/flush |
+| `50-loader.js` | `bootXAPI()` — CDN loader, the three gates, the capped metadata poll, the two-phase resume read (the cross-part hop was removed 2026-09-16), `onXapiReady()` |
 | `60-devbridge.js` | `initDevBridge()` — the `index_dev.html` postMessage bridge (not deployed) |
 | `90-boot.js` | the startup sequence — the only side effects |
 

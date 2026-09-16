@@ -16,8 +16,10 @@
         call anywhere then reaches the wrapper too. Anything installed after it would be bypassed.
      3. partBoot() before bootXAPI() — a component's own wiring must be in place before a resume
         can replay onto it.
-     4. bootXAPI() last, exactly as every script.js used to end. It may window.location.replace()
-        to another component, and nothing after it would run.
+     3b. hideCrossPartBack() — the first-screen "חזרה" is hidden unless DEV_NAV (10-identity.js);
+        the platform owns routing since 2026-09-16.
+     4. bootXAPI() last, exactly as every script.js used to end. (Until 2026-09-16 it could
+        window.location.replace() to another component — the resume hop, now removed.)
 
    No DOMContentLoaded wrapper is needed: this file sits immediately before </body>, so the DOM
    is already complete. That is the same position the report-select and a11y code ran from before
@@ -44,6 +46,8 @@
   if (typeof partBoot === 'function') {
     try { partBoot(); } catch (e) { console.error('[boot] partBoot', e); }
   }
+
+  try { hideCrossPartBack(); } catch (e) { console.error('[boot] hideCrossPartBack', e); }
 
   bootXAPI();
 })();

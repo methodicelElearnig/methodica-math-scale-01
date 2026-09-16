@@ -88,7 +88,7 @@ const SHARED_FNS = [
   'applyUnitProfile', 'drainPendingUnitState', 'recordForwardEdge',
   'previousPartHref', 'goBackToPreviousPart', 'writeForwardState',
   'resumeIsPainting', 'xapiAnswered', 'xapiRequestedHint',
-  'xapiCompleteComponent', 'xapiCompleteUnit'
+  'xapiCompleteComponent', 'xapiEndComponent'
 ];
 
 const failures = [];
@@ -478,8 +478,12 @@ function checkUnitLevelState() {
 
 function checkBackEdges() {
   /* Part 03 is reachable from 02 (normal) and from 01 (the >=4/5 skip). A
-     hard-coded back button sends the skipper into content they never saw. */
-  const { dom, val, exec } = loadComponent('03');
+     hard-coded back button sends the skipper into content they never saw.
+     Since 2026-09-16 the whole edge machinery is DEV-ONLY (the platform owns
+     routing — checkPlatformRouting below asserts the production side), so this
+     group boots with ?dev=1 to reach it. */
+  const { dom, val, exec } = loadComponent('03', { search: '?dev=1' });
+  ok('edges', 'the group runs under DEV_NAV', val('DEV_NAV') === true);
   const NAV_KEY = 'lomda_nav_edges::' + UNIT;
 
   exec('_resumeReady = true; _unitState = emptyUnitState();');
@@ -528,7 +532,8 @@ function checkBackEdges() {
 
   dom.window.close();
 
-  /* Every back button must be wired to goBackToPreviousPart with a fallback. */
+  /* Every back button must be wired to goBackToPreviousPart with a fallback —
+     it still is, for the dev walkthrough; production hides it (checkPlatformRouting). */
   for (const c of ['02', '03', '04', '05']) {
     const html = fs.readFileSync(path.join(BASE, PART_DIR(c), 'index.html'), 'utf8');
     const m = html.match(/id="back-to-prev-part"[^>]*onclick="goBackToPreviousPart\('([^']+)',\s*'([^']+)'\)"/);
@@ -541,6 +546,120 @@ function checkBackEdges() {
         /^#screen=\d+$/.test(m[2]), m[2]);
     }
   }
+}
+
+/* ══════════════ 9b. The platform owns routing (2026-09-16) ══════════════
+   Kata launches each component on its own URL with its own ?registration and
+   routes on our 'completed'. So: no unit-level statement anywhere; every
+   location.href= / location.replace( sits inside an `if (DEV_NAV)` block (or
+   behind goBackToPreviousPart's `if (!DEV_NAV) return;`); the loader's resume
+   hop is gone; DEV_NAV needs ?dev=1 AND no ?registration; every former route
+   function ends via xapiEndComponent; and in a production boot the back button
+   is hidden and goBackToPreviousPart moves nothing. REPORT-XAPI.md §12. */
+
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1');
+}
+
+function checkPlatformRouting() {
+  const files = ['unit-js/10-identity.js', 'unit-js/20-xapi.js', 'unit-js/40-resume.js',
+                 'unit-js/50-loader.js', 'unit-js/90-boot.js',
+                 ...COMPONENTS.map(c => PART_DIR(c) + '/script.js')];
+
+  for (const rel of files) {
+    const src  = fs.readFileSync(path.join(BASE, rel), 'utf8');
+    const code = stripComments(src);
+    ok('routing', rel + ': no unit-level statement (xapiCompleteUnit / scope unit)',
+      !/xapiCompleteUnit\s*\(/.test(code) && !/scope\s*:\s*['"]unit['"]/.test(code));
+
+    /* Every cross-part hop must be gated. Brace-count from the last `if (DEV_NAV) {` —
+       a try/catch sits between it and the hop in every route function. */
+    for (const m of code.matchAll(/location\.(href\s*=(?!=)|replace\s*\()/g)) {
+      const before = code.slice(Math.max(0, m.index - 1200), m.index);
+      const at = before.lastIndexOf('if (DEV_NAV) {');
+      let openBlock = false;
+      if (at !== -1) {
+        const tail = before.slice(at + 'if (DEV_NAV) {'.length);
+        openBlock = (tail.split('{').length - 1) - (tail.split('}').length - 1) >= 0;
+      }
+      const guarded = /if \(!DEV_NAV\) return;(?![\s\S]*\nfunction )/.test(before);
+      ok('routing', rel + ': the hop at offset ' + m.index + ' is gated on DEV_NAV',
+        openBlock || guarded, m[0]);
+    }
+  }
+
+  const ident = fs.readFileSync(path.join(BASE, 'unit-js', '10-identity.js'), 'utf8');
+  ok('routing', "10-identity.js: DEV_NAV needs ?dev=1 AND no ?registration",
+    /get\('dev'\)\s*===\s*'1'\s*&&\s*!\w+\.has\('registration'\)/.test(ident));
+
+  const loader = stripComments(fs.readFileSync(path.join(BASE, 'unit-js', '50-loader.js'), 'utf8'));
+  ok('routing', '50-loader.js: the resume hop to _saved.part is gone',
+    !/_saved\.part\s*!==\s*currentPartSlug\(\)/.test(loader) && !/location\.replace/.test(loader));
+
+  const resume = stripComments(fs.readFileSync(path.join(BASE, 'unit-js', '40-resume.js'), 'utf8'));
+  ok('routing', '40-resume.js: goBackToPreviousPart returns unless DEV_NAV',
+    /function goBackToPreviousPart\([^)]*\)\s*\{\s*if \(!DEV_NAV\) return;/.test(resume));
+  ok('routing', '40-resume.js: hideCrossPartBack hides #back-to-prev-part unless DEV_NAV',
+    /function hideCrossPartBack\(\)\s*\{\s*if \(DEV_NAV\) return;[\s\S]{0,200}back-to-prev-part/.test(resume));
+  const boot = stripComments(fs.readFileSync(path.join(BASE, 'unit-js', '90-boot.js'), 'utf8'));
+  ok('routing', '90-boot.js calls hideCrossPartBack() before bootXAPI()',
+    boot.indexOf('hideCrossPartBack()') > -1 && boot.indexOf('hideCrossPartBack()') < boot.indexOf('bootXAPI()'));
+
+  /* Every former route function ends via xapiEndComponent, with its button. */
+  const ROUTE = { '01': ['routeAfterQuiz', 's23-continue'], '02': ['routeAfterAdvancedPractice', 's33-continue'],
+                  '03': ['goToAdvanced', 's35-continue'], '04': ['goToNextModule', 's41-continue'],
+                  '05': ['closeLomda', 's53-finish'] };
+  for (const c of COMPONENTS) {
+    const [fn, btn] = ROUTE[c];
+    const code = stripComments(fs.readFileSync(path.join(BASE, PART_DIR(c), 'script.js'), 'utf8'));
+    const m = code.match(new RegExp('function ' + fn + '\\(\\)\\s*\\{([\\s\\S]*?)\\n\\}'));
+    ok('routing', c + ': ' + fn + '() ends the component via xapiEndComponent(…, #' + btn + ')',
+      !!m && m[1].includes('xapiEndComponent(') && m[1].includes("getElementById('" + btn + "')"),
+      m ? m[1].slice(0, 120) : 'function not found');
+    const html = fs.readFileSync(path.join(BASE, PART_DIR(c), 'index.html'), 'utf8');
+    ok('routing', c + ': #' + btn + ' exists in the markup', html.includes('id="' + btn + '"'));
+  }
+  /* B2: component 05 reports on the click, not on arrival. */
+  const s05 = stripComments(fs.readFileSync(path.join(BASE, PART_DIR('05'), 'script.js'), 'utf8'));
+  const s53 = s05.match(/function s53Enter\(\)\s*\{([\s\S]*?)\n\}/);
+  ok('routing', '05: s53Enter() no longer sends the component completed on arrival',
+    !!s53 && !s53[1].includes('xapiCompleteComponent(') && !s53[1].includes('xapiEndComponent('));
+  ok('routing', '05: closeLomda() calls window.close() only under DEV_NAV',
+    /if \(DEV_NAV\) window\.close\(\);/.test(s05));
+
+  /* Production boots: flag off, back hidden, back function inert, no unit helper. */
+  for (const c of COMPONENTS) {
+    const { dom, val, exec, consoleErrors } = loadComponent(c);
+    ok('routing', c + ': DEV_NAV is false in a production boot', val('DEV_NAV') === false, String(val('DEV_NAV')));
+    ok('routing', c + ': xapiCompleteUnit no longer exists', val('typeof xapiCompleteUnit') === 'undefined');
+    ok('routing', c + ': xapiEndComponent is defined', val('typeof xapiEndComponent') === 'function');
+    if (c !== '01') {
+      ok('routing', c + ': #back-to-prev-part is hidden by hideCrossPartBack',
+        val("document.getElementById('back-to-prev-part').hidden") === true);
+      exec("_resumeReady = true; _unitState = emptyUnitState(); _unitState.part = 'sentinel';");
+      const errsBefore = consoleErrors.length;
+      exec("goBackToPreviousPart('" + UNIT + "-01', '#screen=1');");
+      ok('routing', c + ': goBackToPreviousPart() moves nothing in production',
+        val('_unitState.part') === 'sentinel' && consoleErrors.length === errsBefore,
+        val('_unitState.part') + ' / ' + consoleErrors.slice(errsBefore).join(' | '));
+    }
+    dom.window.close();
+  }
+
+  /* The flag's two conditions, live. */
+  const flag = (search) => {
+    const { dom, val } = loadComponent('04', { search });
+    const r = { DEV_NAV: val('DEV_NAV'), backHidden: val("document.getElementById('back-to-prev-part').hidden") };
+    dom.window.close();
+    return r;
+  };
+  let r = flag('');
+  ok('devnav', 'no query: DEV_NAV false, back hidden', r.DEV_NAV === false && r.backHidden === true, JSON.stringify(r));
+  r = flag('?dev=1');
+  ok('devnav', '?dev=1 alone: DEV_NAV true, back shown', r.DEV_NAV === true && r.backHidden === false, JSON.stringify(r));
+  r = flag('?dev=1&registration=r1');
+  ok('devnav', '?dev=1&registration: DEV_NAV false, back hidden — a launch URL never opens navigation',
+    r.DEV_NAV === false && r.backHidden === true, JSON.stringify(r));
 }
 
 /* ══════════════ 10. The reset hatch ══════════════ */
@@ -1133,6 +1252,7 @@ function main() {
   checkStateDocument();
   checkUnitLevelState();
   checkBackEdges();
+  checkPlatformRouting();
   checkResetHatch();
   checkCommitmentFlush();
   checkDeployContract();

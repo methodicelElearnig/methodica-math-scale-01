@@ -22,3 +22,17 @@ function shortId(u){ return String(u || '').replace(/\/+$/, '').split('/').pop()
    across parts, a screen pointer within a part, unit-level state for the chosen character, and
    the 'completed' ledger — which lives in the document and therefore survives tab closure. */
 var RESUME_ENABLED = true;
+
+/* ── The platform owns routing (2026-09-16, docs-and-tools/REPORT-XAPI.md §12) ──
+   Kata launches each component on its own URL with its own ?registration, and routes on our
+   'completed' statements. The unit therefore no longer moves between components by itself: the
+   last-screen buttons report and stop, the first-screen "חזרה" is hidden, and the loader's resume
+   hop is gone. The navigation code is kept for local walkthroughs behind this flag — and ONLY when
+   the page was not launched by the platform: every Kata launch URL carries ?registration, and a hop
+   in a real session would report the next component under this component's registration. So the
+   flag is refused outright whenever ?registration is present, whatever else the URL says. */
+var DEV_NAV = false;
+try {
+  var _devQ = new URLSearchParams(location.search);
+  DEV_NAV = _devQ.get('dev') === '1' && !_devQ.has('registration');
+} catch (e) {}

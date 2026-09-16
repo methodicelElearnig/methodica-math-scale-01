@@ -1021,19 +1021,22 @@ function getBasicPracticeScore() {
   return count;
 }
 
-// 2/2 נכון → תרגול כיתה (03) | פחות → ללא מעבר כרגע
+// The component ends here on both paths; the PLATFORM routes on the result (REPORT-XAPI.md §12)
 function routeAfterAdvancedPractice() {
-  /* xAPI: report the component before deciding whether the learner may move on. This runs
-     on BOTH paths — a learner who does not clear 2/2 stays on this screen, and without a
-     'completed' here their whole attempt would never be reported. That branch does not navigate,
-     so it is the reason the ledger persists its mark synchronously: nothing else would write it,
-     and the library's own dedupe lasts only one page load — it cannot survive the reload or the
-     back-navigation that now bring the learner through here again. */
+  /* xAPI: report the component on BOTH paths — a learner who does not clear the gates still has
+     to be reported, or their whole attempt would never be recorded; routing a failing learner is
+     the platform's job, via recommendedAfterFail. This is the last click (s33's check button):
+     report and stop. The ledger persists its mark synchronously because nothing else would write
+     it, and the library's own dedupe lasts only one page load — it cannot survive the reload that
+     brings the learner through here again. */
   var _n = xapiCorrectCount();
-  xapiCompleteComponent({ success: getBasicPracticeScore() >= 3 && getAdvancedPracticeScore() >= 2,
-                          score: { scaled: _n / 7 } });
-  writeForwardState('methodica-math-scale-01-03', '#screen=8');
-  window.location.href = '../methodica-math-scale-01-03/index.html' + window.location.search;
+  xapiEndComponent({ success: getBasicPracticeScore() >= 3 && getAdvancedPracticeScore() >= 2,
+                     score: { scaled: _n / 7 } }, document.getElementById('s33-continue'));
+  /* The hop to 03 lives on only for a local walkthrough (DEV_NAV, unit-js/10-identity.js). */
+  if (DEV_NAV) {
+    writeForwardState('methodica-math-scale-01-03', '#screen=8');
+    window.location.href = '../methodica-math-scale-01-03/index.html' + window.location.search;
+  }
 }
 
 function s33Submit() {

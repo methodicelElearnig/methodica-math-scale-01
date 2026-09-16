@@ -2167,25 +2167,30 @@ function getQuizScore() {
   return count;
 }
 
-// ≥4 נכון → תרגול כיתה (03) | <4 → תרגול בסיסי (02)
+// ≥4 נכון → תרגול כיתה (03) | <4 → תרגול בסיסי (02) — decided by the PLATFORM on the result below
 function routeAfterQuiz() {
   /* xAPI: close the open content item, then report the component result. The denominator is the
      5 quiz exercises the learner was told about ("4 מתוך 5"), not the number of metadata
      questions — s19+s20 together are one exercise. Supplying the result explicitly overrides the
-     library's all-correct aggregation, which would report success:false at 4/5. */
+     library's all-correct aggregation, which would report success:false at 4/5.
+     This is the last click of the component (s23's check button): report and stop. Kata reads
+     the result and opens 02 or 03 from the catalogue (REPORT-XAPI.md §12). */
   var _n = getQuizScore();
-  xapiCompleteComponent({ success: _n >= 4, score: { scaled: _n / 5 } });
-  /* Carry ?slxapi (and ?registration) into the next component — without this the LRS
-     configuration is lost and every later part reports nothing. */
-  var _q = window.location.search;
-  /* Resume: point the state document at the component being entered — inside each branch, because
-     the destination differs. Without it the next launch would come back to this finished quiz. */
-  if (getQuizScore() >= 4) {
-    writeForwardState('methodica-math-scale-01-03', '#screen=23');
-    window.location.href = '../methodica-math-scale-01-03/index.html' + _q;
-  } else {
-    writeForwardState('methodica-math-scale-01-02', '#screen=23');
-    window.location.href = '../methodica-math-scale-01-02/index.html' + _q;
+  xapiEndComponent({ success: _n >= 4, score: { scaled: _n / 5 } }, document.getElementById('s23-continue'));
+
+  /* The unit's own routing lives on only for a local walkthrough (DEV_NAV, unit-js/10-identity.js).
+     writeForwardState() points the state document at the component being entered — inside each
+     branch, because the destination differs — and the query string rides along, because the LRS
+     configuration lives in it. */
+  if (DEV_NAV) {
+    var _q = window.location.search;
+    if (_n >= 4) {
+      writeForwardState('methodica-math-scale-01-03', '#screen=23');
+      window.location.href = '../methodica-math-scale-01-03/index.html' + _q;
+    } else {
+      writeForwardState('methodica-math-scale-01-02', '#screen=23');
+      window.location.href = '../methodica-math-scale-01-02/index.html' + _q;
+    }
   }
 }
 
@@ -2718,11 +2723,10 @@ function s23RestoreUI() {
    and, where it needs one, an onXapiReady() hook. */
 var XAPI_METADATA_FILE = '../metadata/methodica-math-scale-01-01.json';
 
-/* Entry component: this is the launch target every session passes through, so it also
-   opens the unit. Runs from the loader's ready hook, after the resume hop can no longer
-   happen — a session belonging to another part must not leave a unit statement here. */
+/* Entry component. The unit metadata is still loaded (UNIT_METADATA feeds the bug-report form);
+   the unit-scope 'initialized' that used to follow it is gone since 2026-09-16 — v2.5/v2.7 define
+   object as item or component only, and the platform derives unit state itself
+   (REPORT-XAPI.md §12). */
 function onXapiReady() {
-  loadUnitMetadata('../metadata/methodica-math-scale-01_unit.json', function () {
-    try { sendStatement720('initialized', 'onlinelesson', null, { scope: 'unit' }); } catch (e) {}
-  });
+  loadUnitMetadata('../metadata/methodica-math-scale-01_unit.json', function () {});
 }

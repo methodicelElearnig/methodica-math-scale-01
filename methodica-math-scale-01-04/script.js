@@ -58,13 +58,16 @@ let ddqTargetResults = {};
 
 
 
-/* ── Navigation ── */
+/* ── End of the component (the platform routes — REPORT-XAPI.md §12) ── */
 function goToNextModule() {
+  /* Last click (s41's check button): report and stop. */
   var _n = xapiCorrectCount();
-  xapiCompleteComponent({ success: _n >= 4, score: { scaled: _n / 5 } });
-  /* Resume: point the state document at the component being entered, before navigating. */
-  writeForwardState('methodica-math-scale-01-05', '#screen=5');
-  window.location.href = '../methodica-math-scale-01-05/index.html' + window.location.search;
+  xapiEndComponent({ success: _n >= 4, score: { scaled: _n / 5 } }, document.getElementById('s41-continue'));
+  /* The hop to 05 lives on only for a local walkthrough (DEV_NAV, unit-js/10-identity.js). */
+  if (DEV_NAV) {
+    writeForwardState('methodica-math-scale-01-05', '#screen=5');
+    window.location.href = '../methodica-math-scale-01-05/index.html' + window.location.search;
+  }
 }
 
 

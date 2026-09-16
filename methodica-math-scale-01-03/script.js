@@ -119,15 +119,17 @@ var ddqDone        = false;
 var ddqAttempts    = 0;
 
 
-/* ── Cross-folder navigation ── */
+/* ── End of the component (the platform routes — REPORT-XAPI.md §12) ── */
 function goToAdvanced() {
   /* xAPI: this component is the off-computer class task — the catalog gives it no questions
      (isAssessment: false), so 'completed' carries success but no score: there is nothing to
-     grade, only to finish. */
-  xapiCompleteComponent({ success: true });
-  /* Resume: point the state document at the component being entered, before navigating. */
-  writeForwardState('methodica-math-scale-01-04', '#screen=2');
-  window.location.href = '../methodica-math-scale-01-04/index.html' + window.location.search;
+     grade, only to finish. Last click (s35's button): report and stop. */
+  xapiEndComponent({ success: true }, document.getElementById('s35-continue'));
+  /* The hop to 04 lives on only for a local walkthrough (DEV_NAV, unit-js/10-identity.js). */
+  if (DEV_NAV) {
+    writeForwardState('methodica-math-scale-01-04', '#screen=2');
+    window.location.href = '../methodica-math-scale-01-04/index.html' + window.location.search;
+  }
 }
 
 /* ── Per-part boot hook ──

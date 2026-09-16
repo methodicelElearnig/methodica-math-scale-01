@@ -271,19 +271,15 @@ function xapiCompleteComponent(result){
   } catch (e) { console.error('[xAPI] completed component', e); }
 }
 
-/* The unit 'completed'. Sent once per attempt, from the finale screen in component 05.
-   'unit' is a ledger key of its own, because the statement belongs to the unit and not to the
-   component that happens to send it.
-
-   ⚠️ opts is { scope: 'unit' }, NOT { objectId: window.XAPI_UNIT_ID }. Both reach the same object,
-   but this unit has used `scope` since its first version — including for the unit 'initialized'
-   in component 01's onXapiReady — and that is the shape its live statements have been reviewed
-   against. The science unit uses objectId; do not "harmonise" one into the other without checking
-   what the library does with each, because the two are resolved by different code paths. */
-function xapiCompleteUnit(result){
-  try {
-    sendCompletedOnce('done', 'unit', 'onlinelesson', result || null, { scope: 'unit' });
-  } catch (e) { console.error('[xAPI] completed unit', e); }
+/* The last screen's button: report the component, then stop. Kata removes the component on
+   'completed' (v2.7 p.23) and routes on it; outside Kata the disabled button is the only sign the
+   click landed. Every former route function ends here — the hop that used to follow lives on only
+   under DEV_NAV (10-identity.js). There is no unit-level statement any more (the xapiCompleteUnit
+   that stood here until 2026-09-16): v2.5/v2.7 define object as item or component only, and the
+   platform derives unit state itself. See REPORT-XAPI.md §12. */
+function xapiEndComponent(result, btn){
+  xapiCompleteComponent(result);
+  if (btn) { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); }
 }
 
 /* played/paused for HTML5 <video> — CONTENT VIDEO ONLY, by explicit opt-in.

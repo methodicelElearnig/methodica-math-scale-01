@@ -490,8 +490,12 @@ function previousPartHref(fallbackSlug, fallbackHash) {
 
 /* Back navigation. Points the document at the destination BEFORE navigating — that is what stops
    the destination's loader seeing a mismatch and hopping straight back here (a ping-pong that
-   re-sent 'completed' every cycle). If the write does not land, staying put is the safe failure. */
+   re-sent 'completed' every cycle). If the write does not land, staying put is the safe failure.
+   Since 2026-09-16 the platform owns routing (REPORT-XAPI.md §12): outside a local walkthrough
+   (DEV_NAV, 10-identity.js) this is a no-op. The button is hidden too, by hideCrossPartBack() —
+   belt and braces, because the control can still be reached from a stale DOM or by keyboard. */
 function goBackToPreviousPart(fallbackSlug, fallbackHash) {
+  if (!DEV_NAV) return;
   var href = previousPartHref(fallbackSlug, fallbackHash);
   var edge = _incomingEdge();
   var destSlug = (edge && edge.from) || fallbackSlug;
@@ -513,8 +517,19 @@ function goBackToPreviousPart(fallbackSlug, fallbackHash) {
   window.location.replace(href);
 }
 
+/* Production hides the first-screen "חזרה" (#back-to-prev-part, parts 02–05): the platform routes,
+   and the learner never moves between parts from inside one. Called from 90-boot.js. Under DEV_NAV
+   the button stays, resolved by the three layers above. */
+function hideCrossPartBack() {
+  if (DEV_NAV) return;
+  var b = document.getElementById('back-to-prev-part');
+  if (b) { b.hidden = true; b.setAttribute('aria-hidden', 'true'); }
+}
+
 /* Points the document at the component the learner is about to enter, so the next launch resumes
    forward instead of back into the part they just finished — and records the back edge.
+   Since 2026-09-16 every caller sits inside an `if (DEV_NAV)` block — in production the landing
+   pointer is never moved by the unit, because the unit never leaves the component Kata launched.
    The departing part's payload is KEPT (captureUnitState runs first). That is the whole point:
    the back button restores the part the learner came from, and it cannot restore what was thrown
    away. An already-visited destination keeps its payload too, so going forward again resumes

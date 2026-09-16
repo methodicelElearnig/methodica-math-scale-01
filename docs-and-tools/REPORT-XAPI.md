@@ -189,6 +189,12 @@ reported, or the whole attempt goes unrecorded. In this unit part 02 emits `comp
 branches — routing a failed learner is the host platform's job, via the component's
 `recommendedAfterFail`.
 
+**`completed` is the learner's last click (2026-09-16).** Kata removes the component from the
+screen when `completed` arrives (v2.7 p.23), so it may go only after the feedback and the finale
+have been seen. Part 05 used to report on *arrival* at screen 10; it now reports from the "סיימתי"
+button (`closeLomda()`). Known cost, accepted: a learner who closes the tab on the finale without
+clicking is not recorded for that component. See §12.
+
 > ⚠️ **Corrected 2026-09-02.** This paragraph used to end "and simply does not navigate when the
 > gate is not met". That was never true of the code: `routeAfterBasicPractice()` is `goTo(6)` with
 > no branch, and `routeAfterAdvancedPractice()` navigates to part 03 unconditionally — so a learner
@@ -199,15 +205,19 @@ branches — routing a failed learner is the host platform's job, via the compon
 
 ## 6. Query-string propagation
 
-`?slxapi` and `?registration` enter through the **root `index.html`**, which redirects to part 01
-carrying `window.location.search`. **Every** cross-part jump must append `window.location.search`:
+`?slxapi` and `?registration` arrive on the component's **own launch URL** — since 2026-09-16 Kata
+opens every component separately and the unit no longer jumps between parts (§12). The rule below
+therefore matters only for the `?dev=1` walkthrough, where the old hops still run — and for the
+root `index.html`, which still redirects to part 01 carrying `window.location.search`. **Every**
+cross-part jump must append `window.location.search`:
 
 ```js
 window.location.href = '../<unit-slug>-0N/index.html' + window.location.search;
 ```
 
 Miss one and the LRS configuration is lost from that point on — everything downstream silently
-reports nothing.
+reports nothing. `_test/verify-report.js` still checks it (`deploy`): a dev hop that dropped the
+query would make the walkthrough report nothing and look exactly like a reporting bug.
 
 ---
 
@@ -293,7 +303,8 @@ Reporting-side changes only; the resume side is in [RESUME.md](RESUME.md).
 
 - **Six call-site helpers** in `unit-js/20-xapi.js` replace what used to be a 6–8 line block repeated
   25 times and a raw one-liner repeated 23 times: `xapiAnswered`, `xapiRequestedHint`,
-  `xapiCompleteComponent`, `xapiCompleteUnit`, plus the answer-text builders `xapiFieldsAnswer`,
+  `xapiCompleteComponent`, `xapiCompleteUnit` (removed 2026-09-16 — §12; `xapiEndComponent` stands
+  in its place), plus the answer-text builders `xapiFieldsAnswer`,
   `xapiMultiAnswer` and `xapiZoneAnswer`. **No statement shape changed** — verb, `success`,
   `score.scaled` and `student_answer` are byte-identical to before.
   The point is not tidiness: the `XAPI_Q_RESULTS`-before-the-`try/catch` invariant in §2 is now
@@ -400,7 +411,11 @@ that part 05's own metadata routes a failure to — item `-04-005` — has no ma
 agrees everywhere (3 of 4, in the instruction, in `PEAK_PASS_MIN`, in both `completed` statements
 and in the metadata).
 
-### 11.6 The unit `completed` carries no result
+### 11.6 The unit `completed` carries no result — RESOLVED 2026-09-16, by removal
+
+> **Overtaken.** There is no unit `completed` any more, with or without a result: v2.5 and v2.7
+> define `object` as item or component only, and the platform derives the unit outcome itself.
+> `xapiCompleteUnit` is deleted (§12). The text below is kept for the record.
 
 `xapiCompleteUnit(null)` in part 05. This contradicts the rule at the top of §5 — *always supply an
 explicit result, because the library's own aggregation is an all-correct AND and would report
@@ -423,7 +438,78 @@ components, which nothing currently defines.
 | 02 | 7 | 7 | 7 | 7 | `routeAfterAdvancedPractice()` |
 | 03 | 1 | 0 | 0 | 0 | `goToAdvanced()` |
 | 04 | 4 | 5 | 5 | 5 | `goToNextModule()` |
-| 05 | 1 | 4 | 4 | 4 | `s53Enter()` (+ the unit `completed`) |
+| 05 | 1 | 4 | 4 | 4 | `closeLomda()` — the "סיימתי" click (until 2026-09-16: `s53Enter()` on arrival, plus the unit `completed`) |
+
+---
+
+## 12. The platform owns routing (2026-09-16)
+
+**One principle: Kata decides what the learner does next.** It launches each component on its own
+URL — `POST /api/v1/launcher/context` takes a *component* key and returns a per-component
+`launchUrl` and `registrationId` — reads our `completed` statements, and routes on the catalogue
+(`recommendedAfterFail`, `isRequired`, order). The spec pairs two sentences (v2.7 p.23): *"כאשר
+נשלח completed עבור רכיב תוכן, הפלטפורמה מסירה את הרכיב מהמסך"*, and therefore `completed` only
+*"לאחר סיום מלא של הרכיב, לרבות הצגת משוב"*.
+
+Until this date the unit routed itself: `routeAfterQuiz` (01 → 02 or 03 on the score),
+`routeAfterAdvancedPractice` (02 → 03), `goToAdvanced` (03 → 04), `goToNextModule` (04 → 05), a
+"חזרה" on the first screen of 02–05, and the loader's resume hop to `_saved.part`. **That was a live
+reporting defect, not only an ownership question**: Kata's `registration` is per *component*, and
+every hop appended `window.location.search`, so a learner walking the unit from 01 reported every
+part under part 01's registration and saved every part's resume slot into part 01's state blob.
+
+### What changed
+
+| | before | after |
+|---|---|---|
+| last-screen button | `xapiCompleteComponent` → `writeForwardState` → `location.href` | `xapiEndComponent(result, btn)` — report, then the button **disables itself**. No new text. |
+| first-screen "חזרה" (`#back-to-prev-part`, 02–05) | `goBackToPreviousPart(fallback…)` | **hidden** by `hideCrossPartBack()` (90-boot); the function returns at once |
+| loader phase A | `location.replace` to `_saved.part` when it differs | **removed** — the part Kata launched is the part shown, its own slot restored |
+| unit-level statements | `initialized` (01 `onXapiReady`) and `completed` (05 `s53Enter`) with `{ scope: 'unit' }` | **none**; `xapiCompleteUnit` deleted. `XAPI_UNIT_ID` stays — the State document is keyed on it |
+| part 05's component `completed` | on **arrival** at screen 10 (`s53Enter`) | on the **"סיימתי" click** (`closeLomda`, `#s53-finish`); `window.close()` only under `DEV_NAV` |
+
+The navigation code is not deleted. It runs only under **`DEV_NAV`** (`unit-js/10-identity.js`):
+`?dev=1` in the URL **and no `?registration`**. Every Kata launch URL carries a registration, so a
+launch URL with `&dev=1` appended still behaves as production; navigation is possible only on a
+page nobody's learning is recorded on — a local walkthrough. Each former route function is now
+`xapiEndComponent(result, btn); if (DEV_NAV) { writeForwardState(…); location.href = …; }`. The
+`completed` never depends on the flag.
+
+### The last-click rule
+
+Because Kata removes the component on `completed`, the statement must be the learner's **last
+click** in the component. Parts 01–04 already satisfied it (the check button of the last question).
+Part 05 did not — it reported on arrival at the finale, deliberately, so an attempt was recorded even
+if the learner never clicked "סיימתי". Under the platform model that ordering takes the finale away
+before it is seen, so the call moved to `closeLomda()`. **The trade-off is deliberate**: a learner
+who closes the tab on the finale without clicking is now an unrecorded attempt for part 05. The
+spec chose this. `s53Enter()` re-disables the button on a restore when the `done` ledger already
+holds the key, so a second click is not even offered.
+
+### What is asserted
+
+`_test/verify-report.js` (`routing`, `devnav`): source scan — no `xapiCompleteUnit(` and no
+`scope: 'unit'` outside comments in any shipped script; every `location.href =` / `location.replace(`
+inside an `if (DEV_NAV)` block or behind `goBackToPreviousPart`'s guard; the loader hop gone;
+`DEV_NAV` requires `?dev=1` **and** no `?registration`; every former route function ends via
+`xapiEndComponent` with its button, which exists in the markup; `s53Enter` sends nothing. Live
+production boots of all five parts: `DEV_NAV === false`, `#back-to-prev-part` hidden,
+`goBackToPreviousPart()` moves nothing; three boots of part 04 with no query / `?dev=1` /
+`?dev=1&registration=r1`. The back-edge group (`edges`) now boots with `?dev=1`, because it tests
+the dev-only machinery. `_test/statement-flow.js` (`unit`, `restore`): arriving on the finale
+sends no component `completed`; "סיימתי" sends exactly one, carrying `peakResult()`, disables the
+button, marks the ledger, ignores a second click, does not call `window.close()`; a restore onto
+the finale leaves the button enabled and a later click still reports. Five mutations (drop the
+back guard, drop the registration condition, un-gate part 04's hop, forget the finale's
+`completed`, put it back on arrival) each fail exactly their targets.
+
+### Not observed
+
+Kata's removal of a component on `completed` is asserted from the spec, not seen — our content
+never let it happen. If Kata does not act, the learner sees a disabled button and nothing else;
+visible on the first integration run, reversible by re-uploading the previous package.
+
+---
 
 Related documents: [REPORT-ISSUE.md](REPORT-ISSUE.md) · [RESUME.md](RESUME.md) ·
 [SEND-METADATA.md](SEND-METADATA.md) · [RETRIEVE-METADATA.md](RETRIEVE-METADATA.md) ·

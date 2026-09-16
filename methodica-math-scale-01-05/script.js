@@ -20,9 +20,16 @@ if (_savedChar) window.lomdaState.selectedCharacter = _savedChar;
 let finalAssessmentScore = { correct: 0 };
 
 
-/* ── Navigation ── */
+/* ── The finale's "סיימתי" — the last click of the last component ── */
+/* Since 2026-09-16 the component 'completed' is sent from HERE, not on arrival at screen 10
+   (s53Enter): Kata removes the component the moment 'completed' arrives (v2.7 p.23), so a
+   statement on arrival would take the finale away before the learner saw it. The known cost,
+   accepted: a learner who closes the tab on the finale without clicking is not recorded for this
+   component. peakResult() is the same rule the item 'completed' carried on arrival, so item and
+   component agree. window.close() stays for a local walkthrough only (DEV_NAV). */
 function closeLomda() {
-  window.close();
+  xapiEndComponent(peakResult(), document.getElementById('s53-finish'));
+  if (DEV_NAV) window.close();
 }
 
 
@@ -553,16 +560,19 @@ function s53Enter() {
     vid.play();
   }
 
-  /* xAPI: this is the last screen of the last component, so it closes both the component and the
-     whole unit. goTo() already ran xapiOnScreen(10) — screen 10 maps to null, which emitted the
-     item 'completed' carrying peakResult() — so only the component and unit remain.
-     The unit statement deliberately carries no result: the library reports unit scope without one,
-     and a unit-wide score would have to invent a weighting across five components. */
-  /* The finale is entered on screen arrival, not on a button, so a learner who backs out of the
-     unit and walks forward again lands here a second time. Both statements are one-shot: 'unit'
-     is a ledger key of its own because it belongs to the unit, not to this component. */
-  xapiCompleteComponent(peakResult());
-  xapiCompleteUnit(null);
+  /* xAPI: goTo() already ran xapiOnScreen(10) — screen 10 maps to null, which emitted the item
+     'completed' carrying peakResult(). The component 'completed' is NOT sent here any more: it
+     moved to closeLomda() — the "סיימתי" click — on 2026-09-16, see there. The unit-level
+     'completed' that used to follow it is gone altogether (REPORT-XAPI.md §12).
+     A restore lands here too (resetScreenState(10)): re-disable the button when the ledger already
+     holds this component's 'completed', so a second click is not even offered. */
+  var _fin = document.getElementById('s53-finish');
+  if (_fin) {
+    var _done = false;
+    try { _done = typeof alreadySent === 'function' && alreadySent('done', currentPartSlug()); } catch (e) {}
+    _fin.disabled = _done;
+    if (_done) _fin.setAttribute('aria-disabled', 'true');
+  }
 }
 
 

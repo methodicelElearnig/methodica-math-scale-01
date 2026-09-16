@@ -132,9 +132,9 @@ exercisable on `http://localhost` with no LRS.
 | Screen change | `scheduleResumeSave()` at the end of `goTo()` — **debounced** | The choke point; bounds loss to one screen. |
 | Answer committed | `flushResumeSave()` at the end of every `sNNSubmit` / `sNNCheck` / `ddqCheck` — **synchronous** | See the race note below. |
 | Leaving the page | `flushResumeSave()` on `beforeunload`, `pagehide`, and a hidden `visibilitychange` | `beforeunload` never fires when a mobile tab is backgrounded and then killed. |
-| Cross-part jump forward | `writeForwardState(destSlug)` | §6. |
-| Cross-part jump back | `goBackToPreviousPart()` | §6a. Refuses to navigate if the write fails. |
-| `completed` reported | `markSent()` inside `sendCompletedOnce` — **synchronous** | §8a. Two call sites never navigate afterwards, so nothing else would persist the mark. |
+| Cross-part jump forward — **`?dev=1` only** since 2026-09-16 | `writeForwardState(destSlug)` | §6. In production the unit never leaves the component Kata launched. |
+| Cross-part jump back — **`?dev=1` only** | `goBackToPreviousPart()` | §6a. Refuses to navigate if the write fails. |
+| `completed` reported | `markSent()` inside `sendCompletedOnce` — **synchronous** | §8a. No call site navigates afterwards any more, so nothing else would persist the mark. |
 
 All of them bail out unless `RESUME_ENABLED && _resumeReady && !_restoring`, so nothing is written
 during a restore and nothing before the first successful read.
@@ -275,12 +275,9 @@ missed it on the first pass.
 
 ```js
 var _saved = readUnitState();                    // never returns null
-if (_saved.part && _saved.part !== currentPartSlug()) {
-  window.__resumeInFlight = true;                // hold the cover across the hop
-  window.location.replace('../' + _saved.part + '/index.html' + window.location.search);
-  return;                                        // hop, carrying the query string
-}
-if (applyUnitProfile(_saved)) resetScreenState(currentScreen);   // the character, repainted
+/* until 2026-09-16 a hop to _saved.part stood here — removed, the platform owns routing
+   (REPORT-XAPI.md §12): the part Kata launched is the part shown */
+applyUnitProfile(_saved); resetScreenState(currentScreen);       // the character, repainted
 var _payload = _saved.parts[currentPartSlug()];  // this part's slot, not the whole document
 if (!_payload) dropBootCover();                  // a first-time learner waits for nothing
 ```
@@ -307,9 +304,10 @@ dropBootCover();
   with a fresh payload — a write *before* the restore, which is precisely what every write path is
   built to prevent. Phase A therefore only reads; `applyUnitProfile` touches memory and the cache,
   never the document.
-- Reading **before** the `initialized` is what keeps a hopping session from leaving a statement
-  behind for the part it merely passed through. In part 01 the early `return` also skips
-  `loadUnitMetadata`, so no unit `initialized` is emitted either.
+- **There is no hop any more** (2026-09-16). `_saved.part` is still written by `writeForwardState`
+  under `?dev=1` and is read by nothing in production; a document whose `part` names another
+  component is simply not followed. The unit-scope `initialized` that part 01 used to send after
+  this phase is gone too (REPORT-XAPI.md §12).
 - `readUnitState()` always yields a usable document: it discards any `v` that is not the current one
   (§6b — there is no migration since v4) and otherwise returns a fresh skeleton. `_unitState` is
   **never** left `null` — the ledger and `captureUnitState` both dereference it from inside
@@ -321,7 +319,6 @@ dropBootCover();
   `applyExecutionState`. An earlier version did, and cross-part "back" lost the whole restore —
   including `XAPI_Q_RESULTS`, from which the forward routing is derived, so a learner who had met
   the 4/5 threshold was sent into remediation.
-- `location.replace` (not `href`) keeps the abandoned part out of the back-stack.
 - On any throw the `catch` still sets `_resumeReady = true` and installs a skeleton document: a
   failed read does not disable saving, and it does not silence reporting either.
 - `?resetState` (any part) starts from a clean document, then **strips itself from the URL** via
@@ -329,7 +326,12 @@ dropBootCover();
   verbatim, so left in place it would re-fire on arrival in the next component and wipe the document
   on every hop — resume would never work at all. See §10 for why QA needs it.
 
-## 6. Cross-part handoff
+## 6. Cross-part handoff — `?dev=1` only since 2026-09-16
+
+> **The platform owns routing** (REPORT-XAPI.md §12). Every call site below now sits inside an
+> `if (DEV_NAV)` block, after `xapiEndComponent()` has reported and disabled the button. In
+> production nothing in this section runs: the learner never leaves the component Kata launched,
+> and the landing pointer is never moved by the unit.
 
 `writeForwardState(destSlug)` moves the landing pointer to `destSlug`, records the back-edge
 `prev[destSlug] = <this part>`, and seeds `parts[destSlug] = {currentScreen: 0}` **only if the
@@ -356,7 +358,12 @@ Part 05 is terminal and writes no forward state. Nothing is added to part 01's
 > from, and it cannot restore what was thrown away. The avatar still travels through
 > `localStorage.lomdaCharacter` rather than the document.
 
-## 6a. Cross-part back ("חזרה" on the first screen)
+## 6a. Cross-part back ("חזרה" on the first screen) — hidden in production since 2026-09-16
+
+> `hideCrossPartBack()` (called from `90-boot.js`) hides `#back-to-prev-part` unless `DEV_NAV`,
+> and `goBackToPreviousPart()` returns at once unless `DEV_NAV` — belt and braces. The three-layer
+> resolution below still runs in the `?dev=1` walkthrough, and `_test/verify-report.js` boots that
+> group with `?dev=1` to reach it.
 
 The first screen of parts **02, 03, 04 and 05** carries `#back-to-prev-part`, which calls
 `goBackToPreviousPart()`. Before v3 the same button existed in 02/03/04 as `goTo(23)` / `goTo(35)` —
@@ -486,24 +493,26 @@ so the badges cannot be recomputed after the fact.
 
 Back navigation makes every finished screen re-reachable, and the library's own dedupe lasts only
 one page load. So `completed` goes through `sendCompletedOnce(ledger, key, …)`, backed by `done`
-(components, plus `unit`) and `doneItems` (`'<slug>#<itemId>'`). Wrapped call sites: the item close
-in `xapiOnScreen()` and `xapiFinishItems()` in all five parts, and the component `completed` in
+(components; the `unit` key is no longer written since 2026-09-16 — old documents carrying it are
+harmless) and `doneItems` (`'<slug>#<itemId>'`). Wrapped call sites: the item close in
+`xapiOnScreen()` and `xapiFinishItems()` in all five parts, and the component `completed` in
 `routeAfterQuiz` (01), `routeAfterAdvancedPractice` (02), `goToAdvanced` (03), `goToNextModule` (04)
-and `s53Enter` (05 — component **and** unit).
+and `closeLomda` (05 — the "סיימתי" click; until 2026-09-16 `s53Enter` on arrival, component **and**
+unit).
 
 **`initialized` is deliberately not guarded.** The platform asks for it on every entry. The
 consequence is an unmatched item `initialized` in the LRS whenever a learner re-enters a finished
 part: `applyExecutionState` ends with `xapiCurrentItem = null; xapiOnScreen(currentScreen)`, and the
-matching `completed` is ledger-blocked. Likewise a learner who backs all the way to part 01 emits
-the unit-scope `initialized` *after* the unit `completed` was already sent. Both follow directly
-from "keep `initialized`, suppress `completed`" and should be confirmed acceptable to the platform.
+matching `completed` is ledger-blocked. This follows directly from "keep `initialized`, suppress
+`completed`" and should be confirmed acceptable to the platform. (The unit-scope `initialized` and
+`completed` no longer exist — REPORT-XAPI.md §12.)
 
 Three orderings inside `sendCompletedOnce` are load-bearing:
 
 - **Bail out entirely while `_restoring`** — neither send nor mark. `applyExecutionState` stubs the
   sender, so a mark taken there would permanently suppress a statement that never actually left.
-  Part 05's `s53Enter()` runs inside that stub when a learner resumes onto the finale, which is
-  exactly how the unit `completed` would go missing.
+  Part 05's finale is reached inside that stub when a learner resumes onto it; a mark taken there
+  would suppress the component `completed` the later "סיימתי" click owes.
 - **Fail open, never closed.** The ledger is obeyed only when it positively says "already sent". If
   the document is unavailable the statement goes out anyway: every call site sits inside a
   swallowing `try/catch`, where a silent drop is far worse than a duplicate.

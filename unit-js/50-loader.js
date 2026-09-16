@@ -1,7 +1,8 @@
 'use strict';
 /* ═══════════════════ xAPI — loader / init ═══════════════════
-   Shared by all five components. Definition-only; 90-boot.js calls bootXAPI() LAST, because this
-   is the step that may window.location.replace() to another component — nothing after it runs.
+   Shared by all five components. Definition-only; 90-boot.js calls bootXAPI() LAST, after every
+   per-part hook exists. (Until 2026-09-16 this step could also window.location.replace() to another
+   component — the resume hop. The platform owns routing now; see REPORT-XAPI.md §12.)
 
    Per-part seams:
      XAPI_METADATA_FILE   required — '../metadata/<component>.json'
@@ -120,19 +121,12 @@ function bootXAPI() {
         if (RESUME_ENABLED) {
           try {
             _saved = readUnitState();
-            if (_saved.part && _saved.part !== currentPartSlug()) {
-              /* replace(), not href: keeps the abandoned part out of the back-stack, where Back
-                 would land on a URL that immediately hops forward again. The query string rides
-                 along as on every hop — without it the registration is lost and every later part
-                 reports nothing.
-                 The cover is deliberately NOT dropped here: the page is leaving, and the cover
-                 hides the glimpse of this part that the learner would otherwise see.
-                 __resumeInFlight is set so the markup safety net does not expose screen 0 if the
-                 navigation itself is slow. */
-              window.__resumeInFlight = true;
-              window.location.replace('../' + _saved.part + '/index.html' + window.location.search);
-              return;
-            }
+            /* No hop to _saved.part any more (2026-09-16, REPORT-XAPI.md §12): the platform
+               launches each component on its own URL and its own registration, so the part Kata
+               opened is the part shown, and only its own slot is restored below. Under
+               per-component registration _saved.part could differ only because of a legacy in-unit
+               hop; the pointer is still written by writeForwardState under DEV_NAV and read by
+               nothing in production. */
             /* The character — the reason this whole phase exists. Until v4 it lived only in
                localStorage, so continuing from another machine painted the wrong avatar.
                Called unconditionally rather than only when there is a payload: a learner whose

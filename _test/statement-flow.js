@@ -278,29 +278,50 @@ function failurePathReports() {
   b.dom.window.close();
 }
 
-/* ══════════════ 7. The unit completed, once ══════════════ */
+/* ══════════════ 7. No unit-level statement; the finale reports on the click ══════════════
+   Since 2026-09-16 (REPORT-XAPI.md §12): object is item or component only, so
+   xapiCompleteUnit is gone; and component 05's 'completed' moved from arrival
+   at screen 10 to the "סיימתי" button — Kata removes the component the moment
+   'completed' arrives, so a statement on arrival would take the finale away
+   before the learner saw it. */
 
-function unitCompleted() {
+function finaleReportsOnClick() {
   const b = boot('05');
   exec_reset(b);
   b.finishBoot();
+  ok('unit', 'xapiCompleteUnit no longer exists', b.val('typeof xapiCompleteUnit') === 'undefined');
+
+  b.exec('window.__origClose = window.close; window.__closed = false; window.close = function () { window.__closed = true; };');
   b.exec('window.__reset();');
+  b.exec('goTo(TOTAL_SCREENS - 1);');
+  const comps = () => b.stmts().filter(s => s.verb === 'completed' && s.objectType === 'onlinelesson');
+  eq('unit', '05: arriving on the finale sends no component completed', comps().length, 0);
+  ok('unit', '05: the finale button is enabled on a first arrival',
+    b.val("document.getElementById('s53-finish').disabled") === false);
 
-  b.exec('xapiCompleteUnit(null);');
-  b.exec('xapiCompleteUnit(null);');
-  b.exec('xapiCompleteUnit(null);');
-  eq('unit', 'the unit completed is sent exactly once however many times it is called',
-    b.stmts().filter(s => s.verb === 'completed').length, 1);
-  const u = b.stmts()[0];
-  ok('unit', "and it carries scope 'unit', not an objectId",
-    u && u.opts && u.opts.scope === 'unit', JSON.stringify(u && u.opts));
+  b.exec('closeLomda();');
+  eq('unit', '05: "סיימתי" sends exactly one component completed', comps().length, 1);
+  ok('unit', '05: it carries peakResult()',
+    comps()[0] && JSON.stringify(comps()[0].result) === b.val('JSON.stringify(peakResult())'),
+    JSON.stringify(comps()[0] && comps()[0].result));
+  ok('unit', '05: nothing sent is unit-scoped',
+    !b.stmts().some(s => s.opts && s.opts.scope === 'unit'));
+  ok('unit', '05: the button is disabled after the report',
+    b.val("document.getElementById('s53-finish').disabled") === true);
+  ok('unit', '05: window.close() is not called in production (DEV_NAV false)',
+    b.val('window.__closed') === false);
+  ok('unit', '05: the ledger holds the component key',
+    b.val("_unitState.done['" + PART_DIR('05') + "'] === true"));
 
-  /* 'unit' is its own ledger key: a component completed must not be suppressed
-     by it, nor the other way round. */
-  b.exec("xapiCompleteComponent({ success: true });");
-  eq('unit', 'the component completed is not suppressed by the unit key',
-    b.stmts().filter(s => s.verb === 'completed').length, 2);
+  b.exec('closeLomda();');
+  eq('unit', '05: a second click sends nothing more', comps().length, 1);
 
+  /* A reload onto the finale after the click: the painter re-disables the button. */
+  b.exec("document.getElementById('s53-finish').disabled = false; resetScreenState(TOTAL_SCREENS - 1);");
+  ok('unit', '05: re-entering the finale with the key in the ledger re-disables the button',
+    b.val("document.getElementById('s53-finish').disabled") === true);
+
+  b.exec('window.close = window.__origClose;');
   b.dom.window.close();
 }
 
@@ -379,7 +400,8 @@ function restoreOntoFinale() {
   const total = b.val('TOTAL_SCREENS');
   b.exec('window.__reset();');
   /* Land straight on the last screen, the way a learner resuming at the end
-     would. Component 05's finale sends component and unit completed on entry. */
+     would. Screen 10 closes the item on entry (xapiOnScreen); the component
+     'completed' waits for the "סיימתי" click since 2026-09-16. */
   b.exec('_resumeReady = true; if (!_unitState) _unitState = emptyUnitState();');
   b.exec('window.__reset();');
   b.exec('applyExecutionState({ currentScreen: ' + (total - 1) + ' });');
@@ -397,13 +419,12 @@ function restoreOntoFinale() {
   ok('restore', '05: the restore leaves the component ledger key unmarked',
     b.val("_unitState.done['" + PART_DIR('05') + "'] === undefined"),
     b.val('JSON.stringify(_unitState.done)'));
-  ok('restore', '05: the restore leaves the unit ledger key unmarked',
-    b.val("_unitState.done['unit'] === undefined"),
-    b.val('JSON.stringify(_unitState.done)'));
+  ok('restore', '05: the restore leaves the finale button enabled (nothing sent yet)',
+    b.val("document.getElementById('s53-finish').disabled") === false);
 
-  /* Proof of consequence: a real completion afterwards still goes out. */
-  b.exec('window.__reset(); xapiCompleteUnit(null);');
-  eq('restore', '05: a real unit completed after the restore is still sent',
+  /* Proof of consequence: a real "סיימתי" afterwards still goes out. */
+  b.exec('window.__reset(); window.__oc = window.close; window.close = function () {}; closeLomda(); window.close = window.__oc;');
+  eq('restore', '05: a real component completed after the restore is still sent',
     b.verbs().filter(x => x === 'completed').length, 1);
 
   b.dom.window.close();
@@ -448,7 +469,7 @@ function main() {
   itemScope();
   componentScore();
   failurePathReports();
-  unitCompleted();
+  finaleReportsOnClick();
   restoreIsSilent();
   restoreOntoFinale();
   hintOnce();
