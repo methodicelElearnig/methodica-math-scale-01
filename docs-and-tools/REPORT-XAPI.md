@@ -465,7 +465,8 @@ part under part 01's registration and saved every part's resume slot into part 0
 | last-screen button | `xapiCompleteComponent` → `writeForwardState` → `location.href` | `xapiEndComponent(result, btn)` — report, then the button **disables itself**. No new text. |
 | first-screen "חזרה" (`#back-to-prev-part`, 02–05) | `goBackToPreviousPart(fallback…)` | **hidden** by `hideCrossPartBack()` (90-boot); the function returns at once |
 | loader phase A | `location.replace` to `_saved.part` when it differs | **removed** — the part Kata launched is the part shown, its own slot restored |
-| unit-level statements | `initialized` (01 `onXapiReady`) and `completed` (05 `s53Enter`) with `{ scope: 'unit' }` | **none**; `xapiCompleteUnit` deleted. `XAPI_UNIT_ID` stays — the State document is keyed on it |
+| unit-level statements | `initialized` (01 `onXapiReady`) and `completed` (05 `s53Enter`) with `{ scope: 'unit' }` | **none**; `xapiCompleteUnit` deleted. `XAPI_UNIT_ID` stays — it keys the localStorage fallback (`stateLocalKey720`) and matches the catalogue; Kata's State API never sees it |
+| the state document | one per unit (`part` / `parts{}` / `prev`), shared through the hops | **one per component** (v5, same day): `component` + `payload`, v4 migrated in place — RESUME.md §7a |
 | part 05's component `completed` | on **arrival** at screen 10 (`s53Enter`) | on the **"סיימתי" click** (`closeLomda`, `#s53-finish`); `window.close()` only under `DEV_NAV` |
 
 The navigation code is not deleted. It runs only under **`DEV_NAV`** (`unit-js/10-identity.js`):

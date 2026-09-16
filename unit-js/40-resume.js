@@ -5,28 +5,36 @@
    initResumeResetHatch() and initResumeLeaveHandlers(), and ../unit-js/50-loader.js drives the
    restore itself. Full design: docs-and-tools/RESUME.md.
 
-   ── One document — but not "per unit" in Kata's model ──
-   Verified against Documentation/KATA/KATA-API.md. Kata has NO concept of a unit-level state
-   document. Its model is one opaque document per learner–component pair (KATA-API.md §3).
+   ── One document per {learner, component} — Kata's model, and since v5 ours ──
+   Verified against Documentation/KATA/KATA-API.md and Kata's own note (2026-09-16): the
+   registration our content saves State under is a {user, component} pair — for one learner every
+   component of the unit has a DIFFERENT registration, hence a different document. The address is
+   ?registration ALONE (or studentId+componentKey; sending both is a 400). The platform launches
+   each component on its own (POST /launcher/context takes one componentId and returns one
+   registrationId), and since 2026-09-16 no part navigates to another or copies its query along —
+   so every part reads and writes ITS OWN document, nothing else.
 
-   What works, and why: the address is ?registration ALONE (or studentId+componentKey; sending
-   both is a 400). The platform launches one component, and every cross-part navigation copies
-   window.location.search verbatim — so all five parts present the same registration and in
-   effect share THE DOCUMENT OF THE COMPONENT THAT WAS LAUNCHED (part 01). Kata permits this
-   because it validates the address against the group's launches, not the calling component.
+   v5 (2026-09-16): the document itself now matches. No more `part` (landing pointer), `prev`
+   (back edges) or `parts{}` (every part's payload) — instead `component` (whose document this is)
+   and `payload` (this part's). A document whose `component` is not the current part is
+   discarded with console.warn: one registration shared by two components would be a platform-side
+   fault, and another part's payload is never applied.
 
-   ⚠️ Residual risk: if the platform ever deep-launches another part directly it gets a different
-   registration → a different document → split progress. That is a question for the platform
-   partner, not something this code can fence.
+   The platform may CLEAR one component's State on a repeat entry (a re-take of an assessment
+   component). An absent document (404) is therefore "a fresh attempt": no payload, an empty
+   `done` ledger (the completed goes out again — intended), and an empty `results` section that
+   beats the localStorage cache of the previous attempt (read precedence in the getters).
 
    (window.XAPI_UNIT_ID and RESUME_STATE_ID only dictate the localStorage fallback key, which
-   comes into play when there is no valid ?slxapi.)
+   comes into play when there is no valid ?slxapi. RESUME_STATE_ID carries the part slug so that
+   fallback is one document per part as well — without it a ?dev=1 walk from 01 to 02 read 01's
+   document in 02.)
 
    ── Three facts from that document that bear directly on the code here ──
    • Durability: Kata "never acknowledges a write that wasn't durably saved". The true returned by
      saveState720 is a real promise, which is what justifies the !== false check in
-     persistUnitState and the refusal to navigate back on a failed write.
-   • Size: ~1MB ceiling (413 above it). This document is tiny — a screen pointer per part and two
+     persistUnitState.
+   • Size: ~1MB ceiling (413 above it). This document is tiny — one part's payload and four
      ledgers — so there is no concern.
    • Retention: ~12 months from the last update, after which GET returns 404. readUnitState treats
      404/null as "new document", so a learner returning after longer simply starts fresh.
@@ -38,20 +46,22 @@
      restoreScreenUI(n)     repaints an answered screen; MUST stay exception-safe
    ═══════════════════════════════════════════════════════════════════ */
 
-/* v4 (2026-09-01): added two classes of unit-level state — `ui` (the chosen character) and
-   `results` (cross-part gate outcomes). Until v3 the character lived ONLY in localStorage, so a
-   learner continuing the same registration from another machine got the wrong avatar in parts 01
-   and 05. The document is now the source of truth and localStorage is a synchronous cache.
+/* v4 (2026-09-01): added `ui` (the chosen character) and `results`. Until v3 the character lived
+   ONLY in localStorage, so a learner continuing the same registration from another machine got the
+   wrong avatar. The document is the source of truth and localStorage a synchronous cache.
 
-   The 3 → 4 jump discards existing documents (readUnitState throws away any v that is not the
-   current one). That is deliberate and approved: this unit has never had a live Kata run, so the
-   field is clean.
+   v5 (2026-09-16): one document per part — `component` + `payload` instead of
+   `part`/`parts{}`/`prev{}` (see the header). There IS a migration from v4 (migrateState):
+   payload = parts[this part's slug]; the four ledgers, the character and the results are kept as
+   they are. Any other v is discarded. A learner mid-part on upload day loses nothing.
 
-   ⚠️ Because of that, every ?v= on unit-js/*.js and on script.js in all five index.html MUST be
-   bumped in the same commit — a stale cached 40-resume.js reading a v4 document deletes it, and a
-   new script.js against a stale 40-resume.js calls setters that do not exist. */
-var RESUME_STATE_VERSION = 4;
-var RESUME_STATE_ID      = 'execution-state';
+   ⚠️ Even so, every ?v= on unit-js/*.js and on script.js in all five index.html MUST be bumped in
+   the same commit — a stale cached 40-resume.js reading a v5 document deletes it, and a new
+   script.js against a stale 40-resume.js calls setters that do not exist. */
+var RESUME_STATE_VERSION = 5;
+/* Carries the slug: the localStorage fallback key (and the library's debounce map) is per part.
+   currentPartSlug is a function declaration below — hoisted. */
+var RESUME_STATE_ID      = 'execution-state::' + currentPartSlug();
 
 /* Not set until the first successful read (or its catch). Every write path checks it, so nothing
    is written before it is known what the document already holds. */
@@ -60,7 +70,7 @@ var _resumeReady         = false;
 /* Set only inside applyExecutionState. Suppresses writes and the ledger — see there. */
 var _restoring           = false;
 
-/* Stops the leave handlers trampling a landing pointer written moments before a navigation. */
+/* Stops the leave handlers trampling the save written moments before a (DEV_NAV-only) navigation. */
 var _leavingToNextPart   = false;
 
 /* The whole document, as last read or written. Never left null after readUnitState():
@@ -77,9 +87,9 @@ var _resetRequested      = false;
    for this internal slug, and they are all lowercase — like the ids in metadata/.
 
    ⚠️ toLowerCase() is not cosmetic. The slug comes from location.pathname, i.e. from how the
-   learner ARRIVED at the page. A URL differing only in case would produce a second key for the
-   same part — two separate entries under parts[] — and from there: split progress, a `done`
-   ledger that misses, and therefore a duplicate 'completed'. */
+   learner ARRIVED at the page. A URL differing only in case would not match the document's
+   `component` (discarded as "another part's") and would key the ledger differently — and from
+   there: vanished progress, a `done` ledger that misses, and therefore a duplicate 'completed'. */
 function currentPartSlug() {
   var p = window.location.pathname.replace(/\/index\.html.*$/, '').replace(/\/+$/, '');
   return (p.split('/').pop() || '').toLowerCase();
@@ -92,19 +102,18 @@ function itemLedgerKey(item) { return currentPartSlug() + '#' + item; }
 function emptyUnitState() {
   return {
     v: RESUME_STATE_VERSION,
-    part: currentPartSlug(),   // which component the learner should land on
-    parts: {},                 // slug → that component's payload (incl. currentScreen)
-    prev:  {},                 // slug → {from, hash}: where it was entered from, back to which screen
-    done:  {},                 // component slug (or 'unit') → its 'completed' has been sent
-    doneItems: {},             // '<slug>#<itemId>' → that item's 'completed' has been sent
-    hints: {},                 // '<itemId>/<qKey>' → that hint's 'requested.1' has been sent
-    picks: {},                 // one-off learner choices whose 'selected' has been sent
-    /* ── Unit-level state (v4) ──
-       These two are NOT per part and therefore do not live in parts[]: captureUnitState replaces
-       the current part's slot on every save, so anything parked there would be destroyed on the
-       next part's first screen change. */
-    ui:      { character: null },   // e.g. 'Character1' | 'text' | null — chosen on screen 0 of part 01
-    results: {}                     // resultKey → outcome, for gates read across parts
+    component: currentPartSlug(),  // whose document this is — checked on every read; another part's is discarded
+    payload: null,                 // capturePartPayload() of THIS part (incl. currentScreen)
+    done:  {},                     // component slug → its 'completed' has been sent
+    doneItems: {},                 // '<slug>#<itemId>' → that item's 'completed' has been sent
+    hints: {},                     // '<itemId>/<qKey>' → that hint's 'requested.1' has been sent
+    picks: {},                     // one-off learner choices whose 'selected' has been sent
+    /* ── `ui` and `results` — this part's own copy ──
+       They sit BESIDE the payload, not inside it: captureUnitState replaces the payload on every
+       save. The character is chosen in part 01 and reaches the later parts through the same-browser
+       localStorage mirror (adoptUnitCharacter copies it into this part's document on first entry). */
+    ui:      { character: null },   // e.g. 'Character1' | 'text' | null
+    results: {}                     // resultKey → outcome; empty in this unit (gates derive from the payload)
   };
 }
 
@@ -117,8 +126,29 @@ function emptyUnitState() {
 var UI_CHARACTER_KEY = 'lomdaCharacter';
 var RESULT_KEYS      = [];
 
-/* Always returns a usable document. There is no migration — not from v2, not from v3. Any v that
-   is not the current one is discarded, which is approved here because the field is clean. */
+/* One-step migration only (v4 → v5), mechanical and jsdom-testable. A current-version document
+   comes back as is; any other version → null (discarded). */
+function migrateState(old) {
+  if (!old) return null;
+  if (old.v === RESUME_STATE_VERSION) return old;
+  if (old.v !== RESUME_STATE_VERSION - 1) return null;
+  var slug = currentPartSlug();
+  return {
+    v: RESUME_STATE_VERSION,
+    component: slug,
+    payload: (old.parts && old.parts[slug]) || null,
+    done: old.done || {},
+    doneItems: old.doneItems || {},
+    hints: old.hints || {},
+    picks: old.picks || {},
+    ui: old.ui || { character: null },
+    results: old.results || {}
+  };
+}
+
+/* Always returns a usable document. A v4 document is migrated; another part's document (component
+   mismatch) is discarded with a warning — one registration shared by two components is a platform
+   fault, and a foreign payload is never applied; 404/null = a fresh attempt (see the header). */
 function readUnitState() {
   var doc = null;
   try {
@@ -130,41 +160,41 @@ function readUnitState() {
     }
     doc = (typeof window.loadState720 === 'function') ? window.loadState720(RESUME_STATE_ID) : null;
   } catch (e) { console.error('[resume] read', e); doc = null; }
-  if (doc && doc.v !== RESUME_STATE_VERSION) doc = null;
+  doc = migrateState(doc);
+  if (doc && doc.component && doc.component !== currentPartSlug()) {
+    console.warn('[resume] document belongs to "' + doc.component + '", not "' + currentPartSlug() + '" — discarded');
+    doc = null;
+  }
   if (!doc) doc = emptyUnitState();
-  doc.parts     = doc.parts     || {};
-  doc.prev      = doc.prev      || {};
+  doc.component = currentPartSlug();
+  doc.payload   = doc.payload   || null;
   doc.done      = doc.done      || {};
   doc.doneItems = doc.doneItems || {};
   doc.hints     = doc.hints     || {};
   doc.picks     = doc.picks     || {};
   /* These must be present objects rather than undefined: their EXISTENCE is what tells the
      getters "the document is the authority, do not fall back to localStorage". Without it a reset
-     document would hand back the character from a stale cache — a reset that is not a reset. */
+     document (or one the platform cleared for a re-take) would hand back the character from a
+     stale cache — a reset that is not a reset. */
   doc.ui        = doc.ui        || { character: null };
   doc.results   = doc.results   || {};
   _unitState = doc;
   return doc;
 }
 
-/* REPLACES this part's slot rather than merging into it — a merge would leave stale keys alive.
-   `part` is deliberately not touched: only writeForwardState and goBackToPreviousPart move the
-   landing pointer. A save that reset it to the current slug would undo the one they just wrote,
-   and the debounced timer left behind by the last goTo() would fire mid-navigation and bounce the
-   learner straight back to the part they were leaving. */
+/* REPLACES the payload rather than merging into it — a merge would leave stale keys alive. */
 function captureUnitState() {
   var doc = _unitState || emptyUnitState();
   doc.v = RESUME_STATE_VERSION;
-  if (!doc.part) doc.part = currentPartSlug();
-  doc.parts[currentPartSlug()] = capturePartPayload();
+  doc.component = currentPartSlug();
+  doc.payload = capturePartPayload();
   _unitState = doc;
   return doc;
 }
 
 /* Re-arming the debounce BEFORE the synchronous write is what makes a handoff stick: the page
    stays alive while the next document loads, long enough for a stale timer to fire and clobber
-   the write with a payload still naming THIS part. Returns whether the synchronous write landed —
-   callers that are about to navigate need to know. */
+   the write with a payload still naming THIS part. Returns whether the synchronous write landed. */
 function persistUnitState(doc) {
   var ok = false;
   try {
@@ -257,9 +287,9 @@ function setUnitResult(key, val) {
   try { persistUnitState(captureUnitState()); } catch (e) { console.error('[resume] result', e); }
 }
 
-/* Called from ../unit-js/50-loader.js immediately after _resumeReady is set, and BEFORE
-   applyUnitProfile. That order is what implements the precedence rule: a choice made in this
-   session is newer than what the document says, so it wins. */
+/* Called from ../unit-js/50-loader.js immediately after _resumeReady is set (phase B). A choice
+   made in this session is newer than what the document says, so it wins; the same queue carries
+   the character adoptUnitCharacter copied from the mirror in phase A. */
 function drainPendingUnitState() {
   if (!_unitState) return;
   var dirty = false;
@@ -282,17 +312,35 @@ function drainPendingUnitState() {
   }
 }
 
-/* Aligns the in-memory character with the document. Returns whether anything changed — the caller
-   needs that, because a screen already painted in the previous colour has to be repainted before
-   the cover is dropped. Must NOT write to the document: loader phase A is read-only. */
-function applyUnitProfile(doc) {
-  if (!doc || !doc.ui) return false;
-  var c = doc.ui.character || null;
+/* The character on entering a part — four steps (decision 2026-09-16): (1) this part's document;
+   (2) if null — the localStorage mirror (the choice made in part 01 on this browser); (3) if found —
+   copied into this part's document: onto doc directly, so getUnitCharacter returns it between
+   phase A and phase B, and into the _pendingProfile queue, so drainPendingUnitState persists it in
+   phase B (phase A still never writes); (4) if neither — the caller keeps the default.
+
+   NEVER deletes the mirror. Its predecessor (applyUnitProfile) read a null ui.character as "no
+   character", nulled the in-memory value and deleted the mirror — and under one document per part
+   every part >= 02 opens with null, so the character was lost on every Kata launch, and with the
+   mirror gone, for every part after it too. A reset (?resetState) adopts nothing.
+
+   Returns whether anything changed — a screen already painted in the previous colour has to be
+   repainted before the cover is dropped. */
+function adoptUnitCharacter(doc) {
+  var c = (doc && doc.ui && doc.ui.character) || null;
+  if (!c && !_resetRequested) {
+    c = _lsGet(UI_CHARACTER_KEY);
+    if (c && doc) {
+      doc.ui = doc.ui || {};
+      doc.ui.character = c;
+      _pendingProfile = { character: c };
+    }
+  }
   var cur = window.lomdaState ? (window.lomdaState.selectedCharacter || null) : null;
-  if (c === cur) return false;
-  if (window.lomdaState) window.lomdaState.selectedCharacter = c;
-  if (c) _lsSet(UI_CHARACTER_KEY, c); else _lsDel(UI_CHARACTER_KEY);
-  return true;
+  if (c) {
+    if (window.lomdaState) window.lomdaState.selectedCharacter = c;
+    _lsSet(UI_CHARACTER_KEY, c);
+  }
+  return c !== cur;
 }
 
 /* ── The boot cover ──────────────────────────────────────────────────
@@ -432,19 +480,17 @@ function sendCompletedOnce(ledger, key, objectType, result, opts) {
    The solution is a MAP OF EDGES, not a stack: forward navigation writes the edge, back
    navigation only reads it. There is no invariant a partial write can break.
 
-   ── Three layers, deliberately ──
-   1. `prev` in the document — durable, survives tab closure, and the source of truth.
-   2. The edge map in sessionStorage — available SYNCHRONOUSLY from the moment the script loads.
-      Not redundant: the document only arrives after two CDN scripts and the metadata poll, and
-      the back button is visible immediately. A learner clicking in that first second would
-      otherwise fall through to the hard-coded fallback — exactly the bug the edges exist to fix.
-   3. The hard-coded arguments — the pre-edges behaviour, for when neither layer is available
-      (storage blocked, library never loaded).
+   ── One layer + a fallback (all of it DEV_NAV-only since 2026-09-16) ──
+   1. The edge map in sessionStorage — available SYNCHRONOUSLY from the moment the script loads.
+   2. The hard-coded arguments — for when storage is blocked or no edge exists.
+   The document tier (`prev`) went with the landing pointer in v5: the document belongs to one
+   part and has nothing to point at. The navigation itself runs only under DEV_NAV
+   (10-identity.js); in production the platform launches each component on its own.
 
    The edge also carries the target screen's hash, because the screen to return to differs by
    source (from part 01 the learner left screen 23; from part 02, screen 8).
 
-   sessionStorage rather than localStorage in layer 2: the edge belongs to the current attempt. An
+   sessionStorage rather than localStorage: the edge belongs to the current attempt. An
    edge left over from a previous attempt could route a learner down a path they did not take.
 
    ⚠️ NAV_EDGE_KEY must carry the unit slug. Two units sharing this key share a ledger and
@@ -470,12 +516,9 @@ function recordForwardEdge(destSlug, returnHash) {
   } catch (e) { /* storage blocked — the back button's fallback covers it */ }
 }
 
-/* The edge leading into the current part, by the precedence above. */
+/* The edge leading into the current part — from the sessionStorage map only. */
 function _incomingEdge() {
-  var here = currentPartSlug();
-  var fromDoc = _unitState && _unitState.prev && _unitState.prev[here];
-  if (fromDoc && fromDoc.from) return fromDoc;
-  return _readEdges()[here] || null;
+  return _readEdges()[currentPartSlug()] || null;
 }
 
 /* Resolving the edge to a URL. Deliberately separated from the navigation itself: it makes the
@@ -488,38 +531,26 @@ function previousPartHref(fallbackSlug, fallbackHash) {
   return '../' + slug + '/index.html' + window.location.search + hash;
 }
 
-/* Back navigation. Points the document at the destination BEFORE navigating — that is what stops
-   the destination's loader seeing a mismatch and hopping straight back here (a ping-pong that
-   re-sent 'completed' every cycle). If the write does not land, staying put is the safe failure.
+/* Back navigation — DEV_NAV only. Saves this part synchronously (so the ?dev=1 walk resumes it
+   where it stood) and navigates. There is no landing pointer to write any more, hence no write
+   that could fail and hold the learner in place.
    Since 2026-09-16 the platform owns routing (REPORT-XAPI.md §12): outside a local walkthrough
    (DEV_NAV, 10-identity.js) this is a no-op. The button is hidden too, by hideCrossPartBack() —
    belt and braces, because the control can still be reached from a stale DOM or by keyboard. */
 function goBackToPreviousPart(fallbackSlug, fallbackHash) {
   if (!DEV_NAV) return;
   var href = previousPartHref(fallbackSlug, fallbackHash);
-  var edge = _incomingEdge();
-  var destSlug = (edge && edge.from) || fallbackSlug;
-
-  if (RESUME_ENABLED && _resumeReady && destSlug) {
-    var doc = captureUnitState();
-    var here = doc.part;
-    doc.part = destSlug;
-    if (!persistUnitState(doc) && !persistUnitState(doc)) {
-      console.error('[resume] back: state write failed, staying put');
-      doc.part = here;
-      return;
-    }
+  if (RESUME_ENABLED && _resumeReady) {
+    flushResumeSave();
     armLeaving();
   }
-  /* replace(), not href: otherwise the browser's own Back would return the learner to the part
-     they left, whose loader sees a different landing pointer and immediately hops forward — one
-     Back press feels like the page is stuck. */
+  /* replace(), not href: the browser's own Back need not return to the part just left. */
   window.location.replace(href);
 }
 
 /* Production hides the first-screen "חזרה" (#back-to-prev-part, parts 02–05): the platform routes,
    and the learner never moves between parts from inside one. Called from 90-boot.js. Under DEV_NAV
-   the button stays, resolved by the three layers above. */
+   the button stays, resolved by the edge map and the fallback above. */
 function hideCrossPartBack() {
   if (DEV_NAV) return;
   var b = document.getElementById('back-to-prev-part');
@@ -529,24 +560,14 @@ function hideCrossPartBack() {
   if (b) { b.hidden = true; b.style.display = 'none'; b.setAttribute('aria-hidden', 'true'); }
 }
 
-/* Points the document at the component the learner is about to enter, so the next launch resumes
-   forward instead of back into the part they just finished — and records the back edge.
-   Since 2026-09-16 every caller sits inside an `if (DEV_NAV)` block — in production the landing
-   pointer is never moved by the unit, because the unit never leaves the component Kata launched.
-   The departing part's payload is KEPT (captureUnitState runs first). That is the whole point:
-   the back button restores the part the learner came from, and it cannot restore what was thrown
-   away. An already-visited destination keeps its payload too, so going forward again resumes
-   where the learner left off rather than replaying from screen 0. */
+/* Records the back edge and saves the part being left — DEV_NAV only (every caller sits inside an
+   `if (DEV_NAV)` block). No landing pointer and no seeding of the destination any more: the
+   destination's document is another part's. */
 function writeForwardState(destSlug, returnHash) {
-  /* Layer 2 always, even when resume is off or not ready — it is the behaviour that existed
-     before this change, and the part code relies on it. */
+  /* The edge map always, even when resume is off or not ready — the part code relies on it. */
   recordForwardEdge(destSlug, returnHash);
   if (!RESUME_ENABLED || !_resumeReady) return;
-  var doc = captureUnitState();
-  doc.part = destSlug;
-  doc.prev[destSlug] = { from: currentPartSlug(), hash: returnHash || '' };
-  if (!doc.parts[destSlug]) doc.parts[destSlug] = { currentScreen: 0 };
-  persistUnitState(doc);
+  flushResumeSave();
   armLeaving();
 }
 
@@ -609,8 +630,8 @@ function initResumeLeaveHandlers() {
    again, which reads as a catastrophic regression to whoever tests next. ?resetState starts from
    a clean slate.
 
-   It strips itself from the URL: every cross-part navigation copies window.location.search
-   verbatim, so left in place it would re-fire on every hop and resume would never work. The strip
+   It strips itself from the URL: left in place it would re-fire on every reload and resume
+   would never work. The strip
    must happen before anything reads the query, which is why 90-boot.js calls this FIRST; the
    _resetRequested flag carries the intent through to readUnitState, which runs later once the URL
    is already clean.

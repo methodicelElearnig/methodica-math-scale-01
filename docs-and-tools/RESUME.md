@@ -100,29 +100,28 @@ API block plus `stateLastResult720()`; nothing else differs. Three functions on 
 `componentKey` as an alternative — supplying both is a `400`. There is no `activityId`, no
 `stateId` and no `unitKey` parameter ([KATA-API.md](../../Documentation/KATA/KATA-API.md)). So:
 
-1. **Registration** — `window.XAPI_REGISTRATION` from `?registration`. The platform launches the
-   unit once; every cross-part navigation copies `window.location.search` verbatim, so all five
-   parts present the *same* registration and therefore read and write **one** document. This, not
-   the activity id, is what makes resume unit-scoped. Absent → `null`.
+1. **Registration** — `window.XAPI_REGISTRATION` from `?registration`. Kata's registration is a
+   **{learner, component}** pair (Kata, 2026-09-16: *"עבור תלמיד מסוים, בכל רכיב יהיה לו registration
+   שונה"*), the platform launches each part on its own, and since 2026-09-16 no part copies its
+   query into another — so every part reads and writes **its own** document (§7a). Absent → `null`.
 2. **Activity id** — `window.XAPI_UNIT_ID`, set identically in all five parts at
    [script.js:9](methodica-math-scale-01-01/script.js:9):
    `https://…/math/scale/01/methodica-math-scale-01/`. Kata never sees it; it only keys the
    `localStorage` fallback below. The trailing slash still matters for *reporting*
    ([REPORT-XAPI.md §1](REPORT-XAPI.md)).
-3. **State id** — `RESUME_STATE_ID = 'execution-state'`. Also fallback-only, for the same reason.
+3. **State id** — `RESUME_STATE_ID = 'execution-state::<slug>'` (v5). Also fallback-only, for the
+   same reason — and per part, so the fallback is one document per part too (a `?dev=1` walk from
+   01 to 02 used to read 01's document in 02).
 
-> **Depends on a single launch of component 01.** Kata's registration is documented as stable per
-> platform, learner **and component**. The unit-wide document works because the platform launches
-> once and the lomda navigates internally. If the platform ever deep-launched part 03 directly, that
-> registration would address a *different* document and the learner's progress would split in two.
-> Worth confirming with the platform partner. Two related behaviours are undocumented and should be
-> checked against the live API before being relied on: whether Kata validates a registration against
-> the calling component (the docs define only a group-scoped `404`), and whether ingested statements
-> are attributed by registration regardless of the activity id in the statement.
+> **One document per component — confirmed and adopted (2026-09-16).** Until v5 this document
+> described a unit-wide document that worked only because the unit navigated internally and copied
+> the registration along. Kata confirmed the registration is per {learner, component} and that the
+> platform may **clear** one component's document on a repeat entry (a re-take). The unit now
+> conforms: §7a.
 
 **Off-platform fallback:** when `window.XAPI_DISABLED` is true (no valid `?slxapi`) the library
 transparently uses `localStorage` under
-`lomda_state::<activityId>::<registration|local>::execution-state`. The whole feature is therefore
+`lomda_state::<activityId>::<registration|local>::execution-state::<slug>`. The whole feature is therefore
 exercisable on `http://localhost` with no LRS.
 
 ## 3. When state is written
@@ -277,8 +276,8 @@ missed it on the first pass.
 var _saved = readUnitState();                    // never returns null
 /* until 2026-09-16 a hop to _saved.part stood here — removed, the platform owns routing
    (REPORT-XAPI.md §12): the part Kata launched is the part shown */
-applyUnitProfile(_saved); resetScreenState(currentScreen);       // the character, repainted
-var _payload = _saved.parts[currentPartSlug()];  // this part's slot, not the whole document
+adoptUnitCharacter(_saved); resetScreenState(currentScreen);     // the character (document → mirror → default), repainted
+var _payload = _saved.payload;                   // this part's payload — the document is this part's alone (v5)
 if (!_payload) dropBootCover();                  // a first-time learner waits for nothing
 ```
 
@@ -300,13 +299,12 @@ dropBootCover();
   `XAPI_DISABLED` **synchronously** before it touches metadata, and `loadState720` works over a raw
   XHR rather than through `ADL.XAPIWrapper`.
 - **Why `_resumeReady` did NOT move with it.** It is the gate on every write path. Setting it in
-  phase A would open a window in which any `goTo()` arms a save that overwrites `doc.parts[slug]`
+  phase A would open a window in which any `goTo()` arms a save that overwrites `doc.payload`
   with a fresh payload — a write *before* the restore, which is precisely what every write path is
-  built to prevent. Phase A therefore only reads; `applyUnitProfile` touches memory and the cache,
-  never the document.
-- **There is no hop any more** (2026-09-16). `_saved.part` is still written by `writeForwardState`
-  under `?dev=1` and is read by nothing in production; a document whose `part` names another
-  component is simply not followed. The unit-scope `initialized` that part 01 used to send after
+  built to prevent. Phase A therefore only reads; `adoptUnitCharacter` touches memory and the cache,
+  and what it copies into the document (the mirror's character) is queued and persisted in phase B.
+- **There is no hop any more** (2026-09-16), and since v5 no landing pointer either: the document
+  belongs to this part (`component`), and one naming another part is discarded (§7). The unit-scope `initialized` that part 01 used to send after
   this phase is gone too (REPORT-XAPI.md §12).
 - `readUnitState()` always yields a usable document: it discards any `v` that is not the current one
   (§6b — there is no migration since v4) and otherwise returns a fresh skeleton. `_unitState` is
@@ -333,12 +331,9 @@ dropBootCover();
 > production nothing in this section runs: the learner never leaves the component Kata launched,
 > and the landing pointer is never moved by the unit.
 
-`writeForwardState(destSlug)` moves the landing pointer to `destSlug`, records the back-edge
-`prev[destSlug] = <this part>`, and seeds `parts[destSlug] = {currentScreen: 0}` **only if the
-destination has never been visited** — a learner going forward into a part they have already been
-in resumes where they left off rather than replaying from screen 0. It then persists through
-`persistUnitState()`, which re-arms the debounce **before** the synchronous write, and calls
-`armLeaving()`.
+`writeForwardState(destSlug, hash)` records the back-edge in the `sessionStorage` edge map, saves
+**this** part synchronously (`flushResumeSave()`) and calls `armLeaving()`. Since v5 there is no
+landing pointer to move and no destination to seed: the destination's document is another part's.
 
 Call sites, two of which are conditional:
 
@@ -361,7 +356,7 @@ Part 05 is terminal and writes no forward state. Nothing is added to part 01's
 ## 6a. Cross-part back ("חזרה" on the first screen) — hidden in production since 2026-09-16
 
 > `hideCrossPartBack()` (called from `90-boot.js`) hides `#back-to-prev-part` unless `DEV_NAV`,
-> and `goBackToPreviousPart()` returns at once unless `DEV_NAV` — belt and braces. The three-layer
+> and `goBackToPreviousPart()` returns at once unless `DEV_NAV` — belt and braces. The edge-map
 > resolution below still runs in the `?dev=1` walkthrough, and `_test/verify-report.js` boots that
 > group with `?dev=1` to reach it.
 
@@ -371,35 +366,38 @@ leftovers from the pre-split global screen numbering that `goTo`'s range guard s
 so it had never worked. Part 05's first screen had no such button at all; its bar also gained
 `s3-bottom-bar` to lay two buttons out.
 
-`prev` is a **map of back-edges, not a stack**: forward navigation writes `prev[dest]`, back
-navigation only reads it. Nothing to push, pop, or keep in sync, and a partial write cannot corrupt
-an ordering. It also settles part 03, which is reachable from **both** 01 (at ≥ 4/5) and 02 (at
-≥ 2/2): whichever router actually navigated is the one that wrote the edge, so the same button
-resolves to whichever part the learner really came from.
+The edge map (`lomda_nav_edges::<unit>` in `sessionStorage`) is a **map of back-edges, not a stack**:
+forward navigation writes `edges[dest] = {from, hash}`, back navigation only reads it. Nothing to
+push, pop, or keep in sync. It also settles part 03, which is reachable from **both** 01 (at ≥ 4/5)
+and 02 (at ≥ 2/2): whichever router actually navigated is the one that wrote the edge. Until v5 the
+document carried a copy of this map (`prev`); it went with the landing pointer — the document
+belongs to one part and has nothing to point at.
 
-`goBackToPreviousPart()` points the document at the destination **before** navigating. That is what
-stops the destination's loader seeing a mismatch and hopping straight back — the ping-pong that
-would otherwise re-send `completed` on every cycle. If the synchronous write does not land it
-retries once, and if that fails too it **stays put**, rolls the in-memory pointer back and logs
-`[resume] back: state write failed, staying put`. Navigating on a failed write is the one thing
-that reintroduces the ping-pong.
+`goBackToPreviousPart()` (under `DEV_NAV`) saves this part synchronously and navigates. With no
+landing pointer there is no write that could fail and hold the learner in place — the v4
+fail-closed branch ("staying put" after two failed writes) is gone with it.
 
 > **Changed in v4.** The button now ships **visible**, and `syncBackButton()` is gone. It became
-> unnecessary once the back target was resolved in three layers — the document, a `sessionStorage`
-> edge map readable synchronously from the moment the script loads, and a hard-coded fallback passed
-> in the `onclick`. Parts 02–05 are only reachable through the forward chain, so a sane target always
+> unnecessary once the back target was resolved from a `sessionStorage` edge map readable
+> synchronously from the moment the script loads, with a hard-coded fallback passed in the
+> `onclick` (v4 also had a document tier, `prev`, removed in v5). Parts 02–05 are only reachable through the forward chain, so a sane target always
 > exists; hiding the button until `_unitState` arrived (two CDN scripts and a metadata poll later)
 > meant a learner clicking in that first second got nothing at all, which is the very bug the edges
 > were added to fix.
 
-## 6b. Version migration — REMOVED in v4 (2026-09-01)
+## 6b. Version migration — back in v5 (2026-09-16), one step only
 
-> **This section is historical.** `RESUME_STATE_VERSION` is now **4**, `migrateV2()` and
-> `RESUME_PART_CHAIN` are deleted, and `readUnitState()` discards any document whose `v` is not the
-> current one. That was approved because this unit has never had a live Kata run, so there are no
-> documents in the field to lose. The deploy-atomically warning at the end of this section still
-> applies in full, and matters more than before: a stale cached `40-resume.js` reading a v4 document
-> **deletes** it. Bump every `?v=` in the same commit as a version bump.
+> `RESUME_STATE_VERSION` is **5**. `readUnitState()` runs `migrateState()`: a **v4** document is
+> converted in place — `payload = parts[<this part's slug>]`, the four ledgers, `ui` and `results`
+> kept as they are, `part`/`prev`/`parts` dropped — so a learner mid-part on upload day loses
+> nothing. Any **other** version is discarded. The migration is one function, one step, and covered
+> by the `shape` group in `_test/verify-report.js`; that is what makes it acceptable against the
+> guide's "discard rather than write migration code you cannot test".
+>
+> v4 (2026-09-01) had removed migration altogether (`migrateV2()`, `RESUME_PART_CHAIN`), approved
+> because the field was clean. The deploy-atomically warning below still applies in full: a stale
+> cached `40-resume.js` reading a v5 document **deletes** it. Bump every `?v=` in the same commit as
+> a version bump.
 >
 > The original v2 → v3 text follows, for anyone reading a document written before 2026-09-01.
 
@@ -423,33 +421,54 @@ Item-level marks cannot be recovered, so a migrating learner may re-send one rou
 
 ```js
 {
-  v: 4,
-  part: '<slug the learner should land on>',
-  parts: { '<slug>': { currentScreen, …that part's payload }, … },   // every part, retained
-  prev:  { '<slug>': { from: '<slug>', hash: '#screen=N' } },        // back-edges (§6a)
-  done:  { '<slug>': true, unit: true },                             // component/unit 'completed' sent
-  doneItems: { '<slug>#<itemId>': true },                            // item 'completed' sent
-  hints: { '<itemId>/<qKey>': true },                                // 'requested.1' sent (2026-09-02)
-  picks: { 'learning-type/<value>': true },                          // one-off 'selected' sent
-  ui:      { character: '<Character1|Character2|text>' },            // unit-level, NOT per part
-  results: {}                                                        // cross-part gates; empty in this unit
+  v: 5,
+  component: '<this part\'s slug>',                                  // whose document — checked on every read
+  payload: { currentScreen, …this part's payload } | null,           // capturePartPayload()
+  done:  { '<slug>': true },                                          // component 'completed' sent
+  doneItems: { '<slug>#<itemId>': true },                             // item 'completed' sent
+  hints: { '<itemId>/<qKey>': true },                                 // 'requested.1' sent (2026-09-02)
+  picks: { 'learning-type/<value>': true },                           // one-off 'selected' sent
+  ui:      { character: '<Character1|Character2|text>' },             // this part's own copy (§7a)
+  results: {}                                                         // this part's own; empty in this unit
 }
 ```
 
 The four ledgers (`done`, `doneItems`, `hints`, `picks`) all go through `sendStatementOnce`, so they
-share one implementation of the three invariants in §8a. `ui` and `results` are deliberately not
-inside `parts[]`: `captureUnitState` replaces the current part's slot on every save, so anything
-parked there would be destroyed on the next part's first screen change.
+share one implementation of the three invariants in §8a. `ui` and `results` sit **beside** the
+payload, not inside it: `captureUnitState` replaces the payload on every save, so anything parked
+inside it would be destroyed on the next screen change.
 
 `capturePartPayload()` returns this part's payload alone; `captureUnitState()` **replaces** (never
-merges into) `parts[currentPartSlug()]` — a merge would leave stale keys alive, most visibly part
-02's `texts` map, where a stale label for a row the learner has since cleared to `'-'` would survive
-and be repainted.
+merges into) `payload` — a merge would leave stale keys alive, most visibly part 02's `texts` map,
+where a stale label for a row the learner has since cleared to `'-'` would survive and be repainted.
 
-`captureUnitState()` deliberately does **not** touch `part`. Only `writeForwardState` and
-`goBackToPreviousPart` move the landing pointer. A save that reset it to the current slug would undo the
-one those two just wrote, and the debounced timer left behind by the last `goTo()` would fire
-mid-navigation and bounce the learner back to the part they were leaving.
+A document whose `component` is not the current part is **discarded** with
+`[resume] document belongs to "<x>", not "<here>" — discarded`: one registration shared by two
+components would be a platform-side fault, and another part's payload is never applied.
+
+## 7a. One document per component (v5, 2026-09-16) — what the platform does, and what follows
+
+Two statements fixed the model. **MOE:** the platform remembers per learner which components are
+done, not started or in progress, and brings the learner back to *the last component in progress*.
+**Kata:** the registration is a {user, component} pair — a different one per component for the same
+learner — and *"this lets platforms clear the State of one component on a repeat entry (e.g. a
+re-take of an assessment component)"*.
+
+| | |
+|---|---|
+| **The address** | unchanged — `?registration` alone, and it was per component all along. What changed on 2026-09-16 is that no part copies it into another, so each part really reads its own document |
+| **The document** | flat: `component` + `payload` (§7). A document naming another part is discarded with `console.warn` |
+| **Re-take** | the platform clears the document → `readUnitState()` gets a 404 → an empty document. `payload:null` = nothing to restore; empty `done` = the `completed` goes out again (intended); empty `results` **beats** the localStorage cache of the previous attempt (read precedence, §3). No special code — a test (`retake`) |
+| **The character** | the one datum chosen in one part and consumed in another. Four steps (`adoptUnitCharacter`, loader phase A): (1) this part's document; (2) if null — the localStorage mirror (the choice made in part 01 on this browser); (3) if found — copied into this part's document, persisted in phase B; (4) if neither — the default. **Never deletes the mirror** |
+| **Known cost** | a learner switching devices mid-unit sees the default character in parts not yet opened on the new device. Decided 2026-09-16; reading part 01's document by studentId+componentKey was neither built nor asked |
+| **The fallback** | `RESUME_STATE_ID = 'execution-state::<slug>'` — one `localStorage` document per part off-platform too |
+
+**The live defect this fixed.** The previous `applyUnitProfile` read `ui.character: null` in the
+document as "no character": it nulled `lomdaState.selectedCharacter` **and deleted the mirror**.
+Since every part reads its own document (2026-09-16), every part ≥ 02 opened with null — so on every
+Kata launch the character was lost, and with the mirror gone, for every part after it. Before that,
+the in-unit hops masked it by sharing part 01's document. `adoptUnitCharacter` replaces it; the
+`character` group in `_test/verify-report.js` locks the four steps and "never deletes".
 
 Size is not a concern: all five payloads together run ~10–20 KB against Kata's ~1 MB cap.
 

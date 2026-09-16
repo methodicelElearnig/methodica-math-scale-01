@@ -113,31 +113,30 @@ function bootXAPI() {
 
            ⚠️ What was deliberately NOT moved early: _resumeReady. It stays in phase B. Setting it
            here would open a window in which any goTo() arms a save that overwrites
-           doc.parts[slug] with a fresh payload — a write before the restore, which is exactly
+           doc.payload with a fresh payload — a write before the restore, which is exactly
            what every write path is built to prevent. Phase A is therefore READ-ONLY:
-           applyUnitProfile aligns memory and cache, and does not touch the document. */
+           adoptUnitCharacter aligns memory and cache; what it copies into the document (the
+           character from the mirror) waits in the queue and is persisted in phase B. */
         var _saved   = null;
         var _payload = null;
         if (RESUME_ENABLED) {
           try {
             _saved = readUnitState();
-            /* No hop to _saved.part any more (2026-09-16, REPORT-XAPI.md §12): the platform
-               launches each component on its own URL and its own registration, so the part Kata
-               opened is the part shown, and only its own slot is restored below. Under
-               per-component registration _saved.part could differ only because of a legacy in-unit
-               hop; the pointer is still written by writeForwardState under DEV_NAV and read by
-               nothing in production. */
-            /* The character — the reason this whole phase exists. Until v4 it lived only in
-               localStorage, so continuing from another machine painted the wrong avatar.
-               Called unconditionally rather than only when there is a payload: a learner whose
-               document has no slot for this part never enters applyExecutionState at all, and
+            /* The document is this part's alone (v5, 2026-09-16): Kata's registration is per
+               component, the platform launches each part on its own, and there is no landing
+               pointer or hop to a saved part any more. See 40-resume.js (header) and
+               REPORT-XAPI.md §12. */
+            /* The character — adoptUnitCharacter's four steps: this part's document, else the
+               mirror left by part 01 (copied into the document, persisted in phase B), else the
+               default. Called unconditionally rather than only when there is a payload: a learner
+               entering this part for the first time never enters applyExecutionState at all, and
                would miss the alignment. */
-            try { applyUnitProfile(_saved); } catch (e) {}
+            try { adoptUnitCharacter(_saved); } catch (e) {}
             /* Screen 0 was painted by the markup with ONE hardcoded avatar family, and by
                partBoot() with the localStorage guess. Repaint it here, from the document — the
                source of truth — behind the cover.
 
-               UNCONDITIONAL: this used to run only when applyUnitProfile() returned true, i.e.
+               UNCONDITIONAL: this used to run only when the profile call returned true, i.e.
                only when the document disagreed with what memory already held. But it returns
                false whenever the two agree, which is the normal same-machine case — and
                components 02/03/04 never ran resetScreenState(0) at boot at all. Their screen 0
@@ -145,10 +144,10 @@ function bootXAPI() {
                permanently wrong avatar for every Character2 learner arriving fresh at those parts.
                All five screen-0 bodies are idempotent repaints, so running it always is safe. */
             try { resetScreenState(currentScreen); } catch (e) {}
-            _payload = _saved.parts[currentPartSlug()];
+            _payload = _saved.payload;
 
             /* ── No payload → no screen to restore → no reason to hold the cover ──
-               A first-time learner gets an empty document, therefore an empty parts[], therefore
+               A first-time learner gets an empty document, therefore no payload, therefore
                the cover drops here — at the earliest possible moment, without waiting for
                pollMetadataReady. The character fix, if there was one, was already painted
                synchronously one line above.
@@ -200,7 +199,7 @@ function bootXAPI() {
                anything is sent.
 
                _resumeReady is set only here, never in phase A: it is the gate on every write
-               path, and a write opened before the restore overwrites doc.parts[slug] with a fresh
+               path, and a write opened before the restore overwrites doc.payload with a fresh
                payload. It is also set in the catch — a failed read should not disable saving for
                the rest of the session, and certainly should not silence reporting. */
             var _resumed = false;

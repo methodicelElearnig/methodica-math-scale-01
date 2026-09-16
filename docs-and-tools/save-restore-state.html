@@ -17,15 +17,16 @@
 
   ── מה נשמר, ולמה זה מספיק ──
   מ-v4 (2026-08-20) כל מצב הלומד שקובע מה הוא רואה יושב במסמך ה-state:
-  מצביע הסין והמסך, התשובות, יומן ה-completed, **הדמות הנבחרת** (ui.character)
+  המסך והתשובות של הסין (payload), יומן ה-completed, **הדמות הנבחרת** (ui.character)
   ו**תוצאות מועד א/ב** (results). לפני v4 השניים האחרונים ישבו רק
   ב-localStorage, ואז תמונת מצב הייתה חלקית מעצם הגדרתה. ראו RESUME.md §3.
 
   שני דברים שנשארו ב-localStorage/sessionStorage הם **קאש נגזר**, לא מקור אמת:
-    • מפתחות lomda_selectedCharacter / lomda_moed*_result — applyUnitProfile
-      מיישר אותם מהמסמך בכל טעינה, ולכן הזרקת המסמך לבדה מספיקה.
-    • lomda_nav_edges::… — כפילות של doc.prev, וגם per-tab ולכן לא נגיש
-      מלשונית אחרת בכלל.
+    • מפתחות lomdaCharacter / results — adoptUnitCharacter ו-getUnitResult
+      מעדיפים את המסמך, ולכן הזרקת המסמך לבדה מספיקה.
+    • lomda_nav_edges::… — מפת קשתות לסיור ?dev=1 בלבד, per-tab.
+  ⚠️ v5 (2026-09-16): המסמך הוא של **סין אחד** — component + payload. אין יותר
+  part/parts/prev. קובץ v4 עדיין ניתן להזרקה: היחידה מהגרת אותו בקריאה.
   הכלי מתעד אותם בתמונת המצב לצורכי אבחון ומחזיר אותם כשהוא same-origin,
   אבל שחזור נכון לא תלוי בזה.
 
@@ -244,7 +245,7 @@
     <h2>קאש הדפדפן הזה</h2>
     <p class="lead">
       אבחון בלבד. מ-v4 המפתחות האלה הם קאש נגזר מהמסמך, לא מקור אמת —
-      <code>applyUnitProfile</code> מיישר אותם בכל טעינה (RESUME.md §3).
+      <code>adoptUnitCharacter</code> / <code>getUnitResult</code> מעדיפים את המסמך (RESUME.md §7a).
       נגיש רק כשהכלי מוגש מאותו origin כמו היחידה; מ-<code>file://</code> הוא זורק.
     </p>
     <div class="status kv" id="cacheStatus">—</div>
@@ -275,7 +276,7 @@
 
 /* ═══════════════════ קבועים שנגזרים מהיחידה ═══════════════════
    מסונכרנים ידנית מול הקוד. אי-התאמה כאן = ולידציה שמאשרת מסמך שהיחידה תזרוק. */
-var RESUME_STATE_VERSION = 4;                       // unit-js/40-resume.js
+var RESUME_STATE_VERSION = 5;                       // unit-js/40-resume.js (v4 מהוגר בקריאה)
 var UNIT_SLUG   = 'methodica-math-scale-01';
 var SLUG_RE     = /^methodica-math-scale-01-0[1-6]$/;
 var SCREEN_COUNTS = {                                // TOTAL_SCREENS פר סין
@@ -458,12 +459,11 @@ function isoLocal(d) {
 /* state_<תאריך>_<שעה>_p<סין>_scr<מסך>_<8 ראשונים של הרישום>.json
    ASCII ובר-מיון לפי שם, כדי שרשימת התיקייה תהיה כרונולוגית בלי מטא-דאטה. */
 function snapshotName(doc, reg, d) {
-  var part = (doc && doc.part) || 'unknown';
+  var part = (doc && (doc.component || doc.part)) || 'unknown';
   var m = /-(\d\d)$/.exec(part);
   var scr = 'x';
-  if (doc && doc.parts && doc.parts[part] && typeof doc.parts[part].currentScreen === 'number') {
-    scr = doc.parts[part].currentScreen;
-  }
+  var pl = docPayload(doc);
+  if (pl && typeof pl.currentScreen === 'number') scr = pl.currentScreen;
   var r8 = String(reg || '').replace(/[^0-9a-zA-Z]/g, '').slice(0, 8) || 'noreg';
   return 'state_' + stampName(d) + '_p' + (m ? m[1] : 'xx') + '_scr' + scr + '_' + r8 + '.json';
 }
@@ -620,14 +620,20 @@ function renderCache() {
 
 /* ═══════════════════ תמונת המצב ═══════════════════ */
 
+/* v5: payload; v4: parts[part] — שני הצורות נקראות, כדי שקבצים ישנים יישארו שמישים. */
+function docPayload(doc) {
+  if (!doc) return null;
+  if (doc.payload) return doc.payload;
+  var part = doc.component || doc.part;
+  return (doc.parts && part && doc.parts[part]) || null;
+}
+
 function summarize(doc) {
-  var part = doc && doc.part;
+  var part = doc && (doc.component || doc.part);
+  var pl = docPayload(doc);
   return {
     part: part || null,
-    currentScreen: (doc && doc.parts && doc.parts[part] &&
-                    typeof doc.parts[part].currentScreen === 'number')
-                     ? doc.parts[part].currentScreen : null,
-    parts: (doc && doc.parts) ? Object.keys(doc.parts) : [],
+    currentScreen: (pl && typeof pl.currentScreen === 'number') ? pl.currentScreen : null,
     character: (doc && doc.ui) ? (doc.ui.character || null) : undefined,
     results: (doc && doc.results) ? doc.results : undefined,
     done: (doc && doc.done) ? Object.keys(doc.done).length : 0,
@@ -667,50 +673,57 @@ function validateSnapshot(snap, formReg) {
 
   /* readUnitState זורק כל v שאינו הנוכחי, ואז הלומד מתחיל מאפס. עדיף לסרב
      כאן מלכתוב מסמך שהיחידה תזרוק. */
-  if (st.v !== RESUME_STATE_VERSION) {
+  /* v5: v4 מהוגר בקריאה (migrateState), ולכן קובץ v4 מותר — עם אזהרה. כל v אחר
+     נזרק ע"י readUnitState, ואז הלומד מתחיל מאפס; עדיף לסרב כאן. */
+  var isV4 = (st.v === RESUME_STATE_VERSION - 1);
+  if (isV4) {
+    warn.push('state.v הוא ' + st.v + ' — היחידה תהגר אותו ל-v' + RESUME_STATE_VERSION +
+              ' בקריאה (payload = parts[<הסין שנפתח>]; part/prev/parts נזרקים).');
+  } else if (st.v !== RESUME_STATE_VERSION) {
     block.push('state.v הוא ' + st.v + ' ולא ' + RESUME_STATE_VERSION +
                ' — readUnitState() יזרוק מסמך כזה והלומד יתחיל מאפס.');
   }
-  if (!st.part || typeof st.part !== 'string') block.push('state.part חסר או אינו מחרוזת.');
+  var comp = isV4 ? st.part : st.component;
+  if (!comp || typeof comp !== 'string') {
+    block.push('state.' + (isV4 ? 'part' : 'component') + ' חסר או אינו מחרוזת.');
+  }
+  if (!isV4 && !('payload' in st)) warn.push('אין state.payload — readUnitState ישלים null (אין שחזור מסך).');
+  if (!isV4 && st.payload !== null && st.payload !== undefined &&
+      (typeof st.payload !== 'object' || Array.isArray(st.payload))) {
+    block.push('state.payload אינו אובייקט ואינו null.');
+  }
 
-  ['parts', 'prev', 'done', 'doneItems'].forEach(function (k) {
+  ['done', 'doneItems'].forEach(function (k) {
     if (!st[k] || typeof st[k] !== 'object' || Array.isArray(st[k])) {
       block.push('state.' + k + ' חסר או אינו אובייקט.');
     }
   });
 
-  /* v4: בלי ui/results ה-getters נופלים ל-localStorage, כלומר המסמך לא יהיה
-     הסמכות — וזה בדיוק מה ש-v4 בא לתקן. אזהרה ולא חסימה: readUnitState
-     ממלא ברירות מחדל, ולכן המסמך שמיש. */
   if (!st.ui || typeof st.ui !== 'object') {
-    warn.push('אין state.ui — הדמות תיקרא מ-localStorage עד לכתיבה הבאה (ראו RESUME.md §3).');
+    warn.push('אין state.ui — הדמות תיקרא מ-localStorage עד לכתיבה הבאה (ראו RESUME.md §7a).');
   }
   if (!st.results || typeof st.results !== 'object') {
-    warn.push('אין state.results — שערי מועד א/ב ייקראו מ-localStorage עד לכתיבה הבאה.');
+    warn.push('אין state.results — readUnitState ישלים {}.');
   }
 
-  /* toLowerCase אינו קוסמטי: slug באות רישית מייצר משבצת שנייה לאותו סין,
-     ומשם יומן done שמחמיץ ו-completed כפול (40-resume.js). */
-  var slugs = [];
-  if (st.part) slugs.push(st.part);
-  if (st.parts && typeof st.parts === 'object') slugs = slugs.concat(Object.keys(st.parts));
-  slugs.forEach(function (s) {
-    if (s !== s.toLowerCase()) block.push('slug עם אות רישית: "' + s + '" — מפצל את הסין לשתי משבצות.');
-    else if (!SLUG_RE.test(s)) warn.push('slug לא מוכר: "' + s + '".');
-  });
+  /* v5: המסמך חייב להיות של הסין שייפתח — slug באות רישית לא יתאים ל-currentPartSlug()
+     והמסמך ייזרק כ"מסמך של סין אחר"; מסמך של סין 03 שיוזרק תחת registration של סין 05 ייזרק
+     עם console.warn. */
+  if (comp && typeof comp === 'string') {
+    if (comp !== comp.toLowerCase()) block.push('slug עם אות רישית: "' + comp + '" — לא יתאים ל-currentPartSlug() והמסמך ייזרק.');
+    else if (!SLUG_RE.test(comp)) warn.push('slug לא מוכר: "' + comp + '".');
+    warn.push('המסמך הוא של "' + comp + '" — יש להזריק אותו לרישום שהפלטפורמה נתנה **לסין הזה**; תחת רישום של סין אחר הוא ייזרק.');
+  }
 
-  if (st.parts && typeof st.parts === 'object') {
-    Object.keys(st.parts).forEach(function (s) {
-      var p = st.parts[s];
-      if (!p || typeof p !== 'object') { block.push('parts["' + s + '"] אינו אובייקט.'); return; }
-      if (typeof p.currentScreen !== 'number') {
-        warn.push('parts["' + s + '"].currentScreen אינו מספר — השחזור ייפול ל-0.');
-      } else if (SCREEN_COUNTS[s] !== undefined &&
-                 (p.currentScreen < 0 || p.currentScreen >= SCREEN_COUNTS[s])) {
-        warn.push('parts["' + s + '"].currentScreen=' + p.currentScreen +
-                  ' מחוץ לטווח (0..' + (SCREEN_COUNTS[s] - 1) + ') — goTo() יחסום והשחזור ייפול לערך שבמסמך.');
-      }
-    });
+  var pl = docPayload(st);
+  if (pl) {
+    if (typeof pl.currentScreen !== 'number') {
+      warn.push('payload.currentScreen אינו מספר — השחזור ייפול ל-0.');
+    } else if (SCREEN_COUNTS[comp] !== undefined &&
+               (pl.currentScreen < 0 || pl.currentScreen >= SCREEN_COUNTS[comp])) {
+      warn.push('payload.currentScreen=' + pl.currentScreen +
+                ' מחוץ לטווח (0..' + (SCREEN_COUNTS[comp] - 1) + ') — goTo() יחסום והשחזור ייפול לערך שבמסמך.');
+    }
   }
 
   var bytes = 0;
@@ -769,9 +782,8 @@ function doGet(v, label) {
 function describeDoc(doc, prefix) {
   var s = summarize(doc);
   append(prefix + 'v:         ' + doc.v, 'dim');
-  append(prefix + 'part:      ' + (s.part || '(none)'), 'dim');
-  append(prefix + 'screen:    ' + (s.currentScreen === null ? '(none)' : s.currentScreen), 'dim');
-  append(prefix + 'parts:     ' + (s.parts.length ? s.parts.join(', ') : '(none)'), 'dim');
+  append(prefix + 'component: ' + (s.part || '(none)'), 'dim');
+  append(prefix + 'screen:    ' + (s.currentScreen === null ? '(none — no payload)' : s.currentScreen), 'dim');
   append(prefix + 'character: ' + (s.character === undefined ? '(no ui section)' : (s.character || 'null')),
          (s.character === undefined) ? 'warnc' : 'dim');
   append(prefix + 'results:   ' + (s.results === undefined ? '(no results section)' : JSON.stringify(s.results)),
@@ -984,7 +996,7 @@ $('btnInject').onclick = function () {
 };
 
 /* מיישר את הקאש של הדפדפן הזה לפי המסמך שהוזרק. מיותר לנכונות — היחידה
-   מיישרת אותו בעצמה ב-applyUnitProfile — אבל מסדר את הפריים הראשון, לפני
+   מיישרת אותו בעצמה ב-adoptUnitCharacter — אבל מסדר את הפריים הראשון, לפני
    שהמסמך מגיע. */
 function restoreCacheKeys() {
   var st = snapshot.state;
@@ -997,8 +1009,7 @@ function restoreCacheKeys() {
       if (st.results && st.results[k]) window.localStorage.setItem(k, st.results[k]);
       else window.localStorage.removeItem(k);
     });
-    /* המפה הזאת היא per-tab, ולכן כתיבה מהלשונית הזאת לא תגיע ללשונית
-       היחידה. doc.prev מכסה את זה בכל מקרה — ראו RESUME.md §6. */
+    /* המפה הזאת היא per-tab ומשרתת רק את סיור ?dev=1 — ראו RESUME.md §6a. */
     window.sessionStorage.removeItem(NAV_EDGE_KEY);
     append('✓ קאש ה-localStorage של ה-origin הזה יושר לפי המסמך.', 'ok');
     renderCache();
@@ -1030,21 +1041,20 @@ function renderLaunch(st) {
            'להשתמש בקישור ההשקה המקורי מהפלטפורמה, ולהוסיף לו את ה-<code>registration</code> הזה.';
   }
 
-  var part = st.part;
-  var scr = (st.parts && st.parts[part] && typeof st.parts[part].currentScreen === 'number')
-              ? st.parts[part].currentScreen : null;
+  var part = st.component || st.part;
+  var pl = docPayload(st);
+  var scr = (pl && typeof pl.currentScreen === 'number') ? pl.currentScreen : null;
   var rootUrl = '../index.html' + qs;
   var directUrl = '../' + part + '/index.html' + qs + (scr !== null ? '#screen=' + scr : '');
 
   $('launchLinks').innerHTML =
-    '<div class="linkbox"><strong>1. דרך שער היחידה</strong> — המסלול המציאותי. ' +
-    'ה-shim תמיד מפנה לסין 01, והלואדר שלו קופץ משם ל-<code>doc.part</code> בעצמו ' +
-    '(<code>50-loader.js</code>) — כלומר בדיוק מה שקורה בשיגור אמיתי.' +
-    '<code><a href="' + esc(rootUrl) + '" target="_blank" rel="noopener">' + esc(rootUrl) + '</a></code></div>' +
-    '<div class="linkbox"><strong>2. ישר לסין, עם מסך מקובע</strong> — ' +
-    'נחוץ כי הקפיצה בין הסינים גוררת רק את ה-query string, ולכן hash על הקישור ' +
-    'הראשון נופל בדרך.' +
+    '<div class="linkbox"><strong>1. ישר לסין שהמסמך שלו</strong> — המסלול המציאותי מ-2026-09-16: ' +
+    'הפלטפורמה משגרת כל רכיב בנפרד, והלואדר משחזר את ה-<code>payload</code> של הסין ' +
+    'שנפתח (<code>50-loader.js</code>). ה-hash מקבע את המסך.' +
     '<code><a href="' + esc(directUrl) + '" target="_blank" rel="noopener">' + esc(directUrl) + '</a></code></div>' +
+    '<div class="linkbox"><strong>2. דרך שער היחידה</strong> — פותח את סין 01 בלבד; אין יותר ' +
+    'קפיצה לסין השמור, ולכן זה שימושי רק כשהמסמך הוא של סין 01.' +
+    '<code><a href="' + esc(rootUrl) + '" target="_blank" rel="noopener">' + esc(rootUrl) + '</a></code></div>' +
     '<div class="hint" style="margin-top:10px">' + note + '</div>' +
     '<div class="hint">⚠ לא להוסיף <code>?resetState</code> לקישורים האלה — הוא ימחק ' +
     'בדיוק את מה שהוזרק.</div>';

@@ -363,8 +363,9 @@ function selectOption(cardEl) {
   cardEl.classList.add('selected');
   cardEl.setAttribute('aria-checked', 'true');
   /* setUnitCharacter writes all three: window.lomdaState, the localStorage cache and the Kata
-     document. It is chosen on this screen, read again in part 05, and therefore unit-level
-     state — it cannot live in parts[], which captureUnitState replaces on every save.
+     document. It is chosen on this screen and read again in part 05, so it sits beside the
+     payload (which captureUnitState replaces on every save) and reaches part 05 through the
+     localStorage mirror — adoptUnitCharacter copies it into that part's own document (v5).
      If the document has not been read yet the choice is queued and drained in loader phase B. */
   if (typeof setUnitCharacter === 'function') {
     setUnitCharacter(cardEl.dataset.value);

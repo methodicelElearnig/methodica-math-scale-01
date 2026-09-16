@@ -121,9 +121,11 @@
       (opts && opts.objectId ? ' ' + opts.objectId : ''));
   };
 
-  window.loadState720 = function () {
+  function stateKey(id) { return STATE_KEY + '::' + (id || 'execution-state'); }   /* v5: one document per part */
+
+  window.loadState720 = function (id) {
     try {
-      var raw = sessionStorage.getItem(STATE_KEY);
+      var raw = sessionStorage.getItem(stateKey(id));
       /* absent אינו כשל — זו הקריאה הראשונה של registration חדש, וזה בדיוק
          המקרה ש--j לא ידע להבדיל מ-401 או מ-500. */
       record('load', raw ? 200 : 404, true, raw ? 'ok' : 'absent');
@@ -142,7 +144,7 @@
         console.warn('[stub] save FORCED FAIL status', forced, 'reason', r.reason);
         return false;
       }
-      sessionStorage.setItem(STATE_KEY, JSON.stringify(doc));
+      sessionStorage.setItem(stateKey(id), JSON.stringify(doc));
       record('save', 204, true);
       return true;
     } catch (e) { record('save', 0, false, 'threw'); return false; }
@@ -214,10 +216,13 @@
 
   /* ── עוזרי קונסול ── */
   window.__stmts = readLog;
-  window.__state = function () { return window.loadState720(); };
+  window.__state = function () {
+    return window.loadState720(typeof RESUME_STATE_ID !== 'undefined' ? RESUME_STATE_ID : undefined);
+  };
   window.__reset = function () {
     try {
-      sessionStorage.removeItem(STATE_KEY);
+      Object.keys(sessionStorage).filter(function (k) { return k.indexOf(STATE_KEY) === 0; })
+        .forEach(function (k) { sessionStorage.removeItem(k); });
       sessionStorage.removeItem(LOG_KEY);
       sessionStorage.removeItem(FAIL_KEY);
       sessionStorage.removeItem('lomda_nav_edges::methodica-math-scale-01');
@@ -227,10 +232,7 @@
        מהריצה הקודמת בחיים בחלון שלפני קריאת המסמך, וזה בדיוק סוג המצב
        שהעוזר הזה קיים כדי לחסל. אותו ניקוי כמו ב-initResumeResetHatch. */
     try {
-      localStorage.removeItem('lomda_selectedCharacter');
-      ['lomda_moedA_partA_result', 'lomda_moedA_partB_result',
-       'lomda_moedB_partA_step1_result', 'lomda_moedB_partA_step2_result',
-       'lomda_moedB_partB_result'].forEach(function (k) { localStorage.removeItem(k); });
+      localStorage.removeItem('lomdaCharacter');   /* this unit's UI_CHARACTER_KEY; RESULT_KEYS is empty here */
     } catch (e) {}
     return 'cleared';
   };

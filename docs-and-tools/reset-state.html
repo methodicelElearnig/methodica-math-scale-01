@@ -5,7 +5,9 @@
 <title>איפוס מסמך state — כלי QA</title>
 <!--
   ═══════════════════════════════════════════════════════════════════════════
-  כלי QA למחיקת מסמך ה-state של רישום (registration) אחד ב-Kata.
+  כלי QA למחיקת מסמך ה-state של רישום (registration) אחד ב-Kata — כלומר של
+  רכיב אחד ללומד אחד: מ-2026-09-16 (v5) לכל סין מסמך משלו, תחת ה-registration
+  שהפלטפורמה נתנה לו.
 
   ⚠️ **לא נפרס.** הקובץ יושב ב-docs-and-tools/ במכוון: תהליך האריזה מוחק את
   התיקייה הזאת מחבילת השחרור (ראו DEPLOY.md). דף שמוחק התקדמות של לומד לא
@@ -290,8 +292,8 @@ $('btnCheck').onclick = function () {
       try {
         var doc = JSON.parse(r.body);
         append('v:      ' + (doc.v !== undefined ? doc.v : '(none)'), 'dim');
-        append('part:   ' + (doc.part || '(none)'), 'dim');
-        append('parts:  ' + (doc.parts ? Object.keys(doc.parts).join(', ') : '(none)'), 'dim');
+        append('component: ' + (doc.component || doc.part || '(none)'), 'dim');   // v5: component; v4: part
+        append('payload:   ' + (doc.payload ? ('screen ' + doc.payload.currentScreen) : (doc.parts ? 'v4 parts: ' + Object.keys(doc.parts).join(', ') : '(none)')), 'dim');
         var doneN = doc.done ? Object.keys(doc.done).length : 0;
         var itemN = doc.doneItems ? Object.keys(doc.doneItems).length : 0;
         append('ledger: ' + doneN + ' components / ' + itemN + ' items already reported completed',
