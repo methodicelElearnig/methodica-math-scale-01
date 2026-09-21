@@ -294,6 +294,14 @@ function xapiEndComponent(result, btn){
    Only elements carrying data-xapi-report are wired now, its value being the item suffix (e.g.
    data-xapi-report="003"). No element in this unit carries it, so video
    reporting is off in practice — the mechanism stays ready for real content video.
+   ── TWO RULES BIND ANYTHING EVER OPTED IN (17.09.26) ──
+   The machine below reports a 'played' on every start, so:
+     - do NOT load() or swap src on a reported video while it is playing. That is what s53Enter
+       does to #s53-gif on every entry, and the pause it fires is not the learner's. The
+       'emptied' guard catches the common ordering but is not a guarantee — the measurement in
+       mass-measure-01 shows currentTime still holding its OLD value when pause fired, i.e. that
+       engine dispatched pause before tearing the element down, so 'emptied' may arrive after it.
+     - NEVER opt in a `loop` video — #s53-gif is one. Every iteration would report a played.
    ── objectId: the ITEM, not the question (15.09.26) ──
    Reported by the test team: these statements went out against the PART. Carrying xapiQ() was
    never enough. The library builds object.id from sttmContext.objectId, else from a questionId
@@ -312,8 +320,26 @@ function xapiWireVideos(){
     if (v.__xapiWired) return; v.__xapiWired = true;
     var item = v.getAttribute('data-xapi-report');
     var ctx  = { objectId: xapiItemId(item) };   // the ITEM this video belongs to
-    var pausedOnce = false;
-    v.addEventListener('pause', function(){ if (v.ended || v.currentTime === 0) return; pausedOnce = true; try { sendStatement720('paused', 'question', null, Object.assign({ time: v.currentTime }, ctx)); } catch (e) {} });
-    v.addEventListener('play',  function(){ if (!pausedOnce) return; try { sendStatement720('played', 'question', null, Object.assign({ time: v.currentTime }, ctx)); } catch (e) {} });
+    var playing   = false;  // a 'played' is open, not yet closed by a 'paused'
+    var reloading = false;  // a load()/src swap is in flight: its 'pause' is not the learner
+    function send(verb) {
+      try { sendStatement720(verb, 'question', null, Object.assign({ time: v.currentTime }, ctx)); } catch (e) {}
+    }
+    v.addEventListener('emptied', function(){ reloading = true; });
+    v.addEventListener('play', function(){
+      reloading = false;
+      if (playing) return;                           // already open: nothing started
+      playing = true;
+      send('played');
+    });
+    v.addEventListener('pause', function(){
+      if (!playing) return;                          // nothing open -> an orphan is impossible
+      playing = false;
+      if (v.ended) return;                           // end of clip, not a learner pause
+      if (reloading || v.readyState === 0) return;   // load()/src swap, not a learner pause
+      send('paused');
+    });
+    /* Some engines fire 'ended' without a preceding 'pause'. Close the state either way. */
+    v.addEventListener('ended', function(){ playing = false; });
   });
 }

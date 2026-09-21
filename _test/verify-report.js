@@ -1236,11 +1236,79 @@ function checkYouTubeReporting() {
       !!m && !/xapiQ\(/.test(m[0]),
       m ? m[0].replace(/\s+/g, ' ') : 'not found');
   }
-  ok('video', "'played' only reports after a real pause",
-    /PLAYING\s*&&\s*s4PausedOnce/.test(body));
-  ok('video', 'the pause/play pair strictly alternates',
-    /s4PausedOnce\s*=\s*false;/.test(body),
-    'a one-way latch still reports a played per seek');
+  /* 17.09.26 — what stood here asserted the LATCH: "'played' only reports after a real pause"
+     and "the pause/play pair strictly alternates" (/PLAYING && s4PausedOnce/). That assertion
+     was the defect MOE reported — the first 'played' of a viewing was never sent, so the first
+     'paused' had nothing before it. Both are gone; a revert net replaces them, and the emitted
+     sequence is now driven rather than pattern-matched. */
+  ok('video', 'the pausedOnce latch is gone from the handler',
+    !/s4PausedOnce/.test(stripComments(body)),
+    'the first played of a viewing would be suppressed again');
+
+  /* Drive the real handler. YT is never defined in jsdom (the IFrame API is not fetched), so
+     the probe supplies the three state constants it reads. s4YTPlayer is a top-level `let` —
+     a global LEXICAL binding, not a window property — so it is assigned from another script in
+     the same realm rather than through window. sqEnter is stubbed because the UI-side ENDED
+     branch runs OUTSIDE the handler's try/catch and would throw out of the probe. */
+  const b = loadComponent('01');
+  const probe = b.val(
+    "(function(){ var realUsing = window.XAPI_USING_G, realSend = window.sendStatement720," +
+    "             realYT = window.YT, realEnter = window.sqEnter, log = [];" +
+    "  window.XAPI_USING_G = true;" +
+    "  window.sendStatement720 = function(v, t, r, o){ log.push({ v: v, o: o }); };" +
+    "  window.YT = { PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0 } };" +
+    "  window.sqEnter = function(){};" +
+    "  s4YTPlayer = { getCurrentTime: function(){ return 4.5; } };" +
+    "  try {" +
+    "    s4OnPlayerStateChange({ data: 1 });" +   // 1 first start -> played
+    "    var beforeAnyPause = log.length;" +
+    "    s4OnPlayerStateChange({ data: 1 });" +   // 2 a seek      -> silent
+    "    s4OnPlayerStateChange({ data: 2 });" +   // 3 PAUSED      -> paused
+    "    s4OnPlayerStateChange({ data: 2 });" +   // 4 duplicate   -> silent
+    "    s4OnPlayerStateChange({ data: 1 });" +   // 5 resume      -> played
+    "    s4OnPlayerStateChange({ data: 0 });" +   // 6 ENDED       -> silent, re-arms
+    "    s4OnPlayerStateChange({ data: 2 });" +   // 7 pauseVideo() on an ended clip -> silent
+    "    var afterEnded = log.length;" +
+    "    s4OnPlayerStateChange({ data: 1 });" +   // 8 replay      -> played
+    "    return JSON.stringify({ beforeAnyPause: beforeAnyPause, afterEnded: afterEnded," +
+    "      log: log, itemId: xapiItemId('002') });" +
+    "  } finally { window.XAPI_USING_G = realUsing; window.sendStatement720 = realSend;" +
+    "             window.YT = realYT; window.sqEnter = realEnter; } })()");
+  const y = JSON.parse(probe || '{}');
+  const log = y.log || [];
+
+  ok('video', "the first start reports 'played', autoplay included",
+    y.beforeAnyPause === 1 && log[0] && log[0].v === 'played',
+    JSON.stringify(log.map(e => e.v)));
+  ok('video', 'no statement is an orphan (every paused follows a played)',
+    orphanScan(log) === null, orphanScan(log) + ': ' + JSON.stringify(log.map(e => e.v)));
+  ok('video', 'a seek and a duplicate pause emit nothing',
+    log.length === 4, JSON.stringify(log.map(e => e.v)));
+  ok('video', "ENDED emits nothing and re-arms the replay's 'played'",
+    y.afterEnded === 3 && log[3] && log[3].v === 'played',
+    'afterEnded=' + y.afterEnded + ' ' + JSON.stringify(log.map(e => e.v)));
+  ok('video', 'every driven statement carries the ITEM as objectId',
+    log.length === 4 && log.every(e => e.o && e.o.objectId === y.itemId),
+    JSON.stringify(log.map(e => e.o && e.o.objectId)) + ' vs item ' + y.itemId);
+  ok('video', 'every driven statement carries the video time',
+    log.length === 4 && log.every(e => e.o && e.o.time === 4.5),
+    JSON.stringify(log.map(e => e.o && e.o.time)));
+
+  b.dom.window.close();
+}
+
+/* The defect MOE reported on 17.09.26, named: a 'paused' with no 'played' before it. A walk
+   rather than a compare against a literal sequence, so it keeps its meaning when a probe is
+   extended. Only the orphan is checked — a 'played' after a 'played' is NOT a defect, because
+   end of clip closes the stream and emits nothing, so a replay legitimately opens a second one.
+   That a seek does not do the same is pinned by the statement COUNT. Returns null when clean. */
+function orphanScan(log) {
+  let open = false, bad = null;
+  for (const e of log) {
+    if (e.v === 'played') open = true;
+    if (e.v === 'paused') { if (!open && !bad) bad = 'orphan paused'; open = false; }
+  }
+  return bad;
 }
 
 /* ══════════════ run ══════════════ */

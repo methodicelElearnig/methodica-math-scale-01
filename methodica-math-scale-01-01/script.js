@@ -22,8 +22,11 @@ let frcRevealed = [false, false, false];
 let frcDone = false;
 
 let s4VideoEnded = false;
-/* Set on the first real pause, so a 'played' only reports after one - see s4OnPlayerStateChange. */
-let s4PausedOnce = false;
+/* True while a reported 'played' is open. A 'paused' is only reported when one is -- so a
+   'paused' can never arrive without its 'played' (MOE, 17.09.26), and a seek stays silent.
+   A module-level flag is correct here: this unit has ONE player, unlike mass-measure's two,
+   whose flag has to live on the player instance. See s4OnPlayerStateChange. */
+let s4XapiPlaying = false;
 let s4YTPlayer = null;
 let s4PlayerReady = false;
 
@@ -99,22 +102,36 @@ function s4OnPlayerStateChange(e) {
          (MOE's דוגמאות XAPI §6/§7 actually show a COMPONENT id here; we follow the test
          team and the confirmation from MOE is still open.)
 
-         s4PausedOnce is the same noise filter xapiWireVideos uses: YouTube emits
-         BUFFERING -> PLAYING on every seek and on autoplay recovery, so without it a single
-         viewing reports 'played' several times. The flag is CLEARED on each reported 'played',
-         making the pair strictly alternating - slightly stricter than xapiWireVideos, whose
-         latch is one-way and therefore still reports a 'played' per seek once the learner has
-         paused at least once. It is dormant here today (no element in this unit carries
-         data-xapi-report); methodica-science-mass-measure-01's YouTube handler was given this
-         same latch in the 15.09.26 change. */
-      if (e.data === YT.PlayerState.PAUSED) {
-        s4PausedOnce = true;
-        sendStatement720('paused', 'question', null,
-          { time: _t, objectId: xapiItemId('002') });
-      } else if (e.data === YT.PlayerState.PLAYING && s4PausedOnce) {
-        s4PausedOnce = false;
-        sendStatement720('played', 'question', null,
-          { time: _t, objectId: xapiItemId('002') });
+         ⚠️ 17.09.26 - the s4PausedOnce LATCH IS GONE, reported by the MOE test team. It
+         reported a 'played' only AFTER a 'paused', to skip YouTube's BUFFERING -> PLAYING seek
+         churn. It did skip the churn, but it also swallowed the FIRST 'played' of every
+         viewing, so the first 'paused' had nothing before it. MOE measured it on the sibling
+         unit mass-measure-01 part 04: 'paused' at t=0.06 with the 'played' 0.3 s AFTER it.
+         The same latch was in xapiWireVideos and is gone from there too.
+
+         What replaces it is a state machine, not a filter. s4XapiPlaying == "a 'played' is
+         open, not yet closed by a 'paused'". 'played' is sent only on a start while it is
+         false; 'paused' only on a stop while it is true. An orphan 'paused' is therefore
+         STRUCTURALLY impossible, and seek churn stays silent for the same reason: a second
+         PLAYING while already playing is a no-op.
+
+         ENDED re-arms the flag and reports NOTHING - the reset is what makes a replay report
+         'played' again. It is handled HERE, inside the guard, and not in the UI-side ENDED
+         branch below, so an xAPI failure can still never reach sqEnter(4). */
+      if (e.data === YT.PlayerState.PLAYING) {
+        if (!s4XapiPlaying) {
+          s4XapiPlaying = true;
+          sendStatement720('played', 'question', null,
+            { time: _t, objectId: xapiItemId('002') });
+        }
+      } else if (e.data === YT.PlayerState.PAUSED) {
+        if (s4XapiPlaying) {
+          s4XapiPlaying = false;
+          sendStatement720('paused', 'question', null,
+            { time: _t, objectId: xapiItemId('002') });
+        }
+      } else if (e.data === YT.PlayerState.ENDED) {
+        s4XapiPlaying = false;   // re-arm for a replay; ENDED itself reports nothing
       }
     }
   } catch (err) {}

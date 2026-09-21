@@ -457,6 +457,30 @@ function videoSilent() {
   eq('video', '05: the decorative #s53-gif reports nothing',
     b.verbs().filter(x => /played|paused/.test(x)), []);
 
+  /* The half above is weaker than it looks since 17.09.26: a lone 'pause' is now silent even on
+     a WIRED element, so a regression that wired #s53-gif would still show []. The opt-in half
+     is what proves the allowlist is the reason, and it is the only behavioural coverage the
+     HTML5 machine has in this unit.
+
+     A FRESH element, not #s53-gif: addEventListener cannot be undone, so wiring the real one
+     would leave listeners on the page for whatever runs next. jsdom has no media engine —
+     readyState is permanently 0 and 'ended' is not implemented — so both are defined as own
+     properties, shadowing the prototype. Without readyState the reload guard would swallow
+     every 'paused'. */
+  b.exec('window.__reset();');
+  b.exec(
+    "var pv = document.createElement('video');" +
+    "Object.defineProperty(pv, 'readyState', { value: 4, configurable: true });" +
+    "Object.defineProperty(pv, 'ended', { value: false, configurable: true, writable: true });" +
+    "pv.setAttribute('data-xapi-report', '003');" +
+    "document.body.appendChild(pv);" +
+    "xapiWireVideos();" +
+    "function pvFire(n){ pv.dispatchEvent(new window.Event(n)); }" +
+    "pvFire('play'); pvFire('play'); pvFire('pause'); pvFire('pause'); pvFire('play');" +
+    "pv.remove();");
+  eq('video', '05: an opted-in <video> reports played on the first start, then alternates',
+    b.verbs().filter(x => /played|paused/.test(x)), ['played', 'paused', 'played']);
+
   b.dom.window.close();
 }
 

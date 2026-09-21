@@ -341,9 +341,16 @@ A five-point audit re-checked the defect classes that had been found and fixed i
   resume onto it forced the learner to re-pick and emitted a second `selected`. It now goes through
   a `picks` ledger keyed on the chosen value, so re-picking the same option is silent while a real
   change of mind still reports.
-- **Part 01's YouTube `played`/`paused` carry the ITEM as their object.** A `played` also only
-  reports after a real pause, strictly alternating, so buffering and seek churn no longer inflate
-  the count.
+- **Part 01's YouTube `played`/`paused` carry the ITEM as their object.** A `played` is reported
+  on every start, autoplay included, and strictly alternates with `paused`; buffering and seek
+  churn stay silent because a second `PLAYING` while already playing is a no-op.
+  ⚠️ **Corrected 17.09.26.** This entry used to say a `played` "only reports after a real pause".
+  It did — and that was the defect the MOE test team reported: the **first** `played` of a viewing
+  was never sent, so the first `paused` had nothing before it. Measured by MOE on the sibling unit
+  mass-measure-01 part 04: `paused` at t=0.06 with the `played` 0.3 s **after** it. The
+  `s4PausedOnce` latch is gone, replaced by `s4XapiPlaying` — "a `played` is open, not yet closed
+  by a `paused`" — which makes an orphan `paused` structurally impossible. `ENDED` re-arms the
+  flag and emits nothing. The same latch was in `xapiWireVideos` and is gone from there too.
   ⚠️ **Corrected 15.09.26.** This entry used to say they carried a *question* object, because
   the call site passed `xapiQ('002','q1')`. They did not. The library resolves `object.id` from
   `sttmContext.objectId`, else from a `questionId` **but only for `answered`/`selected`/

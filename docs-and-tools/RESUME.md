@@ -714,7 +714,10 @@ re-locked, including the drag board and every dropdown — so these are the edge
 5. **Part 01's YouTube `played`/`paused` were unanchored** and had no churn filter. Made strictly
    alternating, and anchored to item `002` via `objectId: xapiItemId('002')` — the `xapiQ('002','q1')
    written here first was discarded by the library, which is the 15.09.26 correction.
-   (Reporting-side; also in REPORT-XAPI.md §9b.)
+   ⚠️ **17.09.26:** "strictly alternating" was implemented as a latch that suppressed `played` until
+   the learner had paused, which meant the first `paused` of a viewing had no `played` before it —
+   reported by the MOE test team. It now reports `played` on every start, autoplay included, and
+   still swallows seek churn. (Reporting-side; also in REPORT-XAPI.md §9b.)
 
 Not fixed, by decision, and recorded in [REPORT-XAPI.md](REPORT-XAPI.md) §10: part 02's unenforced
 gate and its two extra scales, part 04's unstated threshold, part 05's missing failure screen, and
