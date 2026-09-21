@@ -30,28 +30,68 @@ let s4XapiPlaying = false;
 let s4YTPlayer = null;
 let s4PlayerReady = false;
 
+var S4_YT_VIDEO_ID = 'Bk9KunjWSiA';
+
+/* ── The embed src, built HERE and never by the API ──────────────────────────────────
+   ⚠️ NEVER hand window.location.href to YouTube. The launch URL carries the slxapi
+   envelope, and that envelope carries the Bearer reporting token — so any embed
+   parameter derived from href ships a live credential to a third party on every load of
+   this screen, for every learner (QA/2026-09-20, defect D-1).
+
+   This component never set widget_referrer, and it leaked anyway: the IFrame API
+   appends `forigin` from location.href ON ITS OWN whenever THE API builds the iframe.
+   That is why the iframe is built here instead of letting YT.Player create it from a
+   placeholder div — an API that does not construct the src cannot append to it.
+   Attaching to an existing iframe leaves every event and method intact (onReady,
+   PLAYING/PAUSED/ENDED, getCurrentTime), which is what played/paused and the s4 watch
+   gate need, and is the pattern methodica-science-mass-weight-01 already ships.
+
+   Two other things settled here at the same time:
+     • host is now youtube-nocookie.com, matching methodica-science-mass-measure-01.
+       This unit was the only one still embedding from www.youtube.com.
+     • the old code set `origin` on the config ROOT rather than inside playerVars, so
+       YouTube never actually received it. It is a real query param now.
+
+   origin is the one referrer signal YouTube needs, and location.origin has no query
+   string. Only over http(s): over file:// location.origin is the string "null", an
+   invalid origin param, and YouTube answers with player error 153. */
+function s4YtEmbedSrc() {
+  var p = ['enablejsapi=1', 'rel=0', 'modestbranding=1', 'playsinline=1'];
+  if (/^https?:$/.test(window.location.protocol)) {
+    p.push('origin=' + encodeURIComponent(window.location.origin));
+  }
+  return 'https://www.youtube-nocookie.com/embed/' + S4_YT_VIDEO_ID + '?' + p.join('&');
+}
+
 window.onYouTubeIframeAPIReady = function () {
-  var playerConfig = {
-    videoId: 'Bk9KunjWSiA',
-    host: 'https://www.youtube.com',
-    playerVars: {
-      rel: 0,
-      modestbranding: 1,
-      playsinline: 1,
-      enablejsapi: 1
-    },
+  var el = document.getElementById('s4-yt-player');
+  if (!el) return;
+
+  /* Swap the placeholder div for the iframe, keeping the id — styles.css targets
+     #s4-yt-player directly and has no `… iframe` fallback rule. */
+  if (el.tagName !== 'IFRAME') {
+    var f = document.createElement('iframe');
+    f.id = 's4-yt-player';
+    f.src = s4YtEmbedSrc();
+    f.title = 'סרטון הסבר';
+    f.setAttribute('frameborder', '0');
+    f.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    f.setAttribute('allowfullscreen', '');
+    el.parentNode.replaceChild(f, el);
+    el = f;
+  }
+
+  /* videoId/host/playerVars are deliberately absent: they live in the src above, and
+     passing them here would ask the API to rebuild the iframe — which is exactly what
+     re-introduces forigin. */
+  s4YTPlayer = new YT.Player(el, {
     events: {
       onReady: s4OnPlayerReady,
       onStateChange: s4OnPlayerStateChange,
       onError: s4OnPlayerError
     }
-  };
-
-  if (window.location && window.location.origin && window.location.origin !== 'null') {
-    playerConfig.origin = window.location.origin;
-  }
-
-  s4YTPlayer = new YT.Player('s4-yt-player', playerConfig);
+  });
 };
 
 function s4OnPlayerReady() {
