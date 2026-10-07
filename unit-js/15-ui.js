@@ -222,3 +222,24 @@ function preloadImages(urls) {
   if (document.readyState === 'complete') start();
   else window.addEventListener('load', start, { once: true });
 }
+
+/* Number-only answer fields (MOE 06.10: "ניתן לכתוב אותיות איפה שמיועדים רק מספרים לאורך כל הרכיב").
+   An <input data-numeric="number"> keeps digits, "." and ","; data-numeric="ratio" (a scale such as
+   1:25000) also keeps ":" and spaces. Anything else is dropped as it is typed or pasted. One
+   capture-phase listener on the document: it runs before the field's own oninput, so that handler,
+   the check and the resume payload only ever see the cleaned value. */
+var NUMERIC_FIELD_RE = { number: /[^0-9.,]/g, ratio: /[^0-9.,:\s]/g };
+document.addEventListener('input', function (e) {
+  var el = e.target;
+  if (!el || !el.getAttribute) return;
+  var re = NUMERIC_FIELD_RE[el.getAttribute('data-numeric')];
+  if (!re) return;
+  var v = el.value, clean = v.replace(re, '');
+  if (clean === v) return;
+  var pos = el.selectionStart;
+  el.value = clean;
+  if (pos != null) {
+    var p = Math.max(0, pos - (v.length - clean.length));
+    try { el.setSelectionRange(p, p); } catch (err) {}
+  }
+}, true);

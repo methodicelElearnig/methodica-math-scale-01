@@ -98,3 +98,14 @@ tell them apart. They are pinned separately:
 That failure is itself what showed why `unit-js/90-boot.js` must be a **separate** script tag rather
 than a few lines at the bottom of `script.js`: a top-level throw in `script.js` takes the rest of that
 file with it, silently.
+
+## `monday-2026-10-07.js` — the three MOE monday items of 06.10 (real Chrome)
+
+02's stop after basic Q4 (under 3 of 4 -> ends on screen 5, stays ended after a restore; 3-4 -> screen
+6), number-only answer fields in all five components (real key events), and the first screen's
+continue button on the left. 36 of its 99 checks fail on the code before the fix. Takes an optional
+base URL to run against the CDN.
+
+```bash
+NODE_PATH=/tmp/lomda-test/node_modules node _test/monday-2026-10-07.js
+```

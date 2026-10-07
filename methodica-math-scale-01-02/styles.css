@@ -726,6 +726,12 @@ body {
 .s3-bottom-bar {
   justify-content: space-between;
 }
+/* The continue button belongs at the bar's end (left) even when it is alone: production hides the
+   first screen's "חזרה" (hideCrossPartBack), and space-between then put the lone button at the
+   start — the right (MOE 06.10, 04-001: "כפתור המשך בפריט הראשון בצד ימין במקום צד שמאל"). */
+.s3-bottom-bar > .btn-continue {
+  margin-inline-start: auto;
+}
 
 .btn-back-s3 {
   box-sizing: border-box;

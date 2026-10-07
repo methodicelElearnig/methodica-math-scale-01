@@ -824,7 +824,36 @@ function s31Enter() {
 }
 
 
+/* ── The stop after basic Q4 (MOE 06.10: "בתחילת הרכיב רשום כי יש לענות לפחות על 3 מתוך 4 השאלות
+   נכון כדי להתקדם - אך גם אם עונים על כל השאלות שגוי זה מקדם ברכיב ולא עוצר את המשתמש") ──
+   Screen 0 says «ענו נכון על 3 שאלות ומעלה (75%) כדי להתקדם». Once all four basic questions are
+   resolved (Q4 = screens 4+5) and fewer than 3 are right, Q4's "שנמשיך?" ends the component on
+   screen 5: completed success:false once, the button disabled; Kata routes by recommendedAfterFail
+   (01). 3 or 4 right -> screen 6 as before. Fail-open: an unresolved question never blocks.
+   basicStopEnded rides in the resume payload (RESUME_PLAIN_VARS): off-platform nothing reaches the
+   ledger, and a reload would otherwise hand back a live button. Same pattern as the other 720 units
+   fixed on 07.10 (ratio-05, mass-measure-01/03, mass-weight-01). */
+var basicStopEnded = false;
+
+function basicStopBlocks() {
+  if (!(s26Solved && s27Solved && s28Solved && s29Solved && s30Solved)) return false;
+  return getBasicPracticeScore() < 3;
+}
+
+function endAtBasicStop() {
+  var btn = document.getElementById('s30-continue');
+  if (basicStopEnded || alreadySent('done', currentPartSlug())) {   // already ended (e.g. before a reload)
+    basicStopEnded = true;
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); }
+    return;
+  }
+  basicStopEnded = true;
+  xapiEndComponent({ success: false, score: { scaled: xapiCorrectCount() / 7 } }, btn);
+  try { flushResumeSave(); } catch (e) {}
+}
+
 function routeAfterBasicPractice() {
+  if (basicStopBlocks()) { endAtBasicStop(); return; }
   goTo(6);
 }
 
@@ -1223,7 +1252,7 @@ function partBoot() {
 
 
 /* Variables copied verbatim in both directions. */
-var RESUME_PLAIN_VARS = ['s26Solved', 's26Correct', 's26Attempts', 's27Solved', 's27Correct', 's27Attempts', 's28Solved', 's28Correct', 's28Attempts', 's29Solved', 's29Correct', 's29Attempts', 's30Solved', 's30Correct', 's30Attempts', 's32Solved', 's32Correct', 's32Attempts', 's33Solved', 's33Correct', 's33Attempts', 's33Selected'];
+var RESUME_PLAIN_VARS = ['s26Solved', 's26Correct', 's26Attempts', 's27Solved', 's27Correct', 's27Attempts', 's28Solved', 's28Correct', 's28Attempts', 's29Solved', 's29Correct', 's29Attempts', 's30Solved', 's30Correct', 's30Attempts', 's32Solved', 's32Correct', 's32Attempts', 's33Solved', 's33Correct', 's33Attempts', 's33Selected', 'basicStopEnded'];
 
 /* Typed answers live only in the DOM — no variable holds them — so they travel by element id.
    Reading them at capture time is safe: no submit branch clears these inputs, only disables. */
@@ -1435,6 +1464,11 @@ function s30RestoreUI() {
     explanation: S30_RESTORE_EXPLANATION,
     onContinue: function () { routeAfterBasicPractice(); }
   });
+  /* a component that ended at the stop stays ended (navigation repaint and resume alike) */
+  if (s30Solved && basicStopBlocks() && (basicStopEnded || alreadySent('done', currentPartSlug()))) {
+    var c30 = document.getElementById('s30-continue');
+    if (c30) { c30.disabled = true; c30.setAttribute('aria-disabled', 'true'); }
+  }
 }
 
 /* Screen 3 — multi-select. Mirrors s28Submit, whose two terminal branches paint the same marks. */

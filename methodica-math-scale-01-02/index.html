@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>קנה מידה — לומדה</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <!-- Boot cover. Hides the window in which screen 0 is already visible but the resume document
@@ -478,7 +478,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s29a">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s29-answer-input" type="text" inputmode="numeric" dir="rtl" maxlength="10" oninput="s29CheckInput()" aria-labelledby="label-s29a label-s29b">
+                <input class="s18-answer-box" id="s29-answer-input" type="text" data-numeric="number" inputmode="numeric" dir="rtl" maxlength="10" oninput="s29CheckInput()" aria-labelledby="label-s29a label-s29b">
                 <span class="s18-fill-text" id="label-s29b">מטרים</span>
               </div>
             </div>
@@ -769,7 +769,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s32a">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s32-answer-input" type="text" inputmode="numeric" dir="rtl" maxlength="10" oninput="s32CheckInput()" aria-labelledby="label-s32a label-s32b">
+                <input class="s18-answer-box" id="s32-answer-input" type="text" data-numeric="number" inputmode="numeric" dir="rtl" maxlength="10" oninput="s32CheckInput()" aria-labelledby="label-s32a label-s32b">
                 <span class="s18-fill-text" id="label-s32b">ס"מ</span>
               </div>
             </div>
@@ -1112,7 +1112,7 @@
   <div id="a11y-announcer" role="status" aria-live="polite" aria-atomic="true"
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
   <script src="../unit-js/10-identity.js?v=5"></script>
-  <script src="../unit-js/15-ui.js?v=5"></script>
+  <script src="../unit-js/15-ui.js?v=6"></script>
   <!-- iPad-shaped-viewport gate — must load after scaleApp() is defined and before 90-boot.js
        wires it to the resize listener, so the wrapped version is what gets used -->
   <script src="canvas-tall-gate.js?v=1"></script>
@@ -1123,7 +1123,7 @@
   <script src="../unit-js/40-resume.js?v=7"></script>
   <script src="../unit-js/50-loader.js?v=6"></script>
   <script src="../unit-js/60-devbridge.js?v=4"></script>
-  <script src="script.js?v=19"></script>
+  <script src="script.js?v=20"></script>
   <script src="../unit-js/90-boot.js?v=5"></script>
 </body>
 </html>

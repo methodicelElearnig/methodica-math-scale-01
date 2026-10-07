@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>קנה מידה — לומדה</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <!-- Boot cover. Hides the window in which screen 0 is already visible but the resume document
@@ -1283,7 +1283,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s18">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s18-answer-input" type="text" dir="rtl" maxlength="10" oninput="s18CheckInput()" aria-labelledby="label-s18">
+                <input class="s18-answer-box" id="s18-answer-input" type="text" data-numeric="number" inputmode="decimal" dir="rtl" maxlength="10" oninput="s18CheckInput()" aria-labelledby="label-s18">
               </div>
             </div>
           </div>
@@ -1394,7 +1394,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s19a">השלימו את התשובה:</span>
-                <input class="s18-answer-box" id="s19-answer-input" type="text" dir="rtl" maxlength="10" oninput="s19CheckInput()" aria-labelledby="label-s19a label-s19b">
+                <input class="s18-answer-box" id="s19-answer-input" type="text" data-numeric="number" inputmode="decimal" dir="rtl" maxlength="10" oninput="s19CheckInput()" aria-labelledby="label-s19a label-s19b">
                 <span class="s18-fill-text" id="label-s19b">: 1</span>
               </div>
             </div>
@@ -1611,7 +1611,7 @@
               </div>
               <div class="s18-fill-row">
                 <span class="s18-fill-text" id="label-s21">הקלידו את התשובה:</span>
-                <input class="s18-answer-box" id="s21-answer-input" type="text" dir="rtl" maxlength="10" oninput="s21CheckInput()" aria-labelledby="label-s21">
+                <input class="s18-answer-box" id="s21-answer-input" type="text" data-numeric="ratio" dir="rtl" maxlength="10" oninput="s21CheckInput()" aria-labelledby="label-s21">
               </div>
             </div>
           </div>
@@ -2095,7 +2095,7 @@
   <div id="a11y-announcer" role="status" aria-live="polite" aria-atomic="true"
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
   <script src="../unit-js/10-identity.js?v=5"></script>
-  <script src="../unit-js/15-ui.js?v=5"></script>
+  <script src="../unit-js/15-ui.js?v=6"></script>
   <!-- iPad-shaped-viewport gate (01-01 trial only) — must load after scaleApp() is defined and
        before 90-boot.js wires it to the resize listener, so the wrapped version is what gets used -->
   <script src="canvas-tall-gate.js?v=1"></script>
