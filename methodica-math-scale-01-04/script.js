@@ -60,9 +60,11 @@ let ddqTargetResults = {};
 
 /* ── End of the component (the platform routes — REPORT-XAPI.md §12) ── */
 function goToNextModule() {
-  /* Last click (s41's check button): report and stop. */
-  var _n = xapiCorrectCount();
-  xapiEndComponent({ success: _n >= 4, score: { scaled: _n / 5 } }, document.getElementById('s41-continue'));
+  /* Last click (s41's check button): report and stop. Score over the 5 declared questions
+     (001 q1, 002 q1+q2, 003 q1+q2) — docs-and-tools/REPORT-XAPI.md §5.
+     MOE 2026-10-08: real score, success only ≥60%, no gate, nothing shown. */
+  var _s = xapiCorrectCount() / 5;
+  xapiEndComponent({ success: _s >= 0.6, score: { scaled: _s } }, document.getElementById('s41-continue'));
   /* The hop to 05 lives on only for a local walkthrough (DEV_NAV, unit-js/10-identity.js). */
   if (DEV_NAV) {
     writeForwardState('methodica-math-scale-01-05', '#screen=5');

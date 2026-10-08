@@ -774,6 +774,26 @@ function checkPlatformRouting() {
     const html = fs.readFileSync(path.join(BASE, PART_DIR(c), 'index.html'), 'utf8');
     ok('routing', c + ': #' + btn + ' exists in the markup', html.includes('id="' + btn + '"'));
   }
+  /* MOE 2026-10-08: the challenge (04) reports its real score; success only at >= 60% of its
+     5 declared questions (001 q1, 002 q1+q2, 003 q1+q2). Unanswered counts as wrong. */
+  {
+    const meta = readJSON(path.join(BASE, 'metadata', PART_DIR('04') + '.json'));
+    const keys = [];
+    meta.subContent.forEach(sc => (sc.questions || []).forEach(q =>
+      keys.push(sc.id.replace(/\/+$/, '').slice(-3) + '/' + q.questionId.split('/').pop())));
+    ok('routing', '04: the challenge declares 5 questions', keys.length === 5, keys.join(','));
+    const { dom, val } = loadComponent('04');
+    const thr = JSON.parse(val('(function(){ var orig = xapiEndComponent, out = [];' +
+      ' xapiEndComponent = function (r) { out.push(r); };' +
+      ' [0, 2, 3, 5].forEach(function (n) { Object.keys(XAPI_Q_RESULTS).forEach(function (k) { delete XAPI_Q_RESULTS[k]; });' +
+      '   ' + JSON.stringify(keys) + '.forEach(function (k, i) { if (i < n) XAPI_Q_RESULTS[k] = true; }); goToNextModule(); });' +
+      ' xapiEndComponent = orig; return JSON.stringify(out); })()'));
+    ok('routing', '04: challenge success only at >= 60%, real score (0/5, 2/5 fail; 3/5, 5/5 pass)',
+      thr.length === 4 && thr.map(r => r.success + ':' + r.score.scaled).join(',') === 'false:0,false:0.4,true:0.6,true:1',
+      JSON.stringify(thr));
+    dom.window.close();
+  }
+
   /* B2: component 05 reports on the click, not on arrival. */
   const s05 = stripComments(fs.readFileSync(path.join(BASE, PART_DIR('05'), 'script.js'), 'utf8'));
   const s53 = s05.match(/function s53Enter\(\)\s*\{([\s\S]*?)\n\}/);

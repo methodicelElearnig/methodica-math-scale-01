@@ -181,7 +181,7 @@ Reference values from `methodica-math-scale-01`:
 | 01 | `getQuizScore() / 5` — 4 of 5 → `scaled 0.8, success true` |
 | 02 | correct / 7; `success` requires **both** stated gates (`basic >= 3` **and** `advanced >= 2`) |
 | 03 | `{ success: true }`, **no score** — off-computer class task, nothing to grade |
-| 04 | `xapiCorrectCount() / 5`; **`success` requires `>= 4`** — undocumented until 2026-09-02, and stated nowhere on screen: the learner is told "3 שאלות מתקדמות", while the denominator counts the 5 סעיפים inside them. Left as built by decision; see §10 |
+| 04 | `success = xapiCorrectCount() / 5 >= 0.6`, `score.scaled = xapiCorrectCount() / 5` — **changed 2026-10-08 (MOE, with Maya):** the challenge ("בואו נאתגר את עצמנו"; local metadata title "תרגול מתקדם") reports its real score, success only at ≥60% (3 of 5). Was `>= 4` (undocumented until 2026-09-02, §11.4). Still no gate on screen — every learner continues, nothing is shown. 5 declared questions (001 q1, 002 q1+q2, 003 q1+q2); unanswered counts as wrong |
 | 05 | the שאלת-שיא rule from the item's own `informationToBot`: **≥ 3 of 4 passes**, supplied via `peakResult()` so item and component agree |
 
 **Report `completed` on failure paths too.** A component the learner does not clear must still be
@@ -407,6 +407,9 @@ reported one: a learner told they scored 75% can arrive at the LRS as 0.571 or 0
 See the §5 table. `success` is decided on 4 of 5 סעיפים; the learner is told there are 3
 שאלות. "4" is not expressible in the units they were given. **Decision: leave both the code and
 the screen; document the pass mark** — done, in §5.
+
+**Superseded 2026-10-08 (MOE, with Maya):** `success = correct / 5 >= 0.6` (3 of 5) with the real
+score. The screen still states no threshold, and none is shown — on purpose.
 
 ### 11.5 Part 05's finale has no failure variant
 
