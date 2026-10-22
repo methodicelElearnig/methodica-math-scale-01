@@ -117,7 +117,7 @@ function s38Enter() {
   document.getElementById('s38-fb-bold').textContent    = '';
   document.getElementById('s38-fb-regular').textContent = '';
   var cont = document.getElementById('s38-continue');
-  if (cont) { cont.disabled = true; cont.onclick = function() { s38Submit(); }; }
+  if (cont) { cont.disabled = true; cont.textContent = 'צדקתי?'; cont.onclick = function() { s38Submit(); }; }
   var hintBtn = document.getElementById('s38-hint-btn');
   if (hintBtn) hintBtn.hidden = true;
   var hintPopup = document.getElementById('s38-hint-popup');
@@ -181,6 +181,7 @@ function s38Submit() {
     fb.classList.add('s5-fb--correct');
     fb.hidden     = false;
     cont.disabled = false;
+    cont.textContent = 'שנמשיך?';
     cont.onclick  = function() { goTo(3); };
   } else if (s38Attempts === 1) {
     fbBold.textContent  = 'זה לא מדויק, ננסה שוב?';
@@ -204,6 +205,7 @@ function s38Submit() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden     = false;
     cont.disabled = false;
+    cont.textContent = 'שנמשיך?';
     cont.onclick  = function() { goTo(3); };
   }
   flushResumeSave();   // see s37Submit
@@ -244,7 +246,7 @@ function s37Enter() {
   document.getElementById('s37-fb-bold').textContent    = '';
   document.getElementById('s37-fb-regular').textContent = '';
   var cont = document.getElementById('s37-continue');
-  if (cont) { cont.disabled = true; cont.onclick = function() { s37Submit(); }; }
+  if (cont) { cont.disabled = true; cont.textContent = 'צדקתי?'; cont.onclick = function() { s37Submit(); }; }
   var hintBtn = document.getElementById('s37-hint-btn');
   if (hintBtn) hintBtn.hidden = true;
   var hintPopup = document.getElementById('s37-hint-popup');
@@ -308,6 +310,7 @@ function s37Submit() {
     fb.classList.add('s5-fb--correct');
     fb.hidden     = false;
     cont.disabled = false;
+    cont.textContent = 'שנמשיך?';
     cont.onclick  = function() { goTo(2); };
   } else if (s37Attempts === 1) {
     fbBold.textContent  = 'זה לא מדויק, ננסה שוב?';
@@ -331,6 +334,7 @@ function s37Submit() {
     fb.classList.add('s5-fb--incorrect');
     fb.hidden     = false;
     cont.disabled = false;
+    cont.textContent = 'שנמשיך?';
     cont.onclick  = function() { goTo(2); };
   }
   /* Resume: commit the answer synchronously. A debounced save here could still be in flight when
@@ -1477,6 +1481,7 @@ function s37RestoreUI() {
     correctIndex: S37_CORRECT,
     boldCorrect: 'יופי של תשובה! ​', boldWrong: 'זו טעות, לא נורא – בואו נלמד ממנה:​',
     explanation: S37_RESTORE_EXPLANATION,
+    contText: 'שנמשיך?',
     onContinue: function () { goTo(2); }
   });
 }
@@ -1488,6 +1493,7 @@ function s38RestoreUI() {
     correctIndex: S38_CORRECT,
     boldCorrect: 'נכון מאוד!​', boldWrong: 'זו טעות – בואו נבין למה:​',
     explanation: S38_RESTORE_EXPLANATION,
+    contText: 'שנמשיך?',
     onContinue: function () { goTo(3); }
   });
 }
