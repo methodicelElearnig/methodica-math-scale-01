@@ -48,8 +48,6 @@ let ddqPlacement = {
 let ddqDone        = false;
 let ddqChecked     = false;
 let ddqAttempts    = 0;
-let ddqDragActive  = null;
-let ddqDropHandled = false;
 let ddqKeySelected = null;
 /* Which targets the learner had right on the closing attempt. ddqRevealCorrect() overwrites
    ddqPlacement with the correct map, so the ✓/✗ badges cannot be recomputed after the fact —
@@ -360,8 +358,6 @@ function s39Enter() {
   );
   if (ddqDone) return;
   Object.keys(ddqPlacement).forEach(function(k) { ddqPlacement[k] = 'source'; });
-  ddqDragActive  = null;
-  ddqDropHandled = false;
   ddqChecked     = false;
   ddqAttempts    = 0;
   ddqRender();
@@ -394,13 +390,8 @@ function ddqRender() {
     if (!card) return;
     var inSource = (ddqPlacement[dragId] === 'source');
     card.classList.toggle('ghost', !inSource);
-    if (ddqChecked) {
-      card.classList.add('locked');
-      card.draggable = false;
-    } else {
-      card.classList.remove('locked');
-      card.draggable = true;
-    }
+    card.classList.toggle('locked', ddqChecked);
+    ddqPointerDnd().attachSource(card, dragId);   /* canDrag gates on ddqChecked */
   });
 
   Object.keys(DDQ.correctMap).forEach(function(targetId) {
@@ -425,11 +416,9 @@ function ddqRender() {
       card.setAttribute('role', 'button');
       card.setAttribute('aria-label', 'מספר ' + placedId.replace('drag-', '') + ', לחץ להחזרה למגש');
       if (!ddqChecked) {
-        card.draggable = true;
+        ddqPointerDnd().attachSource(card, placedId);
         (function(id) {
-          card.addEventListener('dragstart', function(ev) { ddqPlacedDragStart(ev, id); });
-          card.addEventListener('dragend',   function(ev) { ddqDragEnd(ev); });
-          card.addEventListener('keydown',   function(ev) { ddqChipKeyDown(ev, id); });
+          card.addEventListener('keydown', function(ev) { ddqChipKeyDown(ev, id); });
         })(placedId);
       } else {
         card.classList.add('locked');
@@ -441,43 +430,159 @@ function ddqRender() {
   ddqUpdateCheckBtn();
 }
 
-function ddqDragStart(event, dragId) {
-  if (ddqChecked) { event.preventDefault(); return; }
-  ddqDragActive  = dragId;
-  ddqDropHandled = false;
-  event.dataTransfer.setData('text/plain', dragId);
-  event.dataTransfer.effectAllowed = 'move';
-  setTimeout(function() {
-    var card = document.getElementById(dragId);
-    if (card) card.classList.add('dragging');
-  }, 0);
+/* Pointer-based drag (mouse + touch). Native HTML5 drag gave no visual on tablets - the chip
+   did not follow the finger (monday: methodica-*-math-scale-01-04-002). Adapted from
+   createPointerDnd() in methodica-science-mass-measure-01-01/js/main.js: a clone of the chip
+   (.pointer-drag-ghost) follows the pointer, scaled to #app; targets get .drag-over.
+   A press without movement is a tap: it runs the same select-then-place flow as the keyboard. */
+var DDQ_TAP_SLOP = 6;   /* px of movement before a press becomes a drag */
+
+function createPointerDnd(opts) {
+  var targets = [];   /* [{ elem, id }] */
+  var active  = null;
+
+  function getAppScale() {
+    var app = document.getElementById('app');
+    var m = app && app.style.transform.match(/scale\(([^)]+)\)/);
+    return m ? parseFloat(m[1]) : 1;
+  }
+
+  function attachSource(elem, dragId) {
+    if (!elem) return;
+    elem.dataset.pdragId = dragId;
+    if (elem.dataset.pdragAttached === '1') return;
+    elem.dataset.pdragAttached = '1';
+    elem.style.touchAction = 'none';
+    elem.addEventListener('pointerdown', onSourceDown);
+  }
+
+  function attachTarget(elem, targetId) {
+    if (elem) targets.push({ elem: elem, id: targetId });
+  }
+
+  function onSourceDown(e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var src    = e.currentTarget;
+    var dragId = src.dataset.pdragId;
+    if (!dragId || active) return;
+    if (opts.canDrag && !opts.canDrag(dragId, src)) return;
+    e.preventDefault();
+    var rect = src.getBoundingClientRect();
+    active = {
+      dragId: dragId, srcElem: src, ghost: null, pointerId: e.pointerId,
+      startX: e.clientX, startY: e.clientY, rect: rect,
+      offX: e.clientX - rect.left, offY: e.clientY - rect.top,
+      currentTarget: null
+    };
+    document.addEventListener('pointermove',   onMove, { passive: false });
+    document.addEventListener('pointerup',     onUp);
+    document.addEventListener('pointercancel', onUp);
+  }
+
+  function startGhost() {
+    var src   = active.srcElem;
+    var rect  = active.rect;
+    var scale = getAppScale();
+    var ghost = src.cloneNode(true);
+    ghost.removeAttribute('id');
+    ghost.querySelectorAll('[id]').forEach(function(n) { n.removeAttribute('id'); });
+    ghost.removeAttribute('tabindex');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.classList.remove('dragging', 'ghost', 'locked');
+    ghost.classList.add('pointer-drag-ghost');
+    ghost.style.position        = 'fixed';
+    ghost.style.left            = rect.left + 'px';
+    ghost.style.top             = rect.top  + 'px';
+    ghost.style.width           = (rect.width  / scale) + 'px';
+    ghost.style.height          = (rect.height / scale) + 'px';
+    ghost.style.boxSizing       = 'border-box';
+    ghost.style.margin          = '0';
+    ghost.style.pointerEvents   = 'none';
+    ghost.style.zIndex          = '9999';
+    ghost.style.transform       = 'scale(' + scale + ')';
+    ghost.style.transformOrigin = 'top left';
+    document.body.appendChild(ghost);
+    active.ghost = ghost;
+    src.classList.add('dragging');
+    if (opts.onPick) opts.onPick(active.dragId, src);
+  }
+
+  function findTargetUnder(x, y) {
+    var el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i].elem === el || targets[i].elem.contains(el)) return targets[i];
+    }
+    return null;
+  }
+
+  function onMove(e) {
+    if (!active || e.pointerId !== active.pointerId) return;
+    e.preventDefault();
+    if (!active.ghost) {
+      if (Math.abs(e.clientX - active.startX) < DDQ_TAP_SLOP &&
+          Math.abs(e.clientY - active.startY) < DDQ_TAP_SLOP) return;
+      startGhost();
+    }
+    active.ghost.style.left = (e.clientX - active.offX) + 'px';
+    active.ghost.style.top  = (e.clientY - active.offY) + 'px';
+    var hit   = findTargetUnder(e.clientX, e.clientY);
+    var hitId = hit ? hit.id : null;
+    if (active.currentTarget !== hitId) {
+      targets.forEach(function(t) { t.elem.classList.toggle('drag-over', t.id === hitId); });
+      active.currentTarget = hitId;
+    }
+  }
+
+  function onUp(e) {
+    if (!active || (e && e.pointerId !== active.pointerId)) return;
+    document.removeEventListener('pointermove',   onMove);
+    document.removeEventListener('pointerup',     onUp);
+    document.removeEventListener('pointercancel', onUp);
+    var a = active;
+    active = null;
+    targets.forEach(function(t) { t.elem.classList.remove('drag-over'); });
+    if (!a.ghost) {   /* no movement - a tap */
+      if (e.type === 'pointerup' && opts.onTap) opts.onTap(a.dragId, a.srcElem);
+      return;
+    }
+    a.srcElem.classList.remove('dragging');
+    a.ghost.remove();
+    if (a.currentTarget && opts.onDrop) opts.onDrop(a.dragId, a.currentTarget);
+    else if (opts.onCancel)            opts.onCancel(a.dragId);
+  }
+
+  return { attachSource: attachSource, attachTarget: attachTarget };
 }
 
-function ddqPlacedDragStart(event, dragId) {
-  if (ddqChecked) { event.preventDefault(); return; }
-  ddqDragActive  = dragId;
-  ddqDropHandled = false;
-  event.dataTransfer.setData('text/plain', dragId);
-  event.dataTransfer.effectAllowed = 'move';
-  setTimeout(function() {
-    ddqPlacement[dragId] = 'source';
-    ddqRender();
-    var card = document.getElementById(dragId);
-    if (card) card.classList.add('dragging');
-  }, 0);
+var ddqDnd     = null;
+var ddqTapTime = 0;   /* a tap on a placed card also clicks its target - see ddqTargetClick */
+
+function ddqPointerDnd() {
+  if (ddqDnd) return ddqDnd;
+  ddqDnd = createPointerDnd({
+    canDrag:  function() { return !ddqChecked; },
+    onPick:   function() {
+      if (ddqKeySelected) { ddqKeySelected = null; ddqUpdateKeyState(); }
+    },
+    onDrop:   function(dragId, targetId) { ddqPlace(dragId, targetId); },
+    onCancel: function(dragId) {   /* dropped outside a target: back to the tray */
+      if (ddqPlacement[dragId] !== 'source') { ddqPlacement[dragId] = 'source'; ddqRender(); }
+    },
+    onTap:    function(dragId) { ddqTapTime = Date.now(); ddqSelectChip(dragId); }
+  });
+  Object.keys(DDQ.correctMap).forEach(function(targetId) {
+    var t = document.getElementById(targetId);
+    if (!t) return;
+    ddqDnd.attachTarget(t, targetId);
+    t.addEventListener('click', function() { ddqTargetClick(targetId); });
+  });
+  return ddqDnd;
 }
 
-function ddqDragEnd(event) {
-  if (!ddqDropHandled && ddqDragActive) {
-    ddqPlacement[ddqDragActive] = 'source';
-    ddqRender();
-  }
-  if (ddqDragActive) {
-    var card = document.getElementById(ddqDragActive);
-    if (card) card.classList.remove('dragging');
-  }
-  ddqDragActive  = null;
-  ddqDropHandled = false;
+function ddqTargetClick(targetId) {
+  if (Date.now() - ddqTapTime < 400) return;
+  ddqPlaceSelected(targetId);
 }
 
 function ddqAnnounce(msg) {
@@ -495,6 +600,11 @@ function ddqUpdateKeyState() {
 function ddqChipKeyDown(event, dragId) {
   if (event.key !== ' ' && event.key !== 'Enter') return;
   event.preventDefault();
+  ddqSelectChip(dragId);
+}
+
+/* Select a chip for tap/keyboard placement; a placed chip goes back to the tray first. */
+function ddqSelectChip(dragId) {
   if (ddqChecked) return;
   if (ddqKeySelected === dragId) {
     ddqKeySelected = null;
@@ -514,6 +624,10 @@ function ddqChipKeyDown(event, dragId) {
 function ddqTargetKeyDown(event, targetId) {
   if (event.key !== ' ' && event.key !== 'Enter') return;
   event.preventDefault();
+  ddqPlaceSelected(targetId);
+}
+
+function ddqPlaceSelected(targetId) {
   if (!ddqKeySelected || ddqChecked) return;
   var dragId = ddqKeySelected;
   Object.keys(ddqPlacement).forEach(function(id) {
@@ -528,26 +642,8 @@ function ddqTargetKeyDown(event, targetId) {
   ddqAnnounce('הנחת ' + dragId.replace('drag-', '') + ' ב' + label);
 }
 
-function ddqDragOver(event, targetId) {
-  event.preventDefault();
-  event.dataTransfer.dropEffect = 'move';
-  var t = document.getElementById(targetId);
-  if (t) t.classList.add('drag-over');
-}
-
-function ddqDragLeave(event, targetId) {
-  var t = document.getElementById(targetId);
-  if (t) t.classList.remove('drag-over');
-}
-
-function ddqDrop(event, targetId) {
-  event.preventDefault();
+function ddqPlace(dragId, targetId) {
   if (ddqChecked) return;
-  var dragId = event.dataTransfer.getData('text/plain') || ddqDragActive;
-  if (!dragId) return;
-  ddqDropHandled = true;
-  var target = document.getElementById(targetId);
-  if (target) target.classList.remove('drag-over');
   Object.keys(ddqPlacement).forEach(function(id) {
     if (ddqPlacement[id] === targetId) ddqPlacement[id] = 'source';
   });
@@ -644,7 +740,7 @@ function ddqCheck() {
     fb.hidden = false;
     if (hintBtn) hintBtn.hidden = false;
 
-    btn.disabled = true;   /* retry lock: ddqDrop re-enables it when the answer changes */
+    btn.disabled = true;   /* retry lock: ddqPlace re-enables it when the answer changes */
   } else {
     /* Second wrong — capture what user had before revealing */
     var targetResults = {};

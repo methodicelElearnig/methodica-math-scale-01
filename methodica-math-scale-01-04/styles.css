@@ -2951,7 +2951,23 @@ body {
 }
 
 .ddq-num-chip.dragging {
-  opacity: 0.45;
+  opacity: 0.3;
+}
+
+/* Pointer drag: the clone that follows the pointer (appended to body, outside #app) */
+.ddq-num-chip.pointer-drag-ghost {
+  background: var(--subject-100);
+  border: 1.5px solid var(--subject-500);
+  border-radius: 10px;
+  color: #303030;
+  opacity: 0.92;
+  cursor: grabbing;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Tap / keyboard selection (select a chip, then a target) */
+.ddq-num-chip[aria-pressed="true"] {
+  border-color: #019DE5;
 }
 
 .ddq-num-chip.locked,

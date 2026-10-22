@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>קנה מידה — לומדה</title>
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
   <!-- Boot cover. Hides the window in which screen 0 is already visible but the resume document
@@ -323,9 +323,6 @@
                 <span class="s39-tlabel">אורך:</span>
                 <div class="s39-target" id="target-lior-orech"
                      tabindex="0" role="button" aria-label="יעד אורך של ליאור"
-                     ondragover="ddqDragOver(event,'target-lior-orech')"
-                     ondragleave="ddqDragLeave(event,'target-lior-orech')"
-                     ondrop="ddqDrop(event,'target-lior-orech')"
                      onkeydown="ddqTargetKeyDown(event,'target-lior-orech')"></div>
                 <span class="s39-unit">ס״מ</span>
               </div>
@@ -333,9 +330,6 @@
                 <span class="s39-tlabel">גובה:</span>
                 <div class="s39-target" id="target-lior-gova"
                      tabindex="0" role="button" aria-label="יעד גובה של ליאור"
-                     ondragover="ddqDragOver(event,'target-lior-gova')"
-                     ondragleave="ddqDragLeave(event,'target-lior-gova')"
-                     ondrop="ddqDrop(event,'target-lior-gova')"
                      onkeydown="ddqTargetKeyDown(event,'target-lior-gova')"></div>
                 <span class="s39-unit">ס״מ</span>
               </div>
@@ -355,9 +349,6 @@
                 <span class="s39-tlabel">אורך:</span>
                 <div class="s39-target" id="target-yuval-orech"
                      tabindex="0" role="button" aria-label="יעד אורך של יובל"
-                     ondragover="ddqDragOver(event,'target-yuval-orech')"
-                     ondragleave="ddqDragLeave(event,'target-yuval-orech')"
-                     ondrop="ddqDrop(event,'target-yuval-orech')"
                      onkeydown="ddqTargetKeyDown(event,'target-yuval-orech')"></div>
                 <span class="s39-unit">ס״מ</span>
               </div>
@@ -365,9 +356,6 @@
                 <span class="s39-tlabel">גובה:</span>
                 <div class="s39-target" id="target-yuval-gova"
                      tabindex="0" role="button" aria-label="יעד גובה של יובל"
-                     ondragover="ddqDragOver(event,'target-yuval-gova')"
-                     ondragleave="ddqDragLeave(event,'target-yuval-gova')"
-                     ondrop="ddqDrop(event,'target-yuval-gova')"
                      onkeydown="ddqTargetKeyDown(event,'target-yuval-gova')"></div>
                 <span class="s39-unit">ס״מ</span>
               </div>
@@ -379,45 +367,38 @@
         <!-- Source tray (drag bank) -->
         <div class="ddq-source" id="ddq-source">
           <div class="ddq-source-slot" id="slot-drag-6">
-            <div class="ddq-num-chip" id="drag-6" draggable="true"
+            <div class="ddq-num-chip" id="drag-6"
                  tabindex="0" role="button" aria-label="מספר 6" aria-pressed="false"
-                 ondragstart="ddqDragStart(event,'drag-6')" ondragend="ddqDragEnd(event)"
                  onkeydown="ddqChipKeyDown(event,'drag-6')">6</div>
           </div>
           <div class="ddq-source-slot" id="slot-drag-12">
-            <div class="ddq-num-chip" id="drag-12" draggable="true"
+            <div class="ddq-num-chip" id="drag-12"
                  tabindex="0" role="button" aria-label="מספר 12" aria-pressed="false"
-                 ondragstart="ddqDragStart(event,'drag-12')" ondragend="ddqDragEnd(event)"
                  onkeydown="ddqChipKeyDown(event,'drag-12')">12</div>
           </div>
           <div class="ddq-source-slot" id="slot-drag-15">
-            <div class="ddq-num-chip" id="drag-15" draggable="true"
+            <div class="ddq-num-chip" id="drag-15"
                  tabindex="0" role="button" aria-label="מספר 15" aria-pressed="false"
-                 ondragstart="ddqDragStart(event,'drag-15')" ondragend="ddqDragEnd(event)"
                  onkeydown="ddqChipKeyDown(event,'drag-15')">15</div>
           </div>
           <div class="ddq-source-slot" id="slot-drag-24">
-            <div class="ddq-num-chip" id="drag-24" draggable="true"
+            <div class="ddq-num-chip" id="drag-24"
                  tabindex="0" role="button" aria-label="מספר 24" aria-pressed="false"
-                 ondragstart="ddqDragStart(event,'drag-24')" ondragend="ddqDragEnd(event)"
                  onkeydown="ddqChipKeyDown(event,'drag-24')">24</div>
           </div>
           <div class="ddq-source-slot" id="slot-drag-30">
-            <div class="ddq-num-chip" id="drag-30" draggable="true"
+            <div class="ddq-num-chip" id="drag-30"
                  tabindex="0" role="button" aria-label="מספר 30" aria-pressed="false"
-                 ondragstart="ddqDragStart(event,'drag-30')" ondragend="ddqDragEnd(event)"
                  onkeydown="ddqChipKeyDown(event,'drag-30')">30</div>
           </div>
           <div class="ddq-source-slot" id="slot-drag-48">
-            <div class="ddq-num-chip" id="drag-48" draggable="true"
+            <div class="ddq-num-chip" id="drag-48"
                  tabindex="0" role="button" aria-label="מספר 48" aria-pressed="false"
-                 ondragstart="ddqDragStart(event,'drag-48')" ondragend="ddqDragEnd(event)"
                  onkeydown="ddqChipKeyDown(event,'drag-48')">48</div>
           </div>
           <div class="ddq-source-slot" id="slot-drag-60">
-            <div class="ddq-num-chip" id="drag-60" draggable="true"
+            <div class="ddq-num-chip" id="drag-60"
                  tabindex="0" role="button" aria-label="מספר 60" aria-pressed="false"
-                 ondragstart="ddqDragStart(event,'drag-60')" ondragend="ddqDragEnd(event)"
                  onkeydown="ddqChipKeyDown(event,'drag-60')">60</div>
           </div>
         </div><!-- /.ddq-source -->
@@ -851,7 +832,7 @@
   <script src="../unit-js/40-resume.js?v=7"></script>
   <script src="../unit-js/50-loader.js?v=6"></script>
   <script src="../unit-js/60-devbridge.js?v=4"></script>
-  <script src="script.js?v=20"></script>
+  <script src="script.js?v=21"></script>
   <script src="../unit-js/90-boot.js?v=5"></script>
 </body>
 </html>

@@ -2414,6 +2414,8 @@ body {
   box-sizing: border-box;
 }
 .s18-answer-box:focus { border-color: var(--subject-alpha-100); }
+/* Revealed answer after the 2nd wrong try - same red border as .s5-dropdown.is-incorrect */
+.s18-answer-box.is-incorrect { border: 1px solid #B20010; }
 
 /* Bottom bar */
 .s18-bottom-bar {
