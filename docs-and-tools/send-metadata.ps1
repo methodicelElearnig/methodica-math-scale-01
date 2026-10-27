@@ -344,7 +344,9 @@ function Send-Entity {
         $script:counts.failed++
         $snippet = ($r.Body -replace '\s+', ' ')
         if ($snippet.Length -gt 400) { $snippet = $snippet.Substring(0, 400) + '…' }
-        Write-Log ("FAILED  {0} — {1} {2} (HTTP {3}) {4}" -f $Label, $CreateMethod, $CreatePath, $r.Code, $snippet) 'ERROR'
+        # Name the request that actually failed — this used to print the create route for a failed PATCH too.
+        $failed = if ($action -eq 'UPDATED') { "PATCH $PatchPath" } else { "$CreateMethod $CreatePath" }
+        Write-Log ("FAILED  {0} — {1} (HTTP {2}) {3}" -f $Label, $failed, $r.Code, $snippet) 'ERROR'
     }
     return $ok
 }
@@ -486,8 +488,12 @@ function New-ItemBody {
         mediaFormat      = $mediaFormat
         order            = $Order
     }
-    if ($null -ne $Item.questions -and @($Item.questions).Count -gt 0) {
-        $body.questions = @($Item.questions)
+    # 2026-10-27: an EMPTY questions list is sent too. Leaving the key out keeps whatever questions
+    # Kata already holds — after the part-01 item split, items 002 and 005 kept the questions of the
+    # old items with the same ids. Assigned straight into the dictionary as [object[]]: routing it
+    # through an if-expression unrolls a one-element array into an object (422 "questions: list_type").
+    if ($null -ne $Item.questions) {
+        $body.questions = [object[]] @($Item.questions)
     }
     return $body
 }
