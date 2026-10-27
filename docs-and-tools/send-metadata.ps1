@@ -38,7 +38,11 @@ param(
     [switch] $DryRun,
     [string] $ApiKey,
     [string] $BaseUrl,
-    [string] $MetadataDir
+    [string] $MetadataDir,
+    # 2026-10-27 (part-01 item split): send components and items only. The unit must already exist
+    # and is never written — Kata holds a he/ar/Hebrew title object and its own targetAudience /
+    # targetSectors, which this script's unit body ({ Hebrew: … } + the repo's lists) would replace.
+    [switch] $ComponentsOnly
 )
 
 # ============================================================================
@@ -517,10 +521,16 @@ $unitKey = Get-Slug $unit.id
 
 $unitBody  = New-UnitBody $unit
 $unitPatch = Remove-Key $unitBody 'uniqueKey'
-$unitOk = Send-Entity -Label "unit $unitKey" `
-    -GetPath "/api/v1/content-units/$unitKey" `
-    -CreateMethod 'POST' -CreatePath '/api/v1/content-units' -CreateBody $unitBody `
-    -PatchPath "/api/v1/content-units/$unitKey" -PatchBody $unitPatch
+if ($ComponentsOnly) {
+    # Read-only: one GET, never a POST/PATCH. A dry run cannot check, so it assumes the unit exists.
+    $unitOk = $DryRun -or (Test-Exists "/api/v1/content-units/$unitKey")
+    Write-Log ("UNIT     {0} — components-only, not written ({1})" -f $unitKey, $(if ($unitOk) { 'exists' } else { 'NOT FOUND' }))
+} else {
+    $unitOk = Send-Entity -Label "unit $unitKey" `
+        -GetPath "/api/v1/content-units/$unitKey" `
+        -CreateMethod 'POST' -CreatePath '/api/v1/content-units' -CreateBody $unitBody `
+        -PatchPath "/api/v1/content-units/$unitKey" -PatchBody $unitPatch
+}
 
 if (-not $unitOk) {
     Write-Log "Unit upsert failed — skipping components (cannot nest under a missing unit)." 'ERROR'

@@ -1,3 +1,11 @@
+> **2026-10-27 — part-01 item split: `-ComponentsOnly`.** Sends components and items only; the unit
+> is checked with one GET and never written. Kata's unit carries a `he`/`ar`/`Hebrew` title object and
+> its own `targetAudience` / `targetSectors` (Arabic components live in this unit too), which this
+> script's unit body (`{ Hebrew: … }` + the repo's lists) would replace. Use it for every send until
+> the unit body is reworked (see `Documentation/KATA/KATA-API.md`, "Unit titles — use the he / ar keys").
+> ⚠️ `retrieve-metadata.ps1` in this repo garbles Hebrew when it writes files — compare against the raw
+> `GET /api/v1/content-units/methodica-math-scale-01` instead.
+
 # Sending metadata to the Kata catalog
 
 `send-metadata.ps1` pushes the `metadata/` folder (1 unit + 5 components + their

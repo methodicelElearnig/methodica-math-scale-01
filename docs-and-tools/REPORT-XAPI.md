@@ -286,7 +286,7 @@ The three still open in `methodica-math-scale-01`:
    `index.html` has no `s42` markup. Part 05's metadata says a failed peak question should route
    here; no such routing exists. Nothing maps to item `005`. *(This is also the `-003` → `-005`
    numbering warning in [METADATA-FIXES.md](METADATA-FIXES.md).)*
-2. **Part 01 item `003`** (the guided worked example, screens 7–14) is authored with two questions,
+2. **Part 01 item `005`** (`003` before the 2026-10-27 split; the guided worked example, screens 7–14) is authored with two questions,
    but the code never grades it — `s8Answer`/`s9Answer`/`s10Answer` ignore their argument and always
    reveal the correct mark. It is a Socratic walk-through, so no `answered` is emitted and it
    contributes nothing to the score. Either metadata drops those questions, or the screens become
@@ -296,6 +296,28 @@ The three still open in `methodica-math-scale-01`:
    wired in the HTML); part 04 `s42*`.
 
 ---
+
+## 9c. Part 01 item split (2026-10-27)
+
+The bot answered about the learning path the learner had not chosen (`QA/2026-10-26`), because the
+choice and both paths were one item, 002. Metadata component 01 now comes from
+`QA/2026-10-26/split-method-choice-final`:
+
+| Screens | Before | Now |
+|---|---|---|
+| 2 how-to-learn choice | `null` (only `selected`) | `002` |
+| 4 concept via video + q1/q2 | `002` | `003` |
+| 3 concept via flip cards + q1/q2 | `002` | `004` |
+| 7–14 guided worked example | `003` | `005` |
+| 16 warm-up | `004` | `006` |
+| 18–23 quizzes 1–5 | `005`–`009` | `007`–`011` |
+
+Both path items declare the same q1/q2 (the concept questions are shared by the two screens), so
+`sqSubmit`/q2 report under `003` on screen 4 and `004` on screen 3, one call site each. The YouTube
+`played`/`paused` object is item `003`. Resume state saved before the split is translated once
+(`_rsRenumberItems`; old 002 → the path in `sq.screen`). The delivered metadata carried the
+word-reversed vocabulary (`content-interactive`, `exercise-solved`, `basic-curriculum-core`) and a
+shortened `learningUnitId`; the Kata spellings and the repo's values were kept (see METADATA-FIXES.md).
 
 ## 9a. What changed in the v4 upgrade (2026-09-01)
 

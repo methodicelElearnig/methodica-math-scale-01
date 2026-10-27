@@ -357,11 +357,18 @@ function checkResumeHashOverride() {
   const c = '01';
   const { dom, val, exec } = loadComponent(c, { hash: '#screen=23' });
   exec('XAPI_Q_RESULTS = {};');
-  exec("applyExecutionState({ currentScreen: 18, qResults: { '005/q1': true, '006/q1': true } }, 23);");
+  exec("applyExecutionState({ ids: 2, currentScreen: 18, qResults: { '007/q1': true, '008/q1': true } }, 23);");
   ok('hash', c + ': the hash chooses the screen',
     val('currentScreen') === 23, String(val('currentScreen')));
   ok('hash', c + ': the hash does NOT cancel the state restore',
-    val("XAPI_Q_RESULTS['005/q1']") === true && val("XAPI_Q_RESULTS['006/q1']") === true,
+    val("XAPI_Q_RESULTS['007/q1']") === true && val("XAPI_Q_RESULTS['008/q1']") === true,
+    val('JSON.stringify(XAPI_Q_RESULTS)'));
+  /* A payload saved before the 2026-10-27 item split (no `ids`) carries the old suffixes; the
+     restore translates them once: 002 → the path item (sq.screen 4 → 003), 005/006 → 007/008. */
+  exec('XAPI_Q_RESULTS = {};');
+  exec("applyExecutionState({ currentScreen: 18, sq: { screen: 4 }, qResults: { '002/q1': true, '005/q1': true, '006/q1': false } }, 23);");
+  ok('hash', c + ': a pre-split payload is translated to the new item numbers',
+    val('JSON.stringify(XAPI_Q_RESULTS)') === JSON.stringify({ '003/q1': true, '007/q1': true, '008/q1': false }),
     val('JSON.stringify(XAPI_Q_RESULTS)'));
 
   /* An out-of-range hash (a part that got shorter) falls back to the document
@@ -1250,7 +1257,7 @@ function checkYouTubeReporting() {
   for (const verb of ['played', 'paused']) {
     const m = body.match(new RegExp("sendStatement720\\('" + verb + "'[\\s\\S]{0,160}?\\)\\s*;"));
     ok('video', "the YouTube '" + verb + "' carries the ITEM as its object",
-      !!m && /objectId:\s*xapiItemId\('002'\)/.test(m[0]),
+      !!m && /objectId:\s*xapiItemId\('003'\)/.test(m[0]),   // the video path item (002 before the 2026-10-27 split)
       m ? m[0].replace(/\s+/g, ' ') : 'not found');
     ok('video', "the YouTube '" + verb + "' no longer passes xapiQ() — the library drops it here",
       !!m && !/xapiQ\(/.test(m[0]),
@@ -1291,7 +1298,7 @@ function checkYouTubeReporting() {
     "    var afterEnded = log.length;" +
     "    s4OnPlayerStateChange({ data: 1 });" +   // 8 replay      -> played
     "    return JSON.stringify({ beforeAnyPause: beforeAnyPause, afterEnded: afterEnded," +
-    "      log: log, itemId: xapiItemId('002') });" +
+    "      log: log, itemId: xapiItemId('003') });" +
     "  } finally { window.XAPI_USING_G = realUsing; window.sendStatement720 = realSend;" +
     "             window.YT = realYT; window.sqEnter = realEnter; } })()");
   const y = JSON.parse(probe || '{}');

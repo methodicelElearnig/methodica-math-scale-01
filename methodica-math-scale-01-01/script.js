@@ -128,7 +128,7 @@ function s4OnPlayerStateChange(e) {
   try {
     if (window.XAPI_USING_G && typeof sendStatement720 === 'function' && s4YTPlayer) {
       var _t = (typeof s4YTPlayer.getCurrentTime === 'function') ? s4YTPlayer.getCurrentTime() : 0;
-      /* Both statements carry the ITEM object. Screen 4 is the video path through item 002
+      /* Both statements carry the ITEM object. Screen 4 is the video path, item 003 (002 before the 2026-10-27 split)
          (see SCREEN_TO_SUBCONTENT), and xapiWireVideos anchors video statements the same way.
 
          ⚠️ 15.09.26 - this used to pass Object.assign({ time }, xapiQ('002','q1')) and the
@@ -162,13 +162,13 @@ function s4OnPlayerStateChange(e) {
         if (!s4XapiPlaying) {
           s4XapiPlaying = true;
           sendStatement720('played', 'question', null,
-            { time: _t, objectId: xapiItemId('002') });
+            { time: _t, objectId: xapiItemId('003') });
         }
       } else if (e.data === YT.PlayerState.PAUSED) {
         if (s4XapiPlaying) {
           s4XapiPlaying = false;
           sendStatement720('paused', 'question', null,
-            { time: _t, objectId: xapiItemId('002') });
+            { time: _t, objectId: xapiItemId('003') });
         }
       } else if (e.data === YT.PlayerState.ENDED) {
         s4XapiPlaying = false;   // re-arm for a replay; ENDED itself reports nothing
@@ -1008,10 +1008,11 @@ function sqSubmit() {
   var feedback = document.getElementById(p + 'inline-feedback');
   feedback.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
-  /* xAPI: item 002 / q1. Single attempt (sqSubmitted latches), so always the last answer.
-     Served from screen 3 (cards path) and screen 4 (video path) alike — same metadata item. */
-  xapiAnswered('002', 'q1', correct, true,
-    xapiAnswerText(opts[sqSelected]));
+  /* xAPI: q1 of the path item — 003 on screen 4 (video), 004 on screen 3 (cards); one item per path
+     since the split of 2026-10-27 (QA/2026-10-26). Single attempt (sqSubmitted latches), so always
+     the last answer. */
+  if (sqScreen === 4) xapiAnswered('003', 'q1', correct, true, xapiAnswerText(opts[sqSelected]));
+  else xapiAnswered('004', 'q1', correct, true, xapiAnswerText(opts[sqSelected]));
   sqCheckBothDone();
   flushResumeSave();   // see s16Submit
 }
@@ -1077,9 +1078,10 @@ function sqQ2Submit() {
   var feedback = document.getElementById(p + 'q2-inline-feedback');
   feedback.classList.add(allCorrect ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
-  /* xAPI: item 002 / q2 — the 4-row unit-conversion matching. Single attempt. */
-  xapiAnswered('002', 'q2', allCorrect, true,
-    _q2Answer);
+  /* xAPI: q2 of the path item (003 video / 004 cards) — the 4-row unit-conversion matching.
+     Single attempt. */
+  if (sqScreen === 4) xapiAnswered('003', 'q2', allCorrect, true, _q2Answer);
+  else xapiAnswered('004', 'q2', allCorrect, true, _q2Answer);
   sqCheckBothDone();
   flushResumeSave();   // see s16Submit
 }
@@ -1137,7 +1139,7 @@ function s16ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    xapiRequestedHint('004', 'q1');
+    xapiRequestedHint('006', 'q1');
   }
 }
 
@@ -1318,7 +1320,7 @@ function s18ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    xapiRequestedHint('005', 'q1');
+    xapiRequestedHint('007', 'q1');
   }
 }
 
@@ -1339,7 +1341,7 @@ function s18Submit() {
   /* xAPI: item 005 / q1 (quiz exercise 1). Two attempts allowed — the first wrong answer is an
      interim 'answered'; a correct answer or the second wrong one closes the question. Only
      'answered.last' feeds the component score denominator. */
-  xapiAnswered('005', 'q1', correct, correct || s18Attempts >= 2,
+  xapiAnswered('007', 'q1', correct, correct || s18Attempts >= 2,
     answer);
 
   var feedback  = document.getElementById('s18-feedback');
@@ -1428,7 +1430,7 @@ function s19ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    xapiRequestedHint('006', 'q1');
+    xapiRequestedHint('008', 'q1');
   }
 }
 
@@ -1447,7 +1449,7 @@ function s19Submit() {
   s19Attempts++;
 
   /* xAPI: item 006 / q1 (quiz exercise 2, part א). */
-  xapiAnswered('006', 'q1', correct, correct || s19Attempts >= 2,
+  xapiAnswered('008', 'q1', correct, correct || s19Attempts >= 2,
     answer);
 
   var feedback    = document.getElementById('s19-feedback');
@@ -1536,7 +1538,7 @@ function s20Select(idx) {
 }
 
 function s20ToggleHint() { var p = document.getElementById('s20-hint-popup'); if (p) { p.hidden = false; announce('רמז נפתח');
-    xapiRequestedHint('006', 'q2');
+    xapiRequestedHint('008', 'q2');
   } }
 function s20CloseHint()  { var p = document.getElementById('s20-hint-popup'); if (p) { p.hidden = true; announce('רמז נסגר'); } }
 
@@ -1547,7 +1549,7 @@ function s20Submit() {
   s20Attempts++;
   /* xAPI: item 006 / q2 (quiz exercise 2, part ב). Reported before the wrong-answer branch below
      clears s20Selected, which would otherwise lose the learner's answer text. */
-  xapiAnswered('006', 'q2', correct, correct || s20Attempts >= 2,
+  xapiAnswered('008', 'q2', correct, correct || s20Attempts >= 2,
     xapiAnswerText(document.querySelectorAll('[data-screen="20"] .s5-opt')[s20Selected]));
   var feedback    = document.getElementById('s20-feedback');
   var fbBold      = document.getElementById('s20-fb-bold');
@@ -1616,7 +1618,7 @@ function s21CheckInput() {
 }
 
 function s21ToggleHint() { var p = document.getElementById('s21-hint-popup'); if (p) { p.hidden = false; announce('רמז נפתח');
-    xapiRequestedHint('007', 'q1');
+    xapiRequestedHint('009', 'q1');
   } }
 function s21CloseHint()  { var p = document.getElementById('s21-hint-popup'); if (p) { p.hidden = true; announce('רמז נסגר'); } }
 
@@ -1626,7 +1628,7 @@ function s21Submit() {
   var answer = input ? input.value : '';
   var correct = checkRatio(answer, 1, 25000);
   s21Attempts++;
-  xapiAnswered('007', 'q1', correct, correct || s21Attempts >= 2,
+  xapiAnswered('009', 'q1', correct, correct || s21Attempts >= 2,
     String(answer).trim());
   var feedback    = document.getElementById('s21-feedback');
   var fbBold      = document.getElementById('s21-fb-bold');
@@ -1710,7 +1712,7 @@ function s22ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    xapiRequestedHint('008', 'q1');
+    xapiRequestedHint('010', 'q1');
   }
 }
 
@@ -1726,7 +1728,7 @@ function s22Submit() {
   var correct = (s22Selected === S22_CORRECT);
   s22Attempts++;
 
-  xapiAnswered('008', 'q1', correct, correct || s22Attempts >= 2,
+  xapiAnswered('010', 'q1', correct, correct || s22Attempts >= 2,
     xapiAnswerText(document.querySelectorAll('[data-screen="22"] .s5-opt')[s22Selected]));
 
   var feedback    = document.getElementById('s22-feedback');
@@ -1803,8 +1805,8 @@ function s16Submit() {
   feedback.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
 
-  /* xAPI: item 004 / q1 — the true/false warm-up. Single attempt. */
-  xapiAnswered('004', 'q1', correct, true,
+  /* xAPI: item 006 / q1 (004 before the 2026-10-27 split) — the true/false warm-up. Single attempt. */
+  xapiAnswered('006', 'q1', correct, true,
     xapiAnswerText(opts[s16Selected]));
 
   var contBtn = document.getElementById('s16-continue');
@@ -2134,7 +2136,7 @@ function s23ToggleHint() {
   if (popup) {
     popup.hidden = false;
     announce('רמז נפתח');
-    xapiRequestedHint('009', 'q1');
+    xapiRequestedHint('011', 'q1');
   }
 }
 
@@ -2151,7 +2153,7 @@ function s23Submit() {
   s23Attempts++;
 
   /* xAPI: item 009 / q1 (quiz exercise 5, the last one before routing). */
-  xapiAnswered('009', 'q1', correct, correct || s23Attempts >= 2,
+  xapiAnswered('011', 'q1', correct, correct || s23Attempts >= 2,
     xapiAnswerText(document.querySelectorAll('[data-screen="23"] .s5-opt')[s23Selected]));
 
   var feedback    = document.getElementById('s23-feedback');
@@ -2286,20 +2288,21 @@ function routeAfterBasicPractice() {
 var SCREEN_TO_SUBCONTENT = {
   0: null,            // avatar choice
   1: ['001', 1],      // hook: drone-vs-reality widget (no question in the catalog)
-  2: null,            // how-to-learn choice -> reported as 'selected'
-  3: ['002', 1],      // concept via flip cards + q1/q2
-  4: ['002', 1],      // concept via video + q1/q2 (same item, other path)
+  /* split 2026-10-27 (QA/2026-10-26): the choice is now its own item, and each path its own item */
+  2: ['002', 1],      // how-to-learn choice (also reported as 'selected')
+  3: ['004', 1],      // concept via flip cards + q1/q2
+  4: ['003', 1],      // concept via video + q1/q2
   6: null,            // transition
-  7:  ['003', 1], 8:  ['003', 2], 9:  ['003', 3], 10: ['003', 4],
-  11: ['003', 5], 12: ['003', 6], 14: ['003', 7],   // guided worked example (not graded)
+  7:  ['005', 1], 8:  ['005', 2], 9:  ['005', 3], 10: ['005', 4],
+  11: ['005', 5], 12: ['005', 6], 14: ['005', 7],   // guided worked example (not graded)
   15: null,           // transition
-  16: ['004', 1],     // warm-up true/false
+  16: ['006', 1],     // warm-up true/false
   17: null,           // transition
-  18: ['005', 1],     // quiz 1
-  19: ['006', 1], 20: ['006', 2],                   // quiz 2 (א + ב)
-  21: ['007', 1],     // quiz 3
-  22: ['008', 1],     // quiz 4
-  23: ['009', 1]      // quiz 5
+  18: ['007', 1],     // quiz 1
+  19: ['008', 1], 20: ['008', 2],                   // quiz 2 (א + ב)
+  21: ['009', 1],     // quiz 3
+  22: ['010', 1],     // quiz 4
+  23: ['011', 1]      // quiz 5
 };
 
 var XAPI_COMP_SLUG = 'methodica-math-scale-01-01';
@@ -2309,9 +2312,9 @@ var XAPI_COMP_ID   = XAPI_ID_PREFIX + XAPI_COMP_SLUG + '/';
 
 
 
-/* Items that carry a graded question IN CODE. 001 is the hook and 003 the Socratic worked
-   example — both are walked through, neither is answered, so they are absent here. */
-var XAPI_EVAL_ITEMS = { '002': 1, '004': 1, '005': 1, '006': 1, '007': 1, '008': 1, '009': 1 };
+/* Items that carry a graded question IN CODE. 001 is the hook, 002 the path choice and 005 the
+   Socratic worked example — walked through, never answered, so they are absent here. */
+var XAPI_EVAL_ITEMS = { '003': 1, '004': 1, '006': 1, '007': 1, '008': 1, '009': 1, '010': 1, '011': 1 };
 
 
 /* Report modal, draggable feedback, a11y wiring and image zoom: ../unit-js/ */
@@ -2425,8 +2428,38 @@ function captureResumeInputs() {
 }
 
 /* This part's payload only. `v` and `part` live on the enclosing v3 document, not in here. */
+/* Item split (2026-10-27): state saved before it carries the old suffixes — qResults and the hints
+   ledger ('<item>/<qKey>'), doneItems ('<slug>#<item>'). Old 002 was the concept on both paths: its
+   q1/q2 go to the path the learner was on (state.sq.screen: 4 video → 003, else cards → 004), and
+   its 'completed' marks that path item (002, now the choice, stays). Old 003–009 → 005–011. Runs
+   once; `ids` marks a payload as already current. */
+var RS_ITEM_IDS = 2;
+var RS_ITEM_RENUMBER = { '003': '005', '004': '006', '005': '007', '006': '008', '007': '009', '008': '010', '009': '011' };
+function _rsRenumberKeys(map, re, ren) {
+  if (!map) return map;
+  var out = {};
+  Object.keys(map).forEach(function (k) {
+    out[k.replace(re, function (all, pre, item, post) { return pre + (ren[item] || item) + post; })] = map[k];
+  });
+  return out;
+}
+function _rsRenumberItems(state) {
+  if (state.ids === RS_ITEM_IDS) return;
+  var pathItem = (state.sq && state.sq.screen === 4) ? '003' : '004';
+  var qRen = Object.assign({ '002': pathItem }, RS_ITEM_RENUMBER);
+  state.qResults = _rsRenumberKeys(state.qResults, /^()(\d{3})(\/.*)$/, qRen);
+  if (typeof _unitState !== 'undefined' && _unitState) {
+    _unitState.hints = _rsRenumberKeys(_unitState.hints, /^()(\d{3})(\/.*)$/, qRen);
+    var d = _rsRenumberKeys(_unitState.doneItems, /^(.*#)(\d{3})()$/, RS_ITEM_RENUMBER);
+    if (d && d[itemLedgerKey('002')]) d[itemLedgerKey(pathItem)] = d[itemLedgerKey('002')];
+    if (d) _unitState.doneItems = d;
+  }
+  state.ids = RS_ITEM_IDS;
+}
+
 function capturePartPayload() {
   return {
+    ids: RS_ITEM_IDS,
     currentScreen: currentScreen,
     /* Component 01 scores from its own sNNCorrect flags (getQuizScore), not from this map — but
        xapiAnswered writes it at every answered site, so persist it like the other components do.
@@ -2463,6 +2496,7 @@ function capturePartPayload() {
 
 /* Both restore passes run through here, so they can never drift apart. */
 function applyResumeVars(state) {
+  _rsRenumberItems(state);
   if (state.qResults) XAPI_Q_RESULTS = Object.assign({}, state.qResults);
   /* selectedCharacter is deliberately NOT restored here — see capturePartPayload. It is
      unit-level state, already applied from doc.ui by applyUnitProfile before this runs, and

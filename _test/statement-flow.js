@@ -148,7 +148,7 @@ function twoAttempts() {
     last.result.extensions.student_answer, ['24']);
 
   ok('attempts', 'the score map records the outcome',
-    b.val("XAPI_Q_RESULTS['005/q1']") === true);
+    b.val("XAPI_Q_RESULTS['007/q1']") === true);   // s18 is item 007 since the 2026-10-27 split
 
   b.dom.window.close();
 }
@@ -170,7 +170,7 @@ function twoWrong() {
   eq('attempts', 'a failed question reports success false and score 0',
     [last.result.success, last.result.score.scaled], [false, 0]);
   ok('attempts', 'and the score map records the failure',
-    b.val("XAPI_Q_RESULTS['005/q1']") === false);
+    b.val("XAPI_Q_RESULTS['007/q1']") === false);
 
   b.dom.window.close();
 }
@@ -380,13 +380,13 @@ function restoreIsSilent() {
      suite until _test/xapi-720-k.js learned the guard -- so keep both halves: deleting the
      stub's guard makes this assertion vacuous rather than failing.
 
-     s18Submit reports item 005; screen 19 belongs to the next item, so this crossing closes
-     005. Nothing has been closed up to here (asserted above), so every 'completed' below
+     s18Submit reports item 007 (005 before the 2026-10-27 split); screen 19 belongs to the next
+     item, so this crossing closes 007. Nothing has been closed up to here (asserted above), so every 'completed' below
      belongs to this crossing. */
   r.exec('goTo(19);');
   const closed = r.stmts().filter(x => x.verb === 'completed').map(x => x.opts.objectId);
   ok('restore', 'an item answered before the reload still closes after it',
-    closed.length === 1 && /-01-005\/$/.test(String(closed[0])),
+    closed.length === 1 && /-01-007\/$/.test(String(closed[0])),
     'closed ' + closed.length + ': ' + closed.join(','));
 
   r.dom.window.close();
