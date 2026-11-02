@@ -483,7 +483,7 @@
             <span class="s3-toggle-icon"><svg width="20" height="26" viewBox="0 0 20 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.13776 0.75H16.3622C17.6809 0.75 18.75 1.81903 18.75 3.13775V24.6276H0.75V3.13775C0.75 1.81903 1.81903 0.75 3.13776 0.75Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/><path d="M14.5259 4.97461H4.97485V6.444H14.5259V4.97461Z" fill="white" stroke="white"/><path d="M14.5259 10.1172H4.97485V11.5866H14.5259V10.1172Z" fill="white" stroke="white"/><path d="M14.5255 15.2598H8.64795V16.7292H14.5255V15.2598Z" fill="white" stroke="white"/></svg></span>
             להפוך קלפים
           </button>
-          <button class="s3-toggle-opt" data-view="video" type="button" onclick="goTo(4)">
+          <button class="s3-toggle-opt" data-view="video" type="button" onclick="goToPath('video')">
             <span class="s3-toggle-icon"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12.479" cy="12.479" r="10.679" fill="currentColor" stroke="white" stroke-width="1"/><path d="M9.49976 7.1123C9.57521 7.1123 9.64824 7.13153 9.72144 7.17383L18.2429 12.0938C18.3842 12.1753 18.4664 12.3162 18.4666 12.4795C18.4666 12.643 18.3843 12.7846 18.2429 12.8662L9.72144 17.7861C9.64824 17.8284 9.5752 17.8477 9.49976 17.8477C9.25346 17.8474 9.05249 17.6458 9.05249 17.3994V7.55957C9.05272 7.31342 9.2536 7.11254 9.49976 7.1123Z" fill="white" stroke="white" stroke-linecap="round"/></svg></span>
             לצפות בסרטון
           </button>
@@ -683,7 +683,7 @@
       <div class="bottom-bar s3-bottom-bar">
         <button class="btn-back-s3" type="button" onclick="goTo(2)">חזרה</button>
         <div class="s3-mode-toggle" role="group" aria-label="מצב למידה">
-          <button class="s3-toggle-opt" data-view="cards" type="button" onclick="goTo(3)">
+          <button class="s3-toggle-opt" data-view="cards" type="button" onclick="goToPath('cards')">
             <span class="s3-toggle-icon"><svg width="20" height="26" viewBox="0 0 20 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.13776 0.75H16.3622C17.6809 0.75 18.75 1.81903 18.75 3.13775V24.6276H0.75V3.13775C0.75 1.81903 1.81903 0.75 3.13776 0.75Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/><path d="M14.5259 4.97461H4.97485V6.444H14.5259V4.97461Z" fill="white" stroke="white"/><path d="M14.5259 10.1172H4.97485V11.5866H14.5259V10.1172Z" fill="white" stroke="white"/><path d="M14.5255 15.2598H8.64795V16.7292H14.5255V15.2598Z" fill="white" stroke="white"/></svg></span>
             להפוך קלפים
           </button>
@@ -2099,14 +2099,14 @@
   <!-- iPad-shaped-viewport gate (01-01 trial only) — must load after scaleApp() is defined and
        before 90-boot.js wires it to the resize listener, so the wrapped version is what gets used -->
   <script src="canvas-tall-gate.js?v=1"></script>
-  <script src="../unit-js/20-xapi.js?v=8"></script>
+  <script src="../unit-js/20-xapi.js?v=9"></script>
   <script src="../unit-js/25-report.js?v=4"></script>
   <script src="../unit-js/28-feedback-drag.js?v=4"></script>
   <script src="../unit-js/30-nav.js?v=5"></script>
   <script src="../unit-js/40-resume.js?v=7"></script>
   <script src="../unit-js/50-loader.js?v=6"></script>
   <script src="../unit-js/60-devbridge.js?v=4"></script>
-  <script src="script.js?v=22"></script>
+  <script src="script.js?v=23"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="../unit-js/90-boot.js?v=5"></script>
 </body>

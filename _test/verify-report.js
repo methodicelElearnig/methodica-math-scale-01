@@ -1232,10 +1232,52 @@ function checkLearningTypePick() {
       const body = branchBodyAt(src, src.indexOf('{', at));
       return !/sendStatement|selectedDesign\s*=|announce\s*\(/.test(body);
     })());
-  ok('pick', "advanceFromS2 reports 'selected' through the picks ledger",
-    /sendStatementOnce\(\s*'picks'\s*,\s*'learning-type\/'\s*\+\s*_pick\s*,\s*'selected'/.test(src));
+  ok('pick', "advanceFromS2 enters the path through goToPath (which reports 'selected')",
+    /function\s+advanceFromS2[\s\S]{0,160}?goToPath\(\s*window\.lomdaState\.selectedDesign\s*\)/.test(src));
+  const x = fs.readFileSync(path.join(BASE, 'unit-js', '20-xapi.js'), 'utf8');
+  ok('pick', "xapiSelectedLearningType reports through the picks ledger, after the USING_G guard",
+    /function\s+xapiSelectedLearningType[\s\S]{0,400}?XAPI_USING_G[\s\S]{0,300}?sendStatementOnce\(\s*'picks'\s*,\s*'learning-type\/'\s*\+\s*path\s*,\s*'selected'/.test(x));
   const r = fs.readFileSync(path.join(BASE, 'unit-js', '40-resume.js'), 'utf8');
   ok('pick', 'emptyUnitState declares a picks ledger', /picks:\s*\{\}/.test(r));
+
+  /* Behavioural (2026-11-02, guide §6.3a): category learning-type, object = the component, response =
+     the chosen path item's catalogue mediaFormat; on המשך and the s3 / s4 toggles, never on a
+     card click; once per distinct path; nothing while a restore paints. */
+  const meta = JSON.parse(fs.readFileSync(path.join(BASE, 'metadata', PART_DIR('01') + '.json'), 'utf8'));
+  const sub = Object.fromEntries(meta.subContent.map((s) => [s.id.replace(/\/$/, '').slice(-3), s]));
+  const { dom, val, exec } = loadComponent('01');
+  const paths = JSON.parse(val('JSON.stringify(XAPI_LEARNING_PATHS)'));
+  ok('pick', 'XAPI_LEARNING_PATHS: every path item exists and its mediaFormat equals the catalogue',
+    Object.keys(paths).length === 2 && Object.values(paths).every((p) => sub[p.item] && sub[p.item].mediaFormat === p.mediaFormat),
+    JSON.stringify(paths));
+  ok('pick', 'XAPI_LEARNING_PATHS: each path item is the item its screen reports (video s4, cards s3)',
+    val('SCREEN_TO_SUBCONTENT[4][0]') === paths.video.item && val('SCREEN_TO_SUBCONTENT[3][0]') === paths.cards.item);
+  exec('window.XAPI_USING_G = true; window.__sel = []; window.sendStatement720 = function (v, t, r, o) { if (v === "selected") window.__sel.push({ t: t, r: r, o: o }); };');
+  exec("_unitState = { v: 5, component: currentPartSlug(), payload: null, done: {}, doneItems: {}, hints: {}, picks: {}, ui: {}, results: {} };");
+  const card = (v) => '[data-screen="2"] .option-card[data-value="' + v + '"]';
+  exec("goTo(2); selectDesign(document.querySelector('" + card('cards') + "')); selectDesign(document.querySelector('" + card('video') + "'));");
+  const onClick = val('window.__sel.length');
+  exec('advanceFromS2();');
+  const first = JSON.parse(val('JSON.stringify(window.__sel)')); const at1 = val('currentScreen');
+  exec("goTo(2); selectDesign(document.querySelector('" + card('video') + "')); advanceFromS2();");
+  const repick = val('window.__sel.length');
+  exec("document.querySelector('[data-screen=\"4\"] .s3-toggle-opt[data-view=\"cards\"]').click();");
+  const toCards = JSON.parse(val('JSON.stringify(window.__sel.slice(1))')); const at2 = val('currentScreen');
+  exec("document.querySelector('[data-screen=\"3\"] .s3-toggle-opt[data-view=\"video\"]').click();");
+  const back = val('window.__sel.length'); const at3 = val('currentScreen');
+  exec("_unitState.picks = {}; window.__sel = []; _restoring = true; goTo(2); advanceFromS2(); _restoring = false;");
+  const restoring = val('window.__sel.length');
+  const one = (l, f) => l.length === 1 && l[0].t === 'onlinelesson' && l[0].o && l[0].o.category === 'learning-type'
+    && !l[0].o.objectId && !l[0].o.questionId && l[0].r && l[0].r.response === f;
+  ok('pick', 'a card click sends nothing (only the confirmed choice reports)', onClick === 0, String(onClick));
+  ok('pick', 'המשך on video -> s4 and one selected — learning-type, component object, response "' + paths.video.mediaFormat + '"',
+    one(first, paths.video.mediaFormat) && at1 === 4, JSON.stringify(first) + ' at ' + at1);
+  ok('pick', 'המשך again on the same path sends nothing', repick === 1, String(repick));
+  ok('pick', 'the s4 cards toggle -> s3 and one selected, response "' + paths.cards.mediaFormat + '"',
+    one(toCards, paths.cards.mediaFormat) && at2 === 3, JSON.stringify(toCards) + ' at ' + at2);
+  ok('pick', 'the s3 video toggle back to an already-reported path -> s4, nothing sent', back === 2 && at3 === 4, back + ' at ' + at3);
+  ok('pick', 'nothing is sent while a restore paints', restoring === 0, String(restoring));
+  dom.window.close();
 }
 
 /* ══════════════ 19. The YouTube path is anchored and filtered ══════════════

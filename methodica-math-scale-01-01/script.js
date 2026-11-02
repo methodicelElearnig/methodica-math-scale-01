@@ -455,26 +455,20 @@ function selectDesign(cardEl) {
 
 function advanceFromS2() {
   if (!window.lomdaState.selectedDesign) return;
-  /* xAPI: the learner picked how to learn the concept — video (screen 4) or flip cards (screen 3).
-     Reported as 'selected' under the learning-type category, not as a graded answer.
-     (The screen-0 avatar choice stays unreported: it is decoration, not a learning preference.) */
-  try {
-    var _card = document.querySelector('[data-screen="2"] .option-card.selected');
-    var _pick = String(window.lomdaState.selectedDesign);
-    var _res  = { response: xapiAnswerText(_card) || _pick };
-    /* Once per distinct choice, through the same ledger as 'completed' and the hints.
-       Until screen 2 had a painter, every resume onto it forced the learner to re-pick and
-       emitted a second 'selected'. Keying on the chosen value rather than on the screen is
-       deliberate: re-picking the SAME option stays silent, while a learner who genuinely
-       changes their mind still reports it. Fails open like every other ledger call. */
-    if (typeof sendStatementOnce === 'function') {
-      sendStatementOnce('picks', 'learning-type/' + _pick, 'selected', 'onlinelesson', _res,
-        { category: 'learning-type' });
-    } else {
-      sendStatement720('selected', 'onlinelesson', _res, { category: 'learning-type' });
-    }
-  } catch (e) { console.error('[xAPI] selected learning-type', e); }
-  goTo(window.lomdaState.selectedDesign === 'video' ? 4 : 3);
+  goToPath(window.lomdaState.selectedDesign);
+}
+
+/* Entering a learning path — screen 2's המשך, and the mode toggles on screens 3 and 4 (switching
+   path is a choice too; screen 5's toggle wiring below points here as well, though its buttons are
+   not in the markup). xAPI: 'selected' under the learning-type category, not a graded answer
+   (../unit-js/20-xapi.js xapiSelectedLearningType: once per distinct path through the picks ledger —
+   the same keys 'learning-type/video' / '…/cards' as before, so a learner who already reported a
+   path is not reported again; response = the path item's mediaFormat since 02.11.26, it was the
+   card's label). Then video → screen 4, anything else → the flip cards, screen 3.
+   (The screen-0 avatar choice stays unreported: it is decoration, not a learning preference.) */
+function goToPath(v) {
+  xapiSelectedLearningType(v);
+  goTo(v === 'video' ? 4 : 3);
 }
 
 /* ── Screen 3: flip cards ── */
@@ -684,12 +678,12 @@ function s5Enter() {
       btnVideo.classList.add('s3-toggle-opt--active');
       btnVideo.removeAttribute('onclick');
       btnCards.classList.remove('s3-toggle-opt--active');
-      btnCards.setAttribute('onclick', 'goTo(3)');
+      btnCards.setAttribute('onclick', "goToPath('cards')");
     } else {
       btnCards.classList.add('s3-toggle-opt--active');
       btnCards.removeAttribute('onclick');
       btnVideo.classList.remove('s3-toggle-opt--active');
-      btnVideo.setAttribute('onclick', 'goTo(4)');
+      btnVideo.setAttribute('onclick', "goToPath('video')");
     }
   }
 
@@ -2315,6 +2309,9 @@ var XAPI_COMP_ID   = XAPI_ID_PREFIX + XAPI_COMP_SLUG + '/';
 /* Items that carry a graded question IN CODE. 001 is the hook, 002 the path choice and 005 the
    Socratic worked example — walked through, never answered, so they are absent here. */
 var XAPI_EVAL_ITEMS = { '003': 1, '004': 1, '006': 1, '007': 1, '008': 1, '009': 1, '010': 1, '011': 1 };
+/* The screen-2 learning-path choice ('selected', learning-type — goToPath above): selectedDesign -> the
+   path's item and its catalogue mediaFormat (the statement's response). */
+var XAPI_LEARNING_PATHS = { video: { item: '003', mediaFormat: 'video' }, cards: { item: '004', mediaFormat: 'text' } };
 
 
 /* Report modal, draggable feedback, a11y wiring and image zoom: ../unit-js/ */
