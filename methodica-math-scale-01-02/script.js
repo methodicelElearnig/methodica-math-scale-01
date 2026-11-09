@@ -850,7 +850,7 @@ function endAtBasicStop() {
     return;
   }
   basicStopEnded = true;
-  xapiEndComponent({ success: false, score: { scaled: xapiCorrectCount() / 7 } }, btn);
+  xapiEndComponent(xapiPartResult(), btn);   // below 3/4 here, so success:false
   try { flushResumeSave(); } catch (e) {}
 }
 
@@ -1038,6 +1038,18 @@ function s33CloseHint() {
   if (popup) { popup.hidden = true; announce('רמז נסגר'); }
 }
 
+/* ── The component result (2026-11-09, 08.11 sheet fixes 1, 2, 4) ──
+   Screen 0 promises «ענו נכון על 3 שאלות ומעלה (75%) כדי להתקדם» over the 4 basic questions, so success
+   and score.scaled come from that one count (getBasicPracticeScore: Q4 = screens 29+30 together). The
+   two advanced questions (screens 32, 33, «ברמת קושי גבוהה יותר») keep their 'answered' and stay out of
+   it. Until then the end sent success = basic >= 3 AND advanced >= 2 — a second, hidden gate the screen
+   never states — with scaled = all correct / 7, and the stop sent scaled / 7 as well. Used by both
+   ends: the stop after Q4 (endAtBasicStop) and the last click (routeAfterAdvancedPractice). */
+function xapiPartResult() {
+  var ok = getBasicPracticeScore();
+  return { success: ok >= 3, score: { scaled: ok / 4 } };
+}
+
 function getAdvancedPracticeScore() {
   return (s32Correct ? 1 : 0) + (s33Correct ? 1 : 0);
 }
@@ -1063,9 +1075,7 @@ function routeAfterAdvancedPractice() {
      report and stop. The ledger persists its mark synchronously because nothing else would write
      it, and the library's own dedupe lasts only one page load — it cannot survive the reload that
      brings the learner through here again. */
-  var _n = xapiCorrectCount();
-  xapiEndComponent({ success: getBasicPracticeScore() >= 3 && getAdvancedPracticeScore() >= 2,
-                     score: { scaled: _n / 7 } }, document.getElementById('s33-continue'));
+  xapiEndComponent(xapiPartResult(), document.getElementById('s33-continue'));
   /* The hop to 03 lives on only for a local walkthrough (DEV_NAV, unit-js/10-identity.js). */
   if (DEV_NAV) {
     writeForwardState('methodica-math-scale-01-03', '#screen=8');
