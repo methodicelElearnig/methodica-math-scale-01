@@ -413,11 +413,15 @@ guards that prevent double reporting). None was chosen.
 
 ### 11.2 Part 02's `success` carries a gate the learner is never told about
 
+> **Resolved 2026-11-09** (MOE sheet 08.11, fixes 1, 2, 4): both ends of part 02 now send `xapiPartResult()` —
+> `success = getBasicPracticeScore() >= 3`, `scaled = getBasicPracticeScore() / 4`. The advanced pair is out of
+> the component result (11.2 and 11.3 below describe the code before that).
+
 `success` is `getBasicPracticeScore() >= 3 && getAdvancedPracticeScore() >= 2`. Nothing on screen
 mentions a threshold for the two advanced exercises. A learner who clears the stated 3/4 but misses
 one advanced exercise is reported `success:false` while the UI moves them on with no indication.
 
-### 11.3 Part 02's score is on a third scale
+### 11.3 Part 02's score is on a third scale (resolved 2026-11-09, see 11.2)
 
 `score.scaled` is `xapiCorrectCount() / 7` over sub-questions, while the learner counts 4 exercises
 (screens 4 and 5 are א/ב of one). So there is no on-screen score that maps cleanly onto the

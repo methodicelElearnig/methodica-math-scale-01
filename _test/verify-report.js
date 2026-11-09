@@ -800,6 +800,40 @@ function checkPlatformRouting() {
       JSON.stringify(thr));
     dom.window.close();
   }
+  /* Score contract (MOE QA runbook §4 "ציון ומעבר"; 2026-11-09, 08.11 sheet fixes 1, 2, 4): part 02 promises
+     3 of its 4 basic questions on screen 0. Both ends — the stop after Q4 (routeAfterBasicPractice →
+     endAtBasicStop) and the last click (routeAfterAdvancedPractice) — send ONE result from that count:
+     success = basic >= 3, scaled = basic / 4. The advanced pair (s32, s33) never enters it, and Q4 counts
+     only when both its parts (s29 + s30) are right. Each case runs the real end function on a fresh
+     page, with xapiEndComponent captured. */
+  {
+    const BASIC = [['s26'], ['s27'], ['s28'], ['s29', 's30']], ADV = ['s32', 's33'];
+    const run = (k, adv, end, q4Partial) => {
+      const { dom, val } = loadComponent('02');
+      const set = [];
+      BASIC.forEach((q, i) => q.forEach((v, j) => set.push(v + 'Solved = true; ' + v + 'Correct = ' + (i < k || (q4Partial && q.length > 1 && j === 0)) + ';')));
+      ADV.forEach((v) => set.push(v + 'Solved = true; ' + v + 'Correct = ' + adv + ';'));
+      const out = JSON.parse(val('(function(){ var out = []; xapiEndComponent = function (r) { out.push(r); };' + set.join(' ') +
+        ' basicStopEnded = false; ' + end + '(); return JSON.stringify(out); })()'));
+      dom.window.close();
+      return out;
+    };
+    for (let k = 0; k <= 4; k++) for (const adv of [false, true]) {
+      const tag = '02 score contract ' + k + '/4' + (adv ? ' + advanced right' : ' + advanced wrong');
+      /* below 3 the learner stops after Q4; at 3 or more the end is the last click */
+      const end = k < 3 ? 'routeAfterBasicPractice' : 'routeAfterAdvancedPractice';
+      const out = run(k, adv, end);
+      ok('routing', tag + ': one completed from ' + end + '()', out.length === 1, JSON.stringify(out));
+      const r = out[0] || { score: {} };
+      ok('routing', tag + ': success = basic >= 3', r.success === (k >= 3), JSON.stringify(r));
+      ok('routing', tag + ': scaled = basic / 4 (advanced not counted)', Math.abs(r.score.scaled - k / 4) < 1e-9, JSON.stringify(r));
+      ok('routing', tag + ': success ⇔ scaled ≥ 3/4', r.success === (r.score.scaled >= 0.75 - 1e-9));
+    }
+    const partial = run(3, true, 'routeAfterBasicPractice', true);   // Q1–Q3 right, Q4 only part א right
+    ok('routing', '02 score contract: Q4 with only part א right counts 0 — 3/4 stays 3/4, not 3.5', partial.length === 0, JSON.stringify(partial));
+    const partial2 = run(2, true, 'routeAfterBasicPractice', true);  // Q1–Q2 right, Q4 only part א right → 2/4, stop
+    ok('routing', '02 score contract: 2 right + Q4 half right stops with scaled 0.5', partial2.length === 1 && partial2[0].success === false && partial2[0].score.scaled === 0.5, JSON.stringify(partial2));
+  }
 
   /* B2: component 05 reports on the click, not on arrival. */
   const s05 = stripComments(fs.readFileSync(path.join(BASE, PART_DIR('05'), 'script.js'), 'utf8'));
