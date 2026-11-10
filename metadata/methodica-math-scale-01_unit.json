@@ -3,23 +3,13 @@
   "title": "יחידות מידה לצורך יישום יחס",
   "subTopic": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.SCALE",
   "learningObjective": "MOE.MATH.G8.NUM.RATIO-PROP-SCL.SCALE.UNIT-CONV",
-  "targetSector": [
+  "targetSectors": [
     "state-general",
     "state-religious",
-    "orthodox",
     "arab-sector",
     "druze-sector",
     "bedouin-sector",
-    "special-education"
+    "orthodox"
   ],
-  "targetAudience": [
-    "general",
-    "excellent",
-    "disadvantaged-populations",
-    "new-immigrants",
-    "students-with-special-needs",
-    "students-with-language-gaps",
-    "at-risk-students"
-  ],
-  "prerequisiteLearningObjective": []
+  "targetAudience": "general"
 }

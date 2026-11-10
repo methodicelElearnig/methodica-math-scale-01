@@ -698,6 +698,10 @@ function s39CheckScrollGate() {
   if (btn) btn.disabled = false;
 }
 
+/* xAPI: drop target -> index of its metadata answers.source entry (002/q2); the chip's number is
+   the target value. Sends Kata's 'step[.]value[,]…' instead of the internal ids (2026-11-11). */
+var DDQ_XAPI_SOURCE = { 'target-yuval-orech': 0, 'target-yuval-gova': 1, 'target-lior-orech': 2, 'target-lior-gova': 3 };
+
 function ddqCheck() {
   if (ddqChecked) { goTo(4); return; }
   ddqAttempts++;
@@ -710,7 +714,8 @@ function ddqCheck() {
     return placed === DDQ.correctMap[tId];
   });
   xapiAnswered('002', 'q2', allCorrect, allCorrect || ddqAttempts >= 2,
-    Object.keys(ddqPlacement).filter(function(k){ return ddqPlacement[k] !== 'source'; }).map(function(k){ return k + ' -> ' + ddqPlacement[k]; }).join(' | '));
+    { pairs: Object.keys(ddqPlacement).filter(function(k){ return DDQ_XAPI_SOURCE[ddqPlacement[k]] != null; })
+        .map(function(k){ return { source: DDQ_XAPI_SOURCE[ddqPlacement[k]], target: k.replace(/^drag-/, '') }; }) });
 
   var fb      = document.getElementById('s39-feedback');
   var fbBold  = document.getElementById('s39-fb-bold');

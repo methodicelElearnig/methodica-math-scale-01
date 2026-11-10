@@ -4,14 +4,15 @@
   "learningUnitId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01/",
   "componentPurpose": "both",
   "isAssessment": false,
-  "manufacture": "methodica",
   "recommendedAfterFail": [],
   "isRequired": true,
   "relativeDifficulty": 3,
   "masteryLevel": null,
   "order": 1,
   "depthLevel": "core-curriculum-basic",
-  "cognitiveLevel": "process-thinking",
+  "cognitiveLevels": [
+    "process-thinking"
+  ],
   "languages": [
     "Hebrew"
   ],
@@ -53,51 +54,48 @@
           ],
           "correctAnswers": [
             "את האורך במציאות"
-          ]
+          ],
+          "xapiInteractionComponents": {
+            "choices": [
+              {"id": "את האורך במציאות", "description": "את האורך במציאות"},
+              {"id": "את האורך בתמונה", "description": "את האורך בתמונה"}
+            ]
+          },
+          "correctXapiResponsesPattern": ["את האורך במציאות"]
         },
         {
           "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-003/q2",
-          "questionType": "matching",
+          "questionType": "performance",
           "questionText": "בחרו את המספרים המתאימים מכל רשימה, והשלימו את המרת היחידות: ב-3 ק\"מ יש __ מטרים; ב-17 מטרים יש __ ס\"מ; ב-32 ס\"מ יש __ מ\"מ; ב-7 ק\"מ יש __ ס\"מ",
-          "answers": {
-            "source": [
-              "ב-3 ק\"מ יש __ מטרים",
-              "ב-17 מטרים יש __ ס\"מ",
-              "ב-32 ס\"מ יש __ מ\"מ",
-              "ב-7 ק\"מ יש __ ס\"מ"
-            ],
-            "target": [
-              "300",
-              "3,000",
-              "30,000",
-              "170",
-              "1,700",
-              "17,000",
-              "320",
-              "3,200",
-              "32,000",
-              "7,000",
-              "70,000",
-              "700,000"
-            ]
-          },
+          "answers": null,
           "correctAnswers": [
             {
-              "source": "ב-3 ק\"מ יש __ מטרים",
-              "target": "3,000"
+              "stepId": "ב-3 ק\"מ יש __ מטרים",
+              "response": "3,000"
             },
             {
-              "source": "ב-17 מטרים יש __ ס\"מ",
-              "target": "1,700"
+              "stepId": "ב-17 מטרים יש __ ס\"מ",
+              "response": "1,700"
             },
             {
-              "source": "ב-32 ס\"מ יש __ מ\"מ",
-              "target": "320"
+              "stepId": "ב-32 ס\"מ יש __ מ\"מ",
+              "response": "320"
             },
             {
-              "source": "ב-7 ק\"מ יש __ ס\"מ",
-              "target": "700,000"
+              "stepId": "ב-7 ק\"מ יש __ ס\"מ",
+              "response": "700,000"
             }
+          ],
+          "xapiInteractionComponents": {
+            "steps": [
+              {"id": "ב-3 ק\"מ יש __ מטרים", "description": null},
+              {"id": "ב-17 מטרים יש __ ס\"מ", "description": null},
+              {"id": "ב-32 ס\"מ יש __ מ\"מ", "description": null},
+              {"id": "ב-7 ק\"מ יש __ ס\"מ", "description": null}
+            ]
+          },
+          "correctXapiResponsesPattern": [
+            "ב-3 ק\"מ יש __ מטרים[.]3,000[,]ב-17 מטרים יש __ ס\"מ[.]1,700[,]ב-32 ס\"מ יש __ מ\"מ[.]320[,]ב-7 ק\"מ יש __ ס\"מ[.]700,000"
           ]
         }
       ]
@@ -119,51 +117,48 @@
           ],
           "correctAnswers": [
             "את האורך במציאות"
-          ]
+          ],
+          "xapiInteractionComponents": {
+            "choices": [
+              {"id": "את האורך במציאות", "description": "את האורך במציאות"},
+              {"id": "את האורך בתמונה", "description": "את האורך בתמונה"}
+            ]
+          },
+          "correctXapiResponsesPattern": ["את האורך במציאות"]
         },
         {
           "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-004/q2",
-          "questionType": "matching",
+          "questionType": "performance",
           "questionText": "בחרו את המספרים המתאימים מכל רשימה, והשלימו את המרת היחידות: ב-3 ק\"מ יש __ מטרים; ב-17 מטרים יש __ ס\"מ; ב-32 ס\"מ יש __ מ\"מ; ב-7 ק\"מ יש __ ס\"מ",
-          "answers": {
-            "source": [
-              "ב-3 ק\"מ יש __ מטרים",
-              "ב-17 מטרים יש __ ס\"מ",
-              "ב-32 ס\"מ יש __ מ\"מ",
-              "ב-7 ק\"מ יש __ ס\"מ"
-            ],
-            "target": [
-              "300",
-              "3,000",
-              "30,000",
-              "170",
-              "1,700",
-              "17,000",
-              "320",
-              "3,200",
-              "32,000",
-              "7,000",
-              "70,000",
-              "700,000"
-            ]
-          },
+          "answers": null,
           "correctAnswers": [
             {
-              "source": "ב-3 ק\"מ יש __ מטרים",
-              "target": "3,000"
+              "stepId": "ב-3 ק\"מ יש __ מטרים",
+              "response": "3,000"
             },
             {
-              "source": "ב-17 מטרים יש __ ס\"מ",
-              "target": "1,700"
+              "stepId": "ב-17 מטרים יש __ ס\"מ",
+              "response": "1,700"
             },
             {
-              "source": "ב-32 ס\"מ יש __ מ\"מ",
-              "target": "320"
+              "stepId": "ב-32 ס\"מ יש __ מ\"מ",
+              "response": "320"
             },
             {
-              "source": "ב-7 ק\"מ יש __ ס\"מ",
-              "target": "700,000"
+              "stepId": "ב-7 ק\"מ יש __ ס\"מ",
+              "response": "700,000"
             }
+          ],
+          "xapiInteractionComponents": {
+            "steps": [
+              {"id": "ב-3 ק\"מ יש __ מטרים", "description": null},
+              {"id": "ב-17 מטרים יש __ ס\"מ", "description": null},
+              {"id": "ב-32 ס\"מ יש __ מ\"מ", "description": null},
+              {"id": "ב-7 ק\"מ יש __ ס\"מ", "description": null}
+            ]
+          },
+          "correctXapiResponsesPattern": [
+            "ב-3 ק\"מ יש __ מטרים[.]3,000[,]ב-17 מטרים יש __ ס\"מ[.]1,700[,]ב-32 ס\"מ יש __ מ\"מ[.]320[,]ב-7 ק\"מ יש __ ס\"מ[.]700,000"
           ]
         }
       ]
@@ -193,7 +188,9 @@
           ],
           "correctAnswers": [
             "true"
-          ]
+          ],
+          "xapiInteractionComponents": null,
+          "correctXapiResponsesPattern": ["true"]
         }
       ]
     },
@@ -211,7 +208,9 @@
           "answers": [],
           "correctAnswers": [
             24
-          ]
+          ],
+          "xapiInteractionComponents": null,
+          "correctXapiResponsesPattern": ["24"]
         }
       ]
     },
@@ -229,7 +228,9 @@
           "answers": [],
           "correctAnswers": [
             20
-          ]
+          ],
+          "xapiInteractionComponents": null,
+          "correctXapiResponsesPattern": ["20"]
         },
         {
           "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-008/q2",
@@ -243,7 +244,16 @@
           ],
           "correctAnswers": [
             "רוחב 9 ס\"מ, אורך 12 ס\"מ"
-          ]
+          ],
+          "xapiInteractionComponents": {
+            "choices": [
+              {"id": "רוחב 4.5 ס\"מ, אורך 6 ס\"מ", "description": "רוחב 4.5 ס\"מ, אורך 6 ס\"מ"},
+              {"id": "רוחב 9 ס\"מ, אורך 12 ס\"מ", "description": "רוחב 9 ס\"מ, אורך 12 ס\"מ"},
+              {"id": "רוחב 18 ס\"מ, אורך 24 ס\"מ", "description": "רוחב 18 ס\"מ, אורך 24 ס\"מ"},
+              {"id": "רוחב 36 ס\"מ, אורך 48 ס\"מ", "description": "רוחב 36 ס\"מ, אורך 48 ס\"מ"}
+            ]
+          },
+          "correctXapiResponsesPattern": ["רוחב 9 ס\"מ, אורך 12 ס\"מ"]
         }
       ]
     },
@@ -264,7 +274,9 @@
             "25,000:1",
             "25000 : 1",
             "25000:1"
-          ]
+          ],
+          "xapiInteractionComponents": null,
+          "correctXapiResponsesPattern": ["25,000 : 1", "25,000:1", "25000 : 1", "25000:1"]
         }
       ]
     },
@@ -287,7 +299,16 @@
           ],
           "correctAnswers": [
             "7,000 ק\"מ"
-          ]
+          ],
+          "xapiInteractionComponents": {
+            "choices": [
+              {"id": "700 ק\"מ", "description": "700 ק\"מ"},
+              {"id": "7,000 ק\"מ", "description": "7,000 ק\"מ"},
+              {"id": "70,000 ק\"מ", "description": "70,000 ק\"מ"},
+              {"id": "700,000 ק\"מ", "description": "700,000 ק\"מ"}
+            ]
+          },
+          "correctXapiResponsesPattern": ["7,000 ק\"מ"]
         }
       ]
     },
@@ -309,7 +330,15 @@
           ],
           "correctAnswers": [
             "לא. מכיוון שאורכי המסלולים בשתי המפות שונה, קני המידה בהכרח שונים"
-          ]
+          ],
+          "xapiInteractionComponents": {
+            "choices": [
+              {"id": "כן. מכיוון ששניהם צילמו בדיוק את אותו מסלול במציאות, קנה המידה חייב להיות זהה", "description": "כן. מכיוון ששניהם צילמו בדיוק את אותו מסלול במציאות, קנה המידה חייב להיות זהה"},
+              {"id": "לא. במפה של רחפן ב' הוסיפו עוד 5 ס\"מ למסלול הטיול, ולכן המרחק במציאות השתנה", "description": "לא. במפה של רחפן ב' הוסיפו עוד 5 ס\"מ למסלול הטיול, ולכן המרחק במציאות השתנה"},
+              {"id": "לא. מכיוון שאורכי המסלולים בשתי המפות שונה, קני המידה בהכרח שונים", "description": "לא. מכיוון שאורכי המסלולים בשתי המפות שונה, קני המידה בהכרח שונים"}
+            ]
+          },
+          "correctXapiResponsesPattern": ["לא. מכיוון שאורכי המסלולים בשתי המפות שונה, קני המידה בהכרח שונים"]
         }
       ]
     }
