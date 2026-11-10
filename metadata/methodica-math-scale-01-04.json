@@ -53,13 +53,13 @@
           "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-04/methodica-math-scale-01-04-002/q1",
           "questionType": "choice",
           "questionText": "יובל מצלם דגם של חללית המיועד לצילומי סרט מדע בדיוני. קנה המידה של התמונה שצילם הוא 1:300. יובל לחץ פעם אחת על כפתור זום המגדיל את כל ממדי התמונה פי 2, ומיד אח\"כ לחץ פעם אחת על כפתור זום המגדיל את כל ממדי התמונה פי 3. א. מהו קנה המידה החדש של התמונה על המסך?",
-          "answers": ["50 : 1", "100 : 1", "150 : 1", "1,800 : 1"],
+          "answers": ["50 : 1", "100 : 1", "500 : 1", "1,800 : 1"],
           "correctAnswers": ["50 : 1"],
           "xapiInteractionComponents": {
             "choices": [
               {"id": "50 : 1", "description": "50 : 1"},
               {"id": "100 : 1", "description": "100 : 1"},
-              {"id": "150 : 1", "description": "150 : 1"},
+              {"id": "500 : 1", "description": "500 : 1"},
               {"id": "1,800 : 1", "description": "1,800 : 1"}
             ]
           },
