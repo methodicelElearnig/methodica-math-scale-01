@@ -4,6 +4,9 @@
    Shared by all five components. Definition-only; ../unit-js/90-boot.js calls
    initResumeResetHatch() and initResumeLeaveHandlers(), and ../unit-js/50-loader.js drives the
    restore itself. Full design: docs-and-tools/RESUME.md.
+   Hardening (2026-11-03 change set, Documentation/reporting-and-resume/BOOT-AND-RESUME-HARDENING-2026-11-03.md):
+   nothing is written before the restore, and a failed read closes the writes. Leave save (2026-11-06):
+   flushResumeSaveOnLeave goes through xapi-720-l.js's saveState720OnLeave - see flushResumeSaveLeaving.
 
    ── One document per {learner, component} — Kata's model, and since v5 ours ──
    Verified against Documentation/KATA/KATA-API.md and Kata's own note (2026-09-16): the
@@ -77,6 +80,14 @@ var _leavingToNextPart   = false;
    sendCompletedOnce and captureUnitState both dereference it, and every one of their call sites
    sits inside a swallowing try/catch — a throw there would drop a real statement in silence. */
 var _unitState           = null;
+
+/* True when the LAST read of the document failed for a reason other than "nothing
+   saved yet" (401, 5xx, network, no registration). Until 2026-11-03 such a read was
+   indistinguishable from a 404 and became a fresh document - whose first save then
+   overwrote the learner's real one on Kata. While this is set, persistUnitState
+   refuses to write and _resumeReady stays off (50-loader.js retries the read once in
+   phase B before giving up). Statements are not affected. */
+var _resumeReadFailed    = false;
 
 /* Set by initResumeResetHatch. The flag is needed because the hatch strips ?resetState from the
    URL at the very start of boot, while readUnitState runs later (after the library loads) — by
@@ -160,6 +171,20 @@ function readUnitState() {
     }
     doc = (typeof window.loadState720 === 'function') ? window.loadState720(RESUME_STATE_ID) : null;
   } catch (e) { console.error('[resume] read', e); doc = null; }
+  /* A null from loadState720 is "nothing saved yet" ONLY when the library says so.
+     -k/-l record every read in stateLastResult720(): ok is true for 2xx and for 404
+     ('absent'); anything else (401, 5xx, an empty 200, a network error, no
+     registration) is a failed read, and a failed read must not become a fresh
+     document. The XAPI_DISABLED local path and -j (no diagnostics) read as ok. */
+  _resumeReadFailed = false;
+  if (doc === null && typeof window.stateLastResult720 === 'function') {
+    var _lr = null;
+    try { _lr = window.stateLastResult720(); } catch (e) {}
+    if (_lr && _lr.op === 'load' && _lr.ok === false) {
+      _resumeReadFailed = true;
+      console.warn('[resume] state read FAILED (not a 404) — writes stay closed until a read succeeds', _lr);
+    }
+  }
   doc = migrateState(doc);
   if (doc && doc.component && doc.component !== currentPartSlug()) {
     console.warn('[resume] document belongs to "' + doc.component + '", not "' + currentPartSlug() + '" — discarded');
@@ -197,6 +222,12 @@ function captureUnitState() {
    the write with a payload still naming THIS part. Returns whether the synchronous write landed. */
 function persistUnitState(doc) {
   var ok = false;
+  /* The one choke point for every write: after a failed read the in-memory document
+     is a placeholder, and writing it would replace the learner's real one. */
+  if (_resumeReadFailed) {
+    console.warn('[resume] persist refused — the state read failed, writes stay closed');
+    return false;
+  }
   try {
     if (typeof window.saveState720Debounced === 'function') window.saveState720Debounced(RESUME_STATE_ID, doc);
     /* !== false rather than a truthiness check: the library returns an explicit true/false on
@@ -308,7 +339,14 @@ function drainPendingUnitState() {
     dirty = true;
   }
   if (dirty) {
-    try { persistUnitState(captureUnitState()); } catch (e) { console.error('[resume] drain', e); }
+    /* Persist the document AS READ - never captureUnitState(): the loader drains BEFORE
+       applyExecutionState, so a capture here is of the un-restored page and replaced the
+       saved payload on Kata (a card picked on screen 0 while the library was still loading;
+       reproduced by the platform 03.11.26). The character and the results live beside the
+       payload, so merging them and writing the document unchanged loses nothing. */
+    _unitState.v = RESUME_STATE_VERSION;
+    _unitState.component = currentPartSlug();
+    try { persistUnitState(_unitState); } catch (e) { console.error('[resume] drain', e); }
   }
 }
 
@@ -453,6 +491,13 @@ function markSent(ledger, key) {
   if (!_unitState) return;
   _unitState[ledger] = _unitState[ledger] || {};
   _unitState[ledger][key] = true;
+  /* Mark in memory always, but persist only once the restore is done. The library
+     is live from phase A, so a statement sent in the window between the phases
+     (a learner navigating while the metadata is still loading) used to reach this
+     line and write a live capture over the saved payload - the same overwrite the
+     drain had (2026-11-03). The key is carried by the next save: the phase-B
+     scheduleResumeSave, or any later capture. */
+  if (!_resumeReady) return;
   try { persistUnitState(captureUnitState()); } catch (e) { console.error('[resume] ledger', e); }
 }
 
@@ -589,7 +634,7 @@ function endRepaint()   { _repainting = false; }
 
 /* Screen change — the choke point. Debounced: bounds the loss to a single screen. */
 function scheduleResumeSave() {
-  if (!RESUME_ENABLED || !_resumeReady || _restoring) return;
+  if (!RESUME_ENABLED || !_resumeReady || _restoring || _resumeReadFailed) return;
   if (typeof window.saveState720Debounced !== 'function') return;
   try { window.saveState720Debounced(RESUME_STATE_ID, captureUnitState()); } catch (e) {}
 }
@@ -603,16 +648,30 @@ function scheduleResumeSave() {
    ⚠️ Contract: a function that commits an answer must flush, and no `return` may sit between the
    commitment and the flush. _test/verify-report.js asserts this statically. */
 function flushResumeSave() {
-  if (!RESUME_ENABLED || !_resumeReady || _restoring) return;
+  if (!RESUME_ENABLED || !_resumeReady || _restoring || _resumeReadFailed) return;
   if (typeof window.saveState720 !== 'function') return;
   try { window.saveState720(RESUME_STATE_ID, captureUnitState()); } catch (e) {}
+}
+
+/* The leave flush (2026-11-06, xapi-720-l.js; methodica-math-percent-03 8b63a4f). Same guards as
+   flushResumeSave, but through saveState720OnLeave: Chrome refuses the synchronous PUT of
+   saveState720 while the page is being dismissed, so on -k every leave save failed and the last
+   debounced change (<= 800 ms) was lost (KNOWN-ISSUE-dismissal-state-write.md). -l tries the same
+   synchronous PUT first and only when it throws re-sends it as a keepalive fetch. typeof-guarded:
+   on -k this is flushResumeSave. Answer / completion commits stay on flushResumeSave - they run
+   with the page alive. */
+function flushResumeSaveLeaving() {
+  if (!RESUME_ENABLED || !_resumeReady || _restoring || _resumeReadFailed) return;
+  var save = (typeof window.saveState720OnLeave === 'function') ? window.saveState720OnLeave : window.saveState720;
+  if (typeof save !== 'function') return;
+  try { save(RESUME_STATE_ID, captureUnitState()); } catch (e) {}
 }
 
 /* Leaving the page. beforeunload alone is not enough: it never fires when a mobile tab is
    backgrounded and then killed, which is exactly how a learner leaves mid-lesson. */
 function flushResumeSaveOnLeave() {
   if (_leavingToNextPart) return;
-  flushResumeSave();
+  flushResumeSaveLeaving();
 }
 
 /* Registered from ../unit-js/90-boot.js. */

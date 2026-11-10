@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>קנה מידה — לומדה</title>
+  <link rel="preload" as="script" fetchpriority="high" href="https://lomdot.education.gov.il/metodica/720active/common/xapiwrapper.min.js">
+  <link rel="preload" as="script" fetchpriority="high" href="https://lomdot.education.gov.il/metodica/720active/common/xapi-720-l.js">
+  <link rel="preconnect" href="https://kata.cet.ac.il">
   <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
@@ -25,6 +28,9 @@
   <div id="boot-cover" style="position:fixed;inset:0;z-index:9999;background:#ffffff"></div>
   <script>
   (function () {
+    /* A Kata launch always carries ?registration: hold the cover from the first frame, not from
+       bootXAPI (the last script tag, which on a cold cache runs after this net's 800ms). */
+    if (/[?&]registration=/.test(location.search)) window.__resumeInFlight = true;
     var t0 = Date.now();
     function tick() {
       var c = document.getElementById('boot-cover');
@@ -42,8 +48,8 @@
     ════════════════════════════════════════ -->
     <button class="flag-btn" id="flag-btn" onclick="openReportModal()" aria-label="מצאתם בעיה?" title="מצאתם בעיה?">
       <span class="flag-btn-icon" aria-hidden="true">
-        <img class="flag-btn-icon-default" src="assets/images/btn-flag-default.png" alt="">
-        <img class="flag-btn-icon-hover" src="assets/images/btn-flag-hover.png" alt="">
+        <img class="flag-btn-icon-default" src="assets/images/btn-flag-default.png" alt="" loading="lazy">
+        <img class="flag-btn-icon-hover" src="assets/images/btn-flag-hover.png" alt="" loading="lazy">
       </span>
       <span class="flag-btn-label">מצאתם בעיה?</span>
     </button>
@@ -85,7 +91,7 @@
       <div class="screen-header"></div>
 
       <div class="scroll-hint" id="s1-scroll-hint" aria-hidden="true">
-        <img class="scroll-hint-cursor" src="./assets/icons/cursor-click.svg" alt="">
+        <img class="scroll-hint-cursor" src="./assets/icons/cursor-click.svg" alt="" loading="lazy">
       </div>
 
       <!-- Scrollable white card -->
@@ -130,7 +136,7 @@
               </div>
               </div>
               <div class="field-container" data-scale="1000">
-                <img id="field-img" src="./assets/images/Football yard.jpg" alt="מגרש כדורגל מהאוויר">
+                <img id="field-img" src="./assets/images/Football yard.jpg" alt="מגרש כדורגל מהאוויר" loading="lazy">
               </div>
             </div>
           </div>
@@ -147,7 +153,7 @@
               נשתמש בקנה מידה במקומות נוספים, למשל במפות - כשעיר שלמה מופיעה במדוייק על נייר די קטן: ​
             </p>
             <div class="img-zoom-wrap">
-              <img class="hook-map-img" src="./assets/images/Tel Aviv Map.jpg" alt="מפת תל אביב">
+              <img class="hook-map-img" src="./assets/images/Tel Aviv Map.jpg" alt="מפת תל אביב" loading="lazy">
               <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-map')" aria-label="הגדל תמונה">
                 <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
                 <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -161,7 +167,7 @@
               או למשל בתכנית אדריכלית – כששרטוט מדוייק של בית מוצג בשלמותו על מסך מחשב: ​
             </p>
             <div class="img-zoom-wrap">
-              <img class="hook-plan-img" src="./assets/images/Architacture plan.jpg" alt="תכנית אדריכלית">
+              <img class="hook-plan-img" src="./assets/images/Architacture plan.jpg" alt="תכנית אדריכלית" loading="lazy">
               <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-plan')" aria-label="הגדל תמונה">
                 <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
                 <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -175,13 +181,13 @@
       <!-- Character widget 1 (absolute, bottom-left) -->
       <div class="character-widget s1-char-visible" id="s1-char-widget-1">
         <div class="speech-bubble">מה אני רואה שם?<br>מה מספר החולצה?<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s1-char-img-1" src="./assets/images/Character1_binoculars.png" alt="דמות עם משקפת">
+        <img id="s1-char-img-1" src="./assets/images/Character1_binoculars.png" alt="דמות עם משקפת" loading="lazy">
       </div>
 
       <!-- Character widget 2 (absolute, bottom-left) -->
       <div class="character-widget s1-char-hidden" id="s1-char-widget-2">
         <div class="speech-bubble">בואו נלמד על קנה מידה!<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s1-char-img-2" src="./assets/images/Character1_roller.png" alt="דמות עם סרגל">
+        <img id="s1-char-img-2" src="./assets/images/Character1_roller.png" alt="דמות עם סרגל" loading="lazy">
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -209,7 +215,7 @@
               <div class="click-hint" id="s2-click-hint" aria-hidden="true">
                 <span class="click-hint-ring click-hint-ring-1"></span>
                 <span class="click-hint-ring click-hint-ring-2"></span>
-                <img class="click-hint-cursor" src="./assets/icons/cursor-click.svg" alt="">
+                <img class="click-hint-cursor" src="./assets/icons/cursor-click.svg" alt="" loading="lazy">
               </div>
             </div>
             <span class="s2-card-label">לצפות בסרטון קצר</span>
@@ -240,7 +246,7 @@
 
     <section class="screen" data-screen="3" id="s3">
       <div class="scroll-hint" id="s3-scroll-hint" aria-hidden="true">
-        <img class="scroll-hint-cursor" src="./assets/icons/cursor-click.svg" alt="">
+        <img class="scroll-hint-cursor" src="./assets/icons/cursor-click.svg" alt="" loading="lazy">
       </div>
       <div class="hook-card">
       <div class="hook-scrollbar" id="s3-hook-scrollbar" aria-hidden="true">
@@ -265,12 +271,12 @@
               <div class="frc-card-inner">
                 <div class="frc-card-front">
                   <div class="frc-field-container" data-zoom="1000">
-                    <img src="./assets/images/Football yard.jpg" alt="מגרש כדורגל — יחס 1:1,000" draggable="false" ondragstart="return false">
+                    <img src="./assets/images/Football yard.jpg" alt="מגרש כדורגל — יחס 1:1,000" draggable="false" ondragstart="return false" loading="lazy">
                   </div>
                 </div>
                 <div class="frc-card-back" aria-hidden="true">
                   <div class="frc-back-thumb" data-zoom="1000">
-                    <img src="./assets/images/Football yard.jpg" alt="" draggable="false" ondragstart="return false">
+                    <img src="./assets/images/Football yard.jpg" alt="" draggable="false" ondragstart="return false" loading="lazy">
                   </div>
                   <span class="frc-ratio-label">1 : 1,000</span>
                   <div class="frc-card-back-content">
@@ -287,12 +293,12 @@
               <div class="frc-card-inner">
                 <div class="frc-card-front">
                   <div class="frc-field-container" data-zoom="100">
-                    <img src="./assets/images/Football yard med zoom.jpg" alt="מגרש כדורגל — יחס 1:100" draggable="false" ondragstart="return false">
+                    <img src="./assets/images/Football yard med zoom.jpg" alt="מגרש כדורגל — יחס 1:100" draggable="false" ondragstart="return false" loading="lazy">
                   </div>
                 </div>
                 <div class="frc-card-back" aria-hidden="true">
                   <div class="frc-back-thumb" data-zoom="100">
-                    <img src="./assets/images/Football yard med zoom.jpg" alt="" draggable="false" ondragstart="return false">
+                    <img src="./assets/images/Football yard med zoom.jpg" alt="" draggable="false" ondragstart="return false" loading="lazy">
                   </div>
                   <span class="frc-ratio-label">1 : 100</span>
                   <div class="frc-card-back-content">
@@ -309,12 +315,12 @@
               <div class="frc-card-inner">
                 <div class="frc-card-front">
                   <div class="frc-field-container" data-zoom="10">
-                    <img src="./assets/images/Football yard zoom.jpg" alt="מגרש כדורגל — יחס 10:1" draggable="false" ondragstart="return false">
+                    <img src="./assets/images/Football yard zoom.jpg" alt="מגרש כדורגל — יחס 10:1" draggable="false" ondragstart="return false" loading="lazy">
                   </div>
                 </div>
                 <div class="frc-card-back" aria-hidden="true">
                   <div class="frc-back-thumb" data-zoom="10">
-                    <img src="./assets/images/Football yard zoom.jpg" alt="" draggable="false" ondragstart="return false">
+                    <img src="./assets/images/Football yard zoom.jpg" alt="" draggable="false" ondragstart="return false" loading="lazy">
                   </div>
                   <span class="frc-ratio-label">1 : 10</span>
                   <div class="frc-card-back-content">
@@ -363,7 +369,7 @@
                 </div>
               </div>
               <div class="s5-img-wrap">
-                <img src="./assets/images/Architacture plan for Q1.jpg" alt="תכנית אדריכלית לדוגמה" draggable="false" ondragstart="return false">
+                <img src="./assets/images/Architacture plan for Q1.jpg" alt="תכנית אדריכלית לדוגמה" draggable="false" ondragstart="return false" loading="lazy">
                 <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-q1')" aria-label="הגדל תמונה">
                   <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
                   <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -473,7 +479,7 @@
 
       <div class="character-widget hidden" id="s3-char-widget">
         <div class="speech-bubble">לאורך כל היחידה,<br>שימו לב ליחידות המידה!<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s3-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
+        <img id="s3-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" loading="lazy">
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -497,7 +503,7 @@
     <section class="screen" data-screen="4" id="s4">
 
       <div class="scroll-hint" id="s4-scroll-hint" aria-hidden="true">
-        <img class="scroll-hint-cursor" src="./assets/icons/cursor-click.svg" alt="">
+        <img class="scroll-hint-cursor" src="./assets/icons/cursor-click.svg" alt="" loading="lazy">
       </div>
       <div class="hook-card">
       <div class="hook-scrollbar" id="s4-hook-scrollbar" aria-hidden="true">
@@ -561,7 +567,7 @@
                 </div>
               </div>
               <div class="s5-img-wrap">
-                <img src="./assets/images/Architacture plan for Q1.jpg" alt="תכנית אדריכלית לדוגמה" draggable="false" ondragstart="return false">
+                <img src="./assets/images/Architacture plan for Q1.jpg" alt="תכנית אדריכלית לדוגמה" draggable="false" ondragstart="return false" loading="lazy">
                 <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-q1')" aria-label="הגדל תמונה">
                   <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
                   <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -672,12 +678,12 @@
 
       <div class="character-widget" id="s4-char-widget">
         <div class="speech-bubble">אני כבר מוכנה עם פופקורן<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s4-char-img" src="./assets/images/Character1_popcorn.png" alt="דמות עם פופקורן">
+        <img id="s4-char-img" src="./assets/images/Character1_popcorn.png" alt="דמות עם פופקורן" loading="lazy">
       </div>
 
       <div class="character-widget hidden" id="s4-char-widget-roller">
         <div class="speech-bubble">לאורך כל היחידה,<br>שימו לב ליחידות המידה!<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s4-char-img-roller" src="./assets/images/Character1_roller.png" alt="דמות עם סרגל">
+        <img id="s4-char-img-roller" src="./assets/images/Character1_roller.png" alt="דמות עם סרגל" loading="lazy">
       </div>
 
       <div class="bottom-bar s3-bottom-bar">
@@ -707,7 +713,7 @@
           <h1 class="s0-title">עוד מעט נתחיל לתרגל,</h1>
           <p class="s2-subtitle">רגע לפני, בואו נפתור תרגיל אחד יחד</p>
         </div>
-        <img id="s6-char-img" src="./assets/images/Character1_holdhands.png" alt="דמויות מחזיקות ידיים" class="s6-char-img">
+        <img id="s6-char-img" src="./assets/images/Character1_holdhands.png" alt="דמויות מחזיקות ידיים" class="s6-char-img" loading="lazy">
       </div>
 
       
@@ -739,7 +745,7 @@
         </p>
 
         <div class="s7-card-img">
-          <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד">
+          <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד" loading="lazy">
         </div>
 
         <p class="s7-card-q"><strong>1. סמנו את הטענה הנכונה:​</strong></p>
@@ -755,7 +761,7 @@
       <!-- Character widget — same structure & classes as screen 1 -->
       <div class="character-widget" id="s7-char-widget">
         <div class="speech-bubble">מיד נסביר את הפתרון,<br>שלב אחר שלב<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s7-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
+        <img id="s7-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" loading="lazy">
       </div>
 
       <!-- Bottom bar -->
@@ -790,7 +796,7 @@
           </p>
 
           <div class="s7-card-img">
-            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד">
+            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד" loading="lazy">
           </div>
 
           <p class="s7-card-q"><strong>1. סמנו את הטענה הנכונה:​</strong></p>
@@ -854,7 +860,7 @@
           </p>
 
           <div class="s7-card-img">
-            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד">
+            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד" loading="lazy">
           </div>
 
           <p class="s7-card-q"><strong>1. סמנו את הטענה הנכונה:​</strong></p>
@@ -918,7 +924,7 @@
           </p>
 
           <div class="s7-card-img">
-            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד">
+            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד" loading="lazy">
           </div>
 
           <p class="s7-card-q"><strong>1. סמנו את הטענה הנכונה:​</strong></p>
@@ -982,7 +988,7 @@
           </p>
 
           <div class="s7-card-img">
-            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד">
+            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד" loading="lazy">
           </div>
 
           <p class="s7-card-q s11-black"><strong>1. סמנו את הטענה הנכונה:​</strong></p>
@@ -1036,7 +1042,7 @@
         </p>
 
         <div class="s7-card-img">
-          <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד">
+          <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד" loading="lazy">
         </div>
 
         <p class="s7-card-q"><strong>2. ראינו שהיחס הוא 1,000 : 5. ולכן קנה המידה הוא 200 : 1 . השלימו: ​</strong></p>
@@ -1050,7 +1056,7 @@
       <!-- Character widget -->
       <div class="character-widget" id="s12-char-widget">
         <div class="speech-bubble">חישבו: מה המשמעות של קנה מידה?​<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s12-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
+        <img id="s12-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" loading="lazy">
       </div>
 
       <!-- Bottom bar -->
@@ -1085,7 +1091,7 @@
           </p>
 
           <div class="s7-card-img">
-            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד">
+            <img src="./assets/images/Guided practice Q1.png" alt="משטח החלקה לסקייטבורד" loading="lazy">
           </div>
 
           <p class="s7-card-q s13-black"><strong>2. ראינו שהיחס הוא 1,000 : 5. ולכן קנה המידה הוא 200 : 1 . השלימו: ​</strong></p>
@@ -1125,7 +1131,7 @@
           <h1 class="s0-title">מה נשאר לנו בראש? ​</h1>
           <p class="s15-subtitle">שאלה קלילה לחימום לפני שנתקדם</p>
         </div>
-        <img id="s15-char-img" src="./assets/images/Character1_workout.png" alt="דמות מתאמנת" class="s6-char-img">
+        <img id="s15-char-img" src="./assets/images/Character1_workout.png" alt="דמות מתאמנת" class="s6-char-img" loading="lazy">
       </div>
 
       
@@ -1180,7 +1186,7 @@
 
       <div class="character-widget" id="s16-char-widget">
         <div class="speech-bubble">זו רק שאלה לחימום, כן?<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s16-char-img" src="./assets/images/Character1_workout.png" alt="דמות מלווה">
+        <img id="s16-char-img" src="./assets/images/Character1_workout.png" alt="דמות מלווה" loading="lazy">
       </div>
 
       <!-- Hint popup overlay -->
@@ -1228,7 +1234,7 @@
           <p class="s2-subtitle">צריך לענות נכון על 4 שאלות (80%) לפחות. ​</p>
         </div>
         <div class="s17-img-wrap">
-          <img id="s17-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" class="s6-char-img">
+          <img id="s17-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" class="s6-char-img" loading="lazy">
         </div>
       </div>
 
@@ -1289,7 +1295,7 @@
           </div>
           <!-- LEFT column: console image -->
           <div class="s18-q-left">
-            <img class="s18-console-img" src="./assets/images/Shoes.png" alt="נעל כדורסל">
+            <img class="s18-console-img" src="./assets/images/Shoes.png" alt="נעל כדורסל" loading="lazy">
             <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-shoes')" aria-label="הגדל תמונה">
               <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
               <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -1299,12 +1305,12 @@
       </div>
 
       <!-- Draggable ruler -->
-      <img class="s18-ruler" id="s18-ruler" src="../unit-assets/img/Ruller.png" alt="סרגל" draggable="false">
+      <img class="s18-ruler" id="s18-ruler" src="../unit-assets/img/Ruller.png" alt="סרגל" draggable="false" loading="lazy">
 
       <!-- Character widget — right side above back button -->
       <div class="character-widget" id="s18-char-widget">
         <div class="speech-bubble">אתם יכולים למדוד גם אותי עם הסרגל!<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s18-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
+        <img id="s18-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" loading="lazy">
       </div>
 
       <!-- Hint popup -->
@@ -1401,7 +1407,7 @@
           </div>
           <!-- LEFT column: bedroom image -->
           <div class="s18-q-left">
-            <img class="s18-console-img" src="./assets/images/Bed Room.jpg" alt="תרשים חדר ילדים">
+            <img class="s18-console-img" src="./assets/images/Bed Room.jpg" alt="תרשים חדר ילדים" loading="lazy">
             <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-bedroom')" aria-label="הגדל תמונה">
               <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
               <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -1517,7 +1523,7 @@
           </div>
           <!-- LEFT column: bedroom image -->
           <div class="s18-q-left">
-            <img class="s18-console-img" src="./assets/images/Bed Room.jpg" alt="תרשים חדר ילדים">
+            <img class="s18-console-img" src="./assets/images/Bed Room.jpg" alt="תרשים חדר ילדים" loading="lazy">
             <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-bedroom')" aria-label="הגדל תמונה">
               <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
               <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -1617,7 +1623,7 @@
           </div>
           <!-- LEFT column: phone/map image -->
           <div class="s18-q-left">
-            <img class="s18-console-img" src="./assets/images/Phone.png" alt="מפת ניווט">
+            <img class="s18-console-img" src="./assets/images/Phone.png" alt="מפת ניווט" loading="lazy">
             <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-phone')" aria-label="הגדל תמונה">
               <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
               <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -1648,7 +1654,7 @@
       <!-- Character widget — right side above back button -->
       <div class="character-widget" id="s21-char-widget">
         <div class="speech-bubble">אפשר טרמפ?<svg class="speech-bubble-tail" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="24" height="5" fill="white"/><polygon points="0,4 24,4 12,18" fill="white"/><line x1="0" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="4" x2="12" y2="18" stroke="#3B2FC2" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <img id="s21-char-img" src="./assets/images/Character1.png" alt="דמות מלווה">
+        <img id="s21-char-img" src="./assets/images/Character1.png" alt="דמות מלווה" loading="lazy">
       </div>
 
       <!-- Bottom bar -->
@@ -1748,7 +1754,7 @@
           </div>
           <!-- LEFT column: map image -->
           <div class="s18-q-left">
-            <img class="s18-console-img" src="./assets/images/Map.jpg" alt="מפת עולם">
+            <img class="s18-console-img" src="./assets/images/Map.jpg" alt="מפת עולם" loading="lazy">
             <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-overlay-world-map')" aria-label="הגדל תמונה">
               <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
               <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -1989,7 +1995,7 @@
         </button>
         <div class="img-zoom-modal__stage">
           <div class="scq-img-inner img-zoom-clone">
-            <img src="./assets/images/Tel Aviv Map.jpg" alt="מפת תל אביב" onerror="this.style.display='none'">
+            <img src="./assets/images/Tel Aviv Map.jpg" alt="מפת תל אביב" onerror="this.style.display='none'" loading="lazy">
           </div>
         </div>
       </div>
@@ -2005,7 +2011,7 @@
         </button>
         <div class="img-zoom-modal__stage">
           <div class="scq-img-inner img-zoom-clone">
-            <img src="./assets/images/Shoes.png" alt="נעל כדורסל" onerror="this.style.display='none'">
+            <img src="./assets/images/Shoes.png" alt="נעל כדורסל" onerror="this.style.display='none'" loading="lazy">
           </div>
         </div>
       </div>
@@ -2021,7 +2027,7 @@
         </button>
         <div class="img-zoom-modal__stage">
           <div class="scq-img-inner img-zoom-clone">
-            <img src="./assets/images/Bed Room.jpg" alt="תרשים חדר ילדים" onerror="this.style.display='none'">
+            <img src="./assets/images/Bed Room.jpg" alt="תרשים חדר ילדים" onerror="this.style.display='none'" loading="lazy">
           </div>
         </div>
       </div>
@@ -2037,7 +2043,7 @@
         </button>
         <div class="img-zoom-modal__stage">
           <div class="scq-img-inner img-zoom-clone">
-            <img src="./assets/images/Phone.png" alt="מפת ניווט" onerror="this.style.display='none'">
+            <img src="./assets/images/Phone.png" alt="מפת ניווט" onerror="this.style.display='none'" loading="lazy">
           </div>
         </div>
       </div>
@@ -2053,7 +2059,7 @@
         </button>
         <div class="img-zoom-modal__stage">
           <div class="scq-img-inner img-zoom-clone">
-            <img src="./assets/images/Map.jpg" alt="מפת עולם" onerror="this.style.display='none'">
+            <img src="./assets/images/Map.jpg" alt="מפת עולם" onerror="this.style.display='none'" loading="lazy">
           </div>
         </div>
       </div>
@@ -2069,7 +2075,7 @@
         </button>
         <div class="img-zoom-modal__stage">
           <div class="scq-img-inner img-zoom-clone">
-            <img src="./assets/images/Architacture plan for Q1.jpg" alt="תכנית אדריכלית לדוגמה" onerror="this.style.display='none'">
+            <img src="./assets/images/Architacture plan for Q1.jpg" alt="תכנית אדריכלית לדוגמה" onerror="this.style.display='none'" loading="lazy">
           </div>
         </div>
       </div>
@@ -2085,7 +2091,7 @@
         </button>
         <div class="img-zoom-modal__stage">
           <div class="scq-img-inner img-zoom-clone">
-            <img src="./assets/images/Architacture plan.jpg" alt="תכנית אדריכלית" onerror="this.style.display='none'">
+            <img src="./assets/images/Architacture plan.jpg" alt="תכנית אדריכלית" onerror="this.style.display='none'" loading="lazy">
           </div>
         </div>
       </div>
@@ -2094,7 +2100,7 @@
   </main>
   <div id="a11y-announcer" role="status" aria-live="polite" aria-atomic="true"
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
-  <script src="../unit-js/10-identity.js?v=5"></script>
+  <script src="../unit-js/10-identity.js?v=6"></script>
   <script src="../unit-js/15-ui.js?v=6"></script>
   <!-- iPad-shaped-viewport gate (01-01 trial only) — must load after scaleApp() is defined and
        before 90-boot.js wires it to the resize listener, so the wrapped version is what gets used -->
@@ -2103,8 +2109,8 @@
   <script src="../unit-js/25-report.js?v=4"></script>
   <script src="../unit-js/28-feedback-drag.js?v=4"></script>
   <script src="../unit-js/30-nav.js?v=5"></script>
-  <script src="../unit-js/40-resume.js?v=7"></script>
-  <script src="../unit-js/50-loader.js?v=6"></script>
+  <script src="../unit-js/40-resume.js?v=8"></script>
+  <script src="../unit-js/50-loader.js?v=7"></script>
   <script src="../unit-js/60-devbridge.js?v=4"></script>
   <script src="script.js?v=24"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
