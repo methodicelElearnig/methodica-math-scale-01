@@ -63,6 +63,18 @@ function s4YtEmbedSrc() {
   return 'https://www.youtube-nocookie.com/embed/' + S4_YT_VIDEO_ID + '?' + p.join('&');
 }
 
+/* The iframe's accessible name. The YouTube API overwrites the title with the video's own title
+   (its Hebrew name, seen live on the Arabic page 10.11.26 — MOE runbook: Hebrew text on an Arabic
+   page is critical), so it is put back on ready and on every state change, as percent-08 does
+   (unit-js/70-platform.js ytWirePlayers). Phase 6, 2026-11-11. */
+var S4_YT_TITLE = 'סרטון הסבר';
+function s4KeepTitle() {
+  try {
+    var f = document.getElementById('s4-yt-player');
+    if (f && f.getAttribute('title') !== S4_YT_TITLE) f.setAttribute('title', S4_YT_TITLE);
+  } catch (e) {}
+}
+
 window.onYouTubeIframeAPIReady = function () {
   var el = document.getElementById('s4-yt-player');
   if (!el) return;
@@ -73,7 +85,7 @@ window.onYouTubeIframeAPIReady = function () {
     var f = document.createElement('iframe');
     f.id = 's4-yt-player';
     f.src = s4YtEmbedSrc();
-    f.title = 'סרטון הסבר';
+    f.title = S4_YT_TITLE;
     f.setAttribute('frameborder', '0');
     f.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
     f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
@@ -96,6 +108,7 @@ window.onYouTubeIframeAPIReady = function () {
 
 function s4OnPlayerReady() {
   s4PlayerReady = true;
+  s4KeepTitle();
   console.log('s4 YouTube player ready', window.location.origin);
 }
 
@@ -122,6 +135,7 @@ function s4OnPlayerError(e) {
 }
 
 function s4OnPlayerStateChange(e) {
+  s4KeepTitle();
   /* xAPI video: YouTube drives this screen, so played/paused come from the player state rather
      than xapiWireVideos() (which only sees HTML5 <video>). Guarded on XAPI_USING_G like every
      other item-level call, and never allowed to break playback. */
