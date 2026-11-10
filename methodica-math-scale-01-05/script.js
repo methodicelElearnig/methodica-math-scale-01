@@ -38,7 +38,7 @@ function resetScreenState(n) {
     /* This screen carried the hand-rolled version of the hide-swap-reveal dance; setImgSrc in
        15-ui.js is that code generalised, and now every component uses it. */
     var _c7 = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
-    setImgSrc(document.getElementById('s43-char-img'), './assets/images/' + _c7 + '_workout.png');
+    setImgSrc(document.getElementById('s43-char-img'), './assets/images/' + _c7 + '_workout-opt.png');
   }
   if (n === 2)  { s45Enter(); }
   if (n === 4)  { s47Enter(); }
@@ -640,8 +640,8 @@ function partBoot() {
      04's .mp4 files, which nothing references either.
      Chosen family only, serialised, and after the load event -- see component 01's partBoot. */
   var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
-  preloadImages(['', '_workout'].map(function (v) {
-    return './assets/images/' + char + v + '.png';
+  preloadImages(['.png', '_workout-opt.png'].map(function (v) {   /* the pose carries '-opt' since 2026-11-10 */
+    return './assets/images/' + char + v;
   }));
 
   resetScreenState(currentScreen);

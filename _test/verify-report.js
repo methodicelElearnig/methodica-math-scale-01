@@ -1651,12 +1651,14 @@ const stripBlockComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
 
 /* The variant arrays each component's preloadCharacterAvatars() actually iterates. Keep in
    step with the loops in the five script.js — that is the point of the assertion. */
+/* The name tails each part builds at runtime after 'Character1' / 'Character2' (preloadImages, and 05's
+   s43 setImgSrc). The poses carry '-opt' since the 2026-11-10 re-encode; the base avatar keeps its name. */
 const PRELOAD_VARIANTS = {
-  '01': ['', '_binoculars', '_roller', '_popcorn', '_cards', '_holdhands', '_workout'],
-  '02': [''],
-  '03': [''],
-  '04': [''],
-  '05': ['', '_workout'],
+  '01': ['.png', '_binoculars-opt.png', '_roller-opt.png', '_popcorn-opt.png', '_cards-opt.png', '_holdhands-opt.png', '_workout-opt.png'],
+  '02': ['.png'],
+  '03': ['.png'],
+  '04': ['.png'],
+  '05': ['.png', '_workout-opt.png'],
 };
 
 function checkAssetContract() {
@@ -1723,8 +1725,8 @@ function checkAssetContract() {
     const dir = path.join(BASE, PART_DIR(c), 'assets', 'images');
     for (const ch of ['Character1', 'Character2']) {
       for (const v of PRELOAD_VARIANTS[c]) {
-        ok('assets', c + ' preloads ' + ch + v + '.png and it exists',
-          fs.existsSync(path.join(dir, ch + v + '.png')));
+        ok('assets', c + ' preloads ' + ch + v + ' and it exists',
+          fs.existsSync(path.join(dir, ch + v)));
       }
     }
     const src = stripBlockComments(
