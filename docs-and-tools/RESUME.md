@@ -2,7 +2,21 @@
 
 Resume ("המשך מהמקום שבו הפסקת") is **enabled** in all five components as of 2026-08-06.
 `RESUME_ENABLED = true` in `unit-js/10-identity.js`; that flag is also what switches the loader from
-`xapi-720-i.js` to `xapi-720-k.js`, the build that carries the State API transport plus diagnostics.
+`xapi-720-i.js` to `xapi-720-l.js` (`-k` until 2026-11-10), the build that carries the State API transport,
+diagnostics and the leave save.
+
+> ## 2026-11-10 — write guard, boot window, leave save
+>
+> The 2026-11-03 hardening and the 2026-11-06 leave save
+> (`Documentation/reporting-and-resume/BOOT-AND-RESUME-HARDENING-2026-11-03.md` §2.1–2.3, §2.10) are in:
+> the phase-B drain writes the document **as read** (never a capture of the un-restored page),
+> `markSent` persists only once `_resumeReady`, a failed read (anything but a 404) sets `_resumeReadFailed`
+> and closes every write path (phase B retries the read once), a screen reached during the boot window
+> gets one debounced save after phase B. Every `index.html` raises `__resumeInFlight` from the inline net on
+> `?registration=`, preloads `xapiwrapper.min.js` and `xapi-720-l.js` from `<head>` (same URL as the loader,
+> no `?v=`), preconnects to Kata, and lazy-loads every image off the landing screen. The leave handlers
+> save through `saveState720OnLeave` (keepalive when Chrome refuses the synchronous PUT), typeof-guarded so
+> the unit still runs on `-k`. Harness: `_test/verify-report.js` sections 20–22.
 
 This document describes the mechanism as built. §9 lists what is deliberately *not* restored, §10
 records the verification performed, and §11 is the changelog of the defects fixed on the way here.
@@ -86,8 +100,8 @@ carries a ledger of the ones already sent (§8a).
 ## 2. Storage — the xAPI State API
 
 Transport lives in the shared CDN library, not in this repo:
-`https://lomdot.education.gov.il/metodica/720active/common/xapi-720-k.js`. It is `-i` plus a State
-API block plus `stateLastResult720()`; nothing else differs. Three functions on `window`:
+`https://lomdot.education.gov.il/metodica/720active/common/xapi-720-l.js` (since 2026-11-10; `-k` before). `-k` is `-i` plus a State
+API block plus `stateLastResult720()`; `-l` is `-k` plus `saveState720OnLeave` (the leave save). Three functions on `window`:
 
 | Function | Behavior |
 |---|---|

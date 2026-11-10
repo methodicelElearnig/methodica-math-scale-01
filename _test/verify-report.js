@@ -1414,6 +1414,194 @@ function orphanScan(log) {
   return bad;
 }
 
+/* ══════════════ 20. Write guard (2026-11-03) ══════════════
+   Documentation/reporting-and-resume/BOOT-AND-RESUME-HARDENING-2026-11-03.md §2.6 a-l. Kata's
+   reproduction (03.11.26): saved currentScreen 2 → a card picked while the library was still loading →
+   the phase-B drain wrote a capture of the un-restored page over the saved payload → the next launch
+   started over. Three doors led to that write: the drain, markSent, and a failed read taken as a
+   fresh document. Each boot below is part 01 with a seeded store keyed like section 8b's. */
+function checkWriteGuard() {
+  const SLUG = PART_DIR('01');
+  const SEED = { v: 5, component: SLUG, payload: { currentScreen: 2 }, done: {}, doneItems: {}, hints: {}, picks: {},
+                 ui: { character: 'text' }, results: {} };
+  const boot = () => {
+    const r = loadComponent('01', { search: '?slxapi=1&registration=wg' });
+    const w = r.dom.window;
+    let store = JSON.stringify(SEED);
+    w.loadState720 = function () { return store ? JSON.parse(store) : null; };
+    w.saveState720 = function (id, doc) { store = JSON.stringify(doc); return true; };
+    w.saveState720Debounced = w.saveState720;
+    w.stateLastResult720 = function () { return { op: 'load', status: 200, ok: true }; };
+    w.sendStatement720 = function () {};
+    return { ...r, w, stored: () => (store ? JSON.parse(store) : null), close: () => setTimeout(() => w.close(), 0) };
+  };
+
+  // a-d: a pick during the wait, then the phase-B drain and restore
+  let b = boot();
+  b.exec("readUnitState(); setUnitCharacter('video'); goTo(1);");
+  ok('write-guard', 'a: a pick and a goTo before _resumeReady leave the stored payload at screen 2',
+    b.stored().payload.currentScreen === 2, JSON.stringify(b.stored().payload));
+  ok('write-guard', 'a: the pick waits in _pendingProfile', b.val('_pendingProfile && _pendingProfile.character') === 'video');
+  b.exec('window.__held = null; window.saveState720Debounced = function (id, doc) { window.__held = doc; };');
+  b.exec('_resumeReady = true; drainPendingUnitState();');
+  ok('write-guard', 'b: the drain writes the document as read (payload screen 2)',
+    b.stored().payload && b.stored().payload.currentScreen === 2, JSON.stringify(b.stored().payload));
+  ok('write-guard', 'b: …with the new character and this part\'s slug',
+    b.stored().ui.character === 'video' && b.stored().component === SLUG, JSON.stringify(b.stored().ui) + ' ' + b.stored().component);
+  b.exec('applyExecutionState(_unitState.payload);');
+  ok('write-guard', 'c: the restore lands on the saved screen', b.val('currentScreen') === 2, String(b.val('currentScreen')));
+  ok('write-guard', 'd: the document the debounced write holds still says screen 2',
+    b.val('window.__held && window.__held.payload && window.__held.payload.currentScreen') === 2,
+    String(b.val('JSON.stringify(window.__held && window.__held.payload)')));
+  b.close();
+
+  // e-f: a statement sent during the wait
+  b = boot();
+  b.exec("readUnitState(); goTo(1); markSent('doneItems', 'x');");
+  ok('write-guard', 'e: markSent before _resumeReady does not write', b.stored().payload.currentScreen === 2 && !b.stored().doneItems.x,
+    JSON.stringify(b.stored()));
+  ok('write-guard', 'e: …but marks in memory', b.val('_unitState.doneItems.x') === true);
+  b.exec('_resumeReady = true; flushResumeSave();');
+  ok('write-guard', 'f: the next save carries the key', b.stored().doneItems.x === true);
+  b.close();
+
+  // g-j: a failed read closes the writes; only a 404 is a fresh document
+  b = boot();
+  b.exec("window.__realLoad = loadState720; window.loadState720 = function () { return null; };" +
+         "window.stateLastResult720 = function () { return { op: 'load', status: 500, ok: false }; }; readUnitState();");
+  ok('write-guard', 'g: a 500 read sets _resumeReadFailed', b.val('_resumeReadFailed') === true);
+  ok('write-guard', 'g: …and the in-memory payload is empty', b.val('_unitState.payload') === null);
+  b.exec("_resumeReady = true; window.__pr = persistUnitState(_unitState); flushResumeSave(); markSent('done', 'y'); goTo(1); scheduleResumeSave();");
+  ok('write-guard', 'h: persistUnitState refuses after a failed read', b.val('window.__pr') === false);
+  ok('write-guard', 'h: no write path reached the store', b.stored().payload.currentScreen === 2 && b.stored().done.y === undefined,
+    JSON.stringify(b.stored()));
+  b.exec("window.loadState720 = window.__realLoad; window.stateLastResult720 = function () { return { op: 'load', status: 200, ok: true }; }; readUnitState();");
+  ok('write-guard', 'i: a successful read clears the flag and reads the payload',
+    b.val('_resumeReadFailed') === false && b.val('_unitState.payload.currentScreen') === 2);
+  b.exec("window.loadState720 = function () { return null; }; window.stateLastResult720 = function () { return { op: 'load', status: 404, ok: true, reason: 'absent' }; }; readUnitState();");
+  ok('write-guard', 'j: a 404 is a fresh document, not a failure',
+    b.val('_resumeReadFailed') === false && b.val('_unitState.payload') === null);
+  b.close();
+
+  // k-l: source shape
+  const res = fs.readFileSync(path.join(BASE, 'unit-js', '40-resume.js'), 'utf8');
+  const body = (src, fn) => { const m = new RegExp('function ' + fn + '\\([^)]*\\) \\{([\\s\\S]*?)\\n\\}').exec(src); return m ? m[1].replace(/\/\*[\s\S]*?\*\//g, '') : ''; };   // comments out
+  const drain = body(res, 'drainPendingUnitState');
+  ok('write-guard', 'k: the drain persists _unitState and never captures',
+    /persistUnitState\(_unitState\)/.test(drain) && !/captureUnitState\(/.test(drain));
+  ok('write-guard', 'k: markSent returns before its persist until _resumeReady',
+    /if \(!_resumeReady\) return;[\s\S]*persistUnitState\(/.test(body(res, 'markSent')));
+  ok('write-guard', 'k: persistUnitState starts with the _resumeReadFailed refusal',
+    /^\s*var ok = false;\s*(\/\*[\s\S]*?\*\/\s*)?if \(_resumeReadFailed\) \{[\s\S]*?return false;/.test(body(res, 'persistUnitState')));
+  for (const fn of ['scheduleResumeSave', 'flushResumeSave']) {
+    ok('write-guard', 'k: ' + fn + ' bails on _resumeReadFailed', /_resumeReadFailed\) return;/.test(body(res, fn)));
+  }
+  const ldr = fs.readFileSync(path.join(BASE, 'unit-js', '50-loader.js'), 'utf8');
+  ok('write-guard', 'l: phase B retries a failed read once', /if \(_resumeReadFailed\) \{\s*_saved = readUnitState\(\);/.test(ldr));
+  ok('write-guard', 'l: the phase-B catch keeps a failed read closed', /_resumeReady = !_resumeReadFailed;/.test(ldr));
+  ok('write-guard', 'l: phase A keeps the cover on a failed read', /if \(!_payload && !_resumeReadFailed\)/.test(ldr));
+  ok('write-guard', 'l: a screen reached during the window is saved after the landing xapiOnScreen',
+    /xapiOnScreen\(currentScreen\);[\s\S]{0,900}if \(!_resumed && currentScreen !== 0\) \{ try \{ scheduleResumeSave\(\); \}/.test(ldr));
+}
+
+/* ══════════════ 21. The boot window, per part (2026-11-03 §2.6 m-p, -l preload 2026-11-06) ══════════════ */
+function checkBootWindow() {
+  const ldr = fs.readFileSync(path.join(BASE, 'unit-js', '50-loader.js'), 'utf8');
+  const lib = (ldr.match(/RESUME_ENABLED \? '(xapi-720-[a-z])\.js'/) || [])[1];
+  const CDN720 = 'https://lomdot.education.gov.il/metodica/720active/common/';
+  for (const c of COMPONENTS) {
+    /* The BOM goes: a browser takes it as the encoding mark, JSDOM's parser as text, which opens <body>
+       before <head> and moves every head link into the body. */
+    const html = fs.readFileSync(path.join(BASE, PART_DIR(c), 'index.html'), 'utf8').replace(/^﻿/, '');
+    const dom0 = new JSDOM(html);                                   // no scripts: structure only
+    const d0 = dom0.window.document;
+    const nets = [...d0.querySelectorAll('script:not([src])')].map(t => t.textContent || '').filter(t => t.includes('boot-cover'));
+    ok('boot-window', c + ': m exactly one inline boot-cover net', nets.length === 1, String(nets.length));
+    const net = nets[0] || '';
+    ok('boot-window', c + ': m the net raises __resumeInFlight itself on registration=',
+      /registration=/.test(net) && /__resumeInFlight = true/.test(net));
+    ok('boot-window', c + ': m the net keeps __resumeInFlight, 800 and the 11000 ceiling',
+      net.includes('__resumeInFlight') && /800/.test(net) && /11000/.test(net));
+    const inlineOnly = (search) => new JSDOM(html, { url: 'http://localhost:8766/' + PART_DIR(c) + '/index.html' + search, runScripts: 'dangerously' });
+    const withReg = inlineOnly('?slxapi=1&registration=abc'), noReg = inlineOnly('');
+    ok('boot-window', c + ': n inline scripts alone raise __resumeInFlight on a Kata launch', withReg.window.__resumeInFlight === true);
+    ok('boot-window', c + ': n …and leave it unset without a registration', noReg.window.__resumeInFlight !== true);
+    withReg.window.close(); noReg.window.close();
+    const pre = [...d0.querySelectorAll('head link[rel="preload"][as="script"]')];
+    const hrefs = pre.map(l => l.getAttribute('href'));
+    ok('boot-window', c + ': o head preloads xapiwrapper.min.js, then the resume library',
+      hrefs.length === 2 && hrefs[0] === CDN720 + 'xapiwrapper.min.js' && /^https:\/\/.+\/xapi-720-[a-z]\.js$/.test(hrefs[1] || ''), JSON.stringify(hrefs));
+    ok('boot-window', c + ': o preload links carry no crossorigin and no ?v=',
+      pre.every(l => !l.hasAttribute('crossorigin')) && hrefs.every(h => !/\?/.test(h)));
+    ok('boot-window', c + ': o the preloaded library is the one 50-loader.js loads',
+      !!lib && hrefs[1] === CDN720 + lib + '.js', 'loader=' + lib + ' preload=' + hrefs[1]);
+    ok('boot-window', c + ': o head preconnects to Kata', !!d0.querySelector('head link[rel="preconnect"][href="https://kata.cet.ac.il"]'));
+    const landing = d0.querySelector('section.screen.active');
+    const isAsset = (i) => { const s = (i.getAttribute('src') || '').replace(/^\.\//, '');
+      return s.startsWith('assets/') || (/^\.\.\/unit-assets\/img\//.test(s) && /\.png$/i.test(s)); };
+    const imgs = [...d0.querySelectorAll('img')].filter(isAsset);
+    const off = imgs.filter(i => !(landing && landing.contains(i))), on = imgs.filter(i => landing && landing.contains(i));
+    ok('boot-window', c + ': p every asset image outside the landing screen is loading="lazy"',
+      off.length > 0 && off.every(i => i.getAttribute('loading') === 'lazy'),
+      off.filter(i => i.getAttribute('loading') !== 'lazy').map(i => i.getAttribute('src')).join());
+    ok('boot-window', c + ': p no landing-screen image is lazy', on.every(i => i.getAttribute('loading') !== 'lazy'));
+    const hiddenSrc = [...d0.querySelectorAll('video[autoplay][src], video[autoplay] source[src]')].filter(v => !(landing && landing.contains(v)));
+    ok('boot-window', c + ': p no hidden autoplay video carries an inline src', hiddenSrc.length === 0,
+      hiddenSrc.map(v => v.getAttribute('src')).join());
+    dom0.window.close();
+  }
+}
+
+/* ══════════════ 22. The leave save through xapi-720-l.js (2026-11-06, §2.10 q-u) ══════════════
+   Chrome refuses the synchronous PUT of saveState720 while the page is being dismissed, so a leave
+   save through it never landed and the last debounced change (<= 800 ms) was lost. -l adds
+   saveState720OnLeave (keepalive fallback); the leave handler must go through it, still run on -k,
+   and write nothing after a failed read. */
+function checkLeaveSave() {
+  const ldr = fs.readFileSync(path.join(BASE, 'unit-js', '50-loader.js'), 'utf8');
+  ok('leave', 'q: the loader loads xapi-720-l.js', /RESUME_ENABLED \? 'xapi-720-l\.js'/.test(ldr));
+  ok('leave', 'q: the XAPI_USING_G regex lists l', /xapi-720-\[[a-z]*l[a-z]*\]/.test(ldr));
+  for (const f of ['xapi-720-k.js', 'xapi-720-l.js']) {
+    ok('leave', 'r: the test stub ' + f + ' exists', fs.existsSync(path.join(HARNESS_DIR, f)));
+  }
+  const res = fs.readFileSync(path.join(BASE, 'unit-js', '40-resume.js'), 'utf8');
+  const onLeave = (/function flushResumeSaveOnLeave\(\) \{([\s\S]*?)\n\}/.exec(res) || [])[1] || '';
+  const leaving = (/function flushResumeSaveLeaving\(\) \{([\s\S]*?)\n\}/.exec(res) || [])[1] || '';
+  ok('leave', 's: flushResumeSaveOnLeave goes through flushResumeSaveLeaving',
+    /flushResumeSaveLeaving\(\)/.test(onLeave) && !/flushResumeSave\(\)/.test(onLeave));
+  ok('leave', 's: flushResumeSaveLeaving has the four guards',
+    /if \(!RESUME_ENABLED \|\| !_resumeReady \|\| _restoring \|\| _resumeReadFailed\) return;/.test(leaving));
+  ok('leave', 's: …and the typeof guard on saveState720OnLeave',
+    /typeof window\.saveState720OnLeave === 'function'\) \? window\.saveState720OnLeave : window\.saveState720/.test(leaving));
+
+  const bootLib = (letter) => {
+    const r = loadComponent('01', { search: '?slxapi=1&registration=lv' });
+    r.exec(fs.readFileSync(path.join(HARNESS_DIR, 'xapi-720-' + letter + '.js'), 'utf8'));
+    r.exec('window.__reset(); _resumeReady = true; readUnitState();');
+    return { ...r, close: () => setTimeout(() => r.dom.window.close(), 0) };
+  };
+  let b = bootLib('l');
+  b.exec("goTo(3); window.dispatchEvent(new window.Event('pagehide'));");
+  const lw = b.val('JSON.stringify(window.__leaveWrites())');
+  const last = JSON.parse(lw || '[]').pop();
+  ok('leave', 't: on -l, pagehide saves the current screen through saveState720OnLeave', !!last && last.cs === 3, lw);
+  ok('leave', 't: on -l, the stored document is at that screen', b.val('__state() && __state().payload.currentScreen') === 3);
+  b.close();
+  b = bootLib('k');
+  b.exec("goTo(4); window.dispatchEvent(new window.Event('pagehide'));");
+  ok('leave', 't: on -k there is no saveState720OnLeave', b.val('typeof window.saveState720OnLeave') === 'undefined');
+  ok('leave', 't: on -k, pagehide falls back on saveState720 (document at that screen)',
+    b.val('__state() && __state().payload.currentScreen') === 4, String(b.val('JSON.stringify(__state())')));
+  b.close();
+  b = bootLib('l');
+  b.exec("window.__realLoad = loadState720; window.loadState720 = function () { return null; };" +
+         "var _sl = stateLastResult720; window.stateLastResult720 = function () { return { op: 'load', status: 500, ok: false }; };" +
+         "readUnitState(); window.loadState720 = window.__realLoad; window.stateLastResult720 = _sl; goTo(2); flushResumeSaveOnLeave();");
+  ok('leave', 'u: after a failed read the leave handler writes nothing',
+    b.val('window.__leaveWrites().length') === 0 && b.val('__state()') === null, String(b.val('JSON.stringify(window.__leaveWrites())')));
+  b.close();
+}
+
 /* ══════════════ run ══════════════ */
 
 /* ══════════════ The asset contract ══════════════
@@ -1463,12 +1651,14 @@ const stripBlockComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
 
 /* The variant arrays each component's preloadCharacterAvatars() actually iterates. Keep in
    step with the loops in the five script.js — that is the point of the assertion. */
+/* The name tails each part builds at runtime after 'Character1' / 'Character2' (preloadImages, and 05's
+   s43 setImgSrc). The poses carry '-opt' since the 2026-11-10 re-encode; the base avatar keeps its name. */
 const PRELOAD_VARIANTS = {
-  '01': ['', '_binoculars', '_roller', '_popcorn', '_cards', '_holdhands', '_workout'],
-  '02': [''],
-  '03': [''],
-  '04': [''],
-  '05': ['', '_workout'],
+  '01': ['.png', '_binoculars-opt.png', '_roller-opt.png', '_popcorn-opt.png', '_cards-opt.png', '_holdhands-opt.png', '_workout-opt.png'],
+  '02': ['.png'],
+  '03': ['.png'],
+  '04': ['.png'],
+  '05': ['.png', '_workout-opt.png'],
 };
 
 function checkAssetContract() {
@@ -1535,8 +1725,8 @@ function checkAssetContract() {
     const dir = path.join(BASE, PART_DIR(c), 'assets', 'images');
     for (const ch of ['Character1', 'Character2']) {
       for (const v of PRELOAD_VARIANTS[c]) {
-        ok('assets', c + ' preloads ' + ch + v + '.png and it exists',
-          fs.existsSync(path.join(dir, ch + v + '.png')));
+        ok('assets', c + ' preloads ' + ch + v + ' and it exists',
+          fs.existsSync(path.join(dir, ch + v)));
       }
     }
     const src = stripBlockComments(
@@ -1595,6 +1785,9 @@ function main() {
   checkHintLedgerPersists();
   checkLearningTypePick();
   checkYouTubeReporting();
+  checkWriteGuard();
+  checkBootWindow();
+  checkLeaveSave();
 
   console.log('');
   console.log('passed: ' + passes);

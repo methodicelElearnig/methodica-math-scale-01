@@ -6,8 +6,10 @@
 
 | File | What it does |
 |---|---|
-| `verify-report.js` | **Structure.** 875 assertions. Loads the real `index.html`, `script.js` and every `unit-js/*.js` of all five components into jsdom, runs the script tags in document order from disk, and asserts against what actually ran. It does not call the code in isolation — it runs it. |
+| `verify-report.js` | **Structure.** 1032 assertions (2026-11-10). Loads the real `index.html`, `script.js` and every `unit-js/*.js` of all five components into jsdom, runs the script tags in document order from disk, and asserts against what actually ran. It does not call the code in isolation — it runs it. |
 | `statement-flow.js` | **Behaviour.** 41 assertions. Which statements actually leave the lomda when a learner does a thing, in what order, with what result — and, more importantly, which ones do **not** leave when the same screen is reached again by resume or by the back button. |
+| `true-false.js` | **True/false responses** (2026-11-10, guide §6.3b). Every `true-false` question of `metadata/` (01-006 q1), each option through the real handler: the answered statement reports `true` / `false`, matching the correct answer exactly when `success`. 3 of its 9 checks fail on the code before (it sent the label). |
+| `xapi-720-l.js` | The `-k` stub plus `saveState720OnLeave` (writes like `saveState720`, counts its calls in `sessionStorage`, `__leaveWrites()`). The unit loads `-l` since 2026-11-10; section 22 boots on both stubs. |
 | `xapi-720-k.js` | A local stand-in for the CDN library, backed by `sessionStorage`. Loaded in the browser via `?xapiLib=`, and executed directly by both harnesses. It also models the real library's **deferral guard** — an item's `completed` is dropped, with no queue and no retry, unless an `answered` for that item passed through in the same page load. Keep it: without the guard the suite is blind to a whole class of permanently lost statements, which is how one survived every assertion here until it was found live against Kata. |
 
 ## Running
@@ -56,6 +58,9 @@ path as the first argument — without one they assume their own parent director
 | Deploy contract | `?v=` identical across all five `index.html`; every cross-part path lowercase; every cross-part navigation carries the query string; the library letter is listed in the `XAPI_USING_G` regex; no identifier declared in both layers. |
 | Hint dedupe | Reopening a hint reports `requested.1` once; a different question still reports. |
 | Video | Only `data-xapi-report` elements are wired. |
+| **Write guard** (20, 2026-11-03 §2.6 a–l) | Part 01 with a seeded store (`currentScreen 2`): a pick and a `goTo` before `_resumeReady` write nothing; the drain writes the document as read with the new character; the restore lands on 2 and the held debounced document still says 2; `markSent` marks in memory only until `_resumeReady`; a 500 read closes every write path, a 200 reopens it, a 404 is a fresh document. Source shape of the drain, `markSent`, `persistUnitState`, the two save guards and the loader's retry / catch / phase-A cover / boot-window save. **b–l fail on the 2026-11-09 package** (a cannot: here a pre-ready `goTo` never wrote — the overwrite was the drain's). |
+| **Boot window** (21, §2.6 m–p) | Per part: one inline net, raising `__resumeInFlight` on `?registration=` (behavioural, inline scripts only), keeping 800 / 11000; two preload links (wrapper, then the loader's own library letter; no `crossorigin`, no `?v=`) and the Kata preconnect; every asset image off the landing screen lazy, none on it; no hidden autoplay video with an inline `src`. |
+| **Leave save** (22, §2.10 q–u) | The loader loads `-l` and the regex lists it; both stubs exist; `flushResumeSaveOnLeave` → `flushResumeSaveLeaving` with the four guards and the typeof guard; `pagehide` on `-l` saves the current screen through `saveState720OnLeave`, on `-k` falls back on `saveState720`; nothing after a failed read. Mutation (handler back to `flushResumeSave`) caught by s and t. |
 
 ## Two allowlists, and why they are there
 

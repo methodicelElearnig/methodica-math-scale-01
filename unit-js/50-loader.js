@@ -76,7 +76,13 @@ function bootXAPI() {
 
      On localhost only, ?xapiLib=<same-origin path> may override it to test a local build.
 
-     ⚠️ The stub's filename must end in a library letter the regex below knows (xapi-720-k.js):
+     -l (2026-11-06, from methodica-math-percent-03 8b63a4f) is -k plus one additive function,
+     saveState720OnLeave: the leave save that still reaches Kata when Chrome refuses the synchronous
+     PUT during page dismissal (keepalive fallback). -k is untouched on the CDN. 40-resume.js
+     typeof-guards the new function, so the unit still runs on -k (rollback = this letter, the
+     regex and the preload links in every index.html).
+
+     ⚠️ The stub's filename must end in a library letter the regex below knows (xapi-720-l.js):
      the regex is what sets XAPI_USING_G, and a name that does not match silences every
      item-level statement with no error.
 
@@ -84,14 +90,14 @@ function bootXAPI() {
      all. The regex must list every library letter that supports them — A NEW LETTER NOT ADDED
      HERE SILENCES xapiOnScreen AND THE VIDEO REPORTING WITH NO ERROR. Changing LIB720 and
      changing the regex must therefore happen in the same commit. */
-  var LIB720 = CDN + (RESUME_ENABLED ? 'xapi-720-k.js' : 'xapi-720-i.js');
+  var LIB720 = CDN + (RESUME_ENABLED ? 'xapi-720-l.js' : 'xapi-720-i.js');
   try {
     if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
       var _ovr = new URLSearchParams(location.search).get('xapiLib');
       if (_ovr && /^(\.\.?\/|\/)[^:]*$/.test(_ovr)) LIB720 = _ovr;   // same-origin relative only
     }
   } catch (e) {}
-  window.XAPI_USING_G = /xapi-720-[ghijk]\.js/.test(LIB720);
+  window.XAPI_USING_G = /xapi-720-[ghijkl]\.js/.test(LIB720);
 
   loadScript(CDN + 'xapiwrapper.min.js', function () {
     loadScript(LIB720, function () {
@@ -154,7 +160,10 @@ function bootXAPI() {
                dropBootCover also clears __resumeInFlight, so the safety net returns to its normal
                800ms behaviour. If there IS a payload the flag stays set and the cover is held
                until phase B. */
-            if (!_payload) dropBootCoverWhenPainted();
+            /* ...unless the read FAILED (401/5xx/network; 40-resume.js sets _resumeReadFailed):
+               then "no payload" means nothing yet. Keep the cover for the retry in phase B;
+               the markup's net caps it at 11 s. */
+            if (!_payload && !_resumeReadFailed) dropBootCoverWhenPainted();
           } catch (e) {
             console.error('[resume] read', e);
             dropBootCover();
@@ -205,6 +214,25 @@ function bootXAPI() {
             var _resumed = false;
             if (RESUME_ENABLED) {
               try {
+                /* A read that failed in phase A (not a 404) gets ONE retry here, a few seconds
+                   later. If it fails again, this session never opens the writes: the document
+                   on Kata is left exactly as it was, statements still go out, and the ledger
+                   reads empty (fail-open). On a successful retry: a card picked meanwhile
+                   (_pendingProfile) beats the document's character, and resetScreenState is
+                   only safe on screen 0 (2026-11-03). */
+                if (_resumeReadFailed) {
+                  _saved = readUnitState();
+                  if (_resumeReadFailed) {
+                    console.error('[resume] state read failed twice — saving is OFF for this session; progress on Kata is preserved',
+                      typeof window.stateLastResult720 === 'function' ? window.stateLastResult720() : null);
+                  } else {
+                    if (!_pendingProfile && adoptUnitCharacter(_saved) && currentScreen === 0) {
+                      try { resetScreenState(0); } catch (e) {}
+                    }
+                    _payload = _saved.payload;
+                  }
+                }
+                if (!_resumeReadFailed) {
                 _resumeReady = true;
                 if (!_unitState) _unitState = emptyUnitState();
                 /* A choice made in the window between the phases is waiting in the queue. Drained
@@ -228,9 +256,10 @@ function bootXAPI() {
                   applyExecutionState(_payload, _hm ? parseInt(_hm[1], 10) : undefined);
                   _resumed = true;
                 }
+                }   /* if (!_resumeReadFailed) */
               } catch (e) {
                 console.error('[resume] init', e);
-                _resumeReady = true;
+                _resumeReady = !_resumeReadFailed;   /* a throwing restore must not disable saving; a failed read must */
                 if (!_unitState) _unitState = emptyUnitState();
               }
             }
@@ -250,6 +279,13 @@ function bootXAPI() {
             /* Item-level init for the landing screen. On a resume, applyExecutionState already
                emitted it for the restored screen. */
             if (!_resumed) { try { xapiOnScreen(currentScreen); } catch (e) {} }
+
+            /* Nothing restored, but the learner may have moved past the landing screen while
+               the phases were still loading (the drain no longer captures the live page, and
+               markSent no longer persists before _resumeReady). One debounced save - gated on
+               _resumeReady inside, so inert after a failed read - carries that screen and any
+               ledger key marked in memory. Saved LAST, as goTo does (2026-11-03). */
+            if (!_resumed && currentScreen !== 0) { try { scheduleResumeSave(); } catch (e) {} }
             if (typeof onXapiReady === 'function') {
               try { onXapiReady(); } catch (e) { console.error('[xAPI] ready hook', e); }
             }

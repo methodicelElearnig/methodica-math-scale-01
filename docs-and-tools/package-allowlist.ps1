@@ -89,8 +89,8 @@ $ExcludeRelPaths = @(
     'methodica-math-scale-01-02/assets/images/Bed Room.jpg',
     'methodica-math-scale-01-02/assets/images/Architacture plan.jpg',
     # component 04's preload loop is c + '.png' only — it has no _workout variant
-    'methodica-math-scale-01-04/assets/images/Character1_workout.png',
-    'methodica-math-scale-01-04/assets/images/Character2_workout.png',
+    'methodica-math-scale-01-04/assets/images/Character1_workout-opt.png',   # -opt since the 2026-11-10 re-encode
+    'methodica-math-scale-01-04/assets/images/Character2_workout-opt.png',
     # component 04 contains zero occurrences of "videos", "GIF" or ".mp4" in its html/js/css
     'methodica-math-scale-01-04/assets/videos/Character1 GIF Happy.mp4',
     'methodica-math-scale-01-04/assets/videos/Character1 GIF Sad.mp4',

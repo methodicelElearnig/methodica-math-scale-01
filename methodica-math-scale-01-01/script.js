@@ -286,11 +286,11 @@ function resetScreenState(n) {
   if (n === 1) {
     const char = window.lomdaState.selectedCharacter;
     const src1 = char === 'text'
-      ? './assets/images/Character1_binoculars.png'
-      : './assets/images/Character2_binoculars.png';
+      ? './assets/images/Character1_binoculars-opt.png'
+      : './assets/images/Character2_binoculars-opt.png';
     const src2 = char === 'text'
-      ? './assets/images/Character1_roller.png'
-      : './assets/images/Character2_roller.png';
+      ? './assets/images/Character1_roller-opt.png'
+      : './assets/images/Character2_roller-opt.png';
     setImgSrc(document.getElementById('s1-char-img-1'), src1, 'דמות עם משקפת');
     setImgSrc(document.getElementById('s1-char-img-2'), src2, 'דמות עם סרגל');
     setScale(1000);
@@ -351,11 +351,11 @@ function resetScreenState(n) {
     const char = window.lomdaState.selectedCharacter;
     const isChar1 = char === 'text';
     setImgSrc(document.getElementById('s2-char-a'), isChar1
-      ? './assets/images/Character1_popcorn.png'
-      : './assets/images/Character2_popcorn.png', 'דמות עם פופקורן');
+      ? './assets/images/Character1_popcorn-opt.png'
+      : './assets/images/Character2_popcorn-opt.png', 'דמות עם פופקורן');
     setImgSrc(document.getElementById('s2-char-b'), isChar1
-      ? './assets/images/Character1_cards.png'
-      : './assets/images/Character2_cards.png', 'דמות עם קלפים');
+      ? './assets/images/Character1_cards-opt.png'
+      : './assets/images/Character2_cards-opt.png', 'דמות עם קלפים');
 
     const clickHint = document.getElementById('s2-click-hint');
     if (clickHint) {
@@ -374,8 +374,8 @@ function resetScreenState(n) {
     var s6Img = document.getElementById('s6-char-img');
     if (s6Img) {
       setImgSrc(s6Img, window.lomdaState.selectedCharacter === 'text'
-        ? './assets/images/Character1_holdhands.png'
-        : './assets/images/Character2_holdhands.png', 'דמויות מחזיקות ידיים');
+        ? './assets/images/Character1_holdhands-opt.png'
+        : './assets/images/Character2_holdhands-opt.png', 'דמויות מחזיקות ידיים');
     }
   }
   if (n === 7) { s7Enter(); }
@@ -390,8 +390,8 @@ function resetScreenState(n) {
     var s15Img = document.getElementById('s15-char-img');
     if (s15Img) {
       setImgSrc(s15Img, window.lomdaState.selectedCharacter === 'text'
-        ? './assets/images/Character1_workout.png'
-        : './assets/images/Character2_workout.png', 'דמות מתאמנת');
+        ? './assets/images/Character1_workout-opt.png'
+        : './assets/images/Character2_workout-opt.png', 'דמות מתאמנת');
     }
   }
   if (n === 17) {
@@ -514,8 +514,8 @@ function frcEnter() {
   var charImg3 = document.getElementById('s3-char-img');
   if (charImg3) {
     setImgSrc(charImg3, window.lomdaState.selectedCharacter === 'text'
-      ? './assets/images/Character1_roller.png'
-      : './assets/images/Character2_roller.png', 'דמות מלווה');
+      ? './assets/images/Character1_roller-opt.png'
+      : './assets/images/Character2_roller-opt.png', 'דמות מלווה');
   }
   var s3body = document.getElementById('s3-body');
   var charWidget3 = document.getElementById('s3-char-widget');
@@ -549,10 +549,10 @@ function setScale(ratio) {
   const img = document.getElementById('field-img');
   if (img) {
     const newSrc = (ratio === 10)
-      ? './assets/images/Football yard zoom.jpg'
+      ? './assets/images/Football yard zoom-opt.jpg'
       : (ratio === 100)
-        ? './assets/images/Football yard med zoom.jpg'
-        : './assets/images/Football yard.jpg';
+        ? './assets/images/Football yard med zoom-opt.jpg'
+        : './assets/images/Football yard-opt.jpg';
 
     /* The guard that used to sit here compared a raw path against img.src, which reads back
        percent-encoded ('Football%20yard.jpg'), so it never matched and every click re-requested a
@@ -601,14 +601,14 @@ function s4Enter() {
   var charImg = document.getElementById('s4-char-img');
   if (charImg) {
     setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
-      ? './assets/images/Character1_popcorn.png'
-      : './assets/images/Character2_popcorn.png', 'דמות עם פופקורן');
+      ? './assets/images/Character1_popcorn-opt.png'
+      : './assets/images/Character2_popcorn-opt.png', 'דמות עם פופקורן');
   }
   var charImgRoller = document.getElementById('s4-char-img-roller');
   if (charImgRoller) {
     setImgSrc(charImgRoller, window.lomdaState.selectedCharacter === 'text'
-      ? './assets/images/Character1_roller.png'
-      : './assets/images/Character2_roller.png', 'דמות עם סרגל');
+      ? './assets/images/Character1_roller-opt.png'
+      : './assets/images/Character2_roller-opt.png', 'דמות עם סרגל');
   }
 
   var s4body = document.getElementById('s4-body');
@@ -1108,8 +1108,8 @@ function s16Enter() {
   var charImg = document.getElementById('s16-char-img');
   if (charImg) {
     setImgSrc(charImg, window.lomdaState.selectedCharacter === 'text'
-      ? './assets/images/Character1_workout.png'
-      : './assets/images/Character2_workout.png', 'דמות מלווה');
+      ? './assets/images/Character1_workout-opt.png'
+      : './assets/images/Character2_workout-opt.png', 'דמות מלווה');
   }
 
   var contBtn = document.getElementById('s16-continue');
@@ -1799,9 +1799,12 @@ function s16Submit() {
   feedback.classList.add(correct ? 's5-fb--correct' : 's5-fb--incorrect');
   feedback.hidden = false;
 
-  /* xAPI: item 006 / q1 (004 before the 2026-10-27 split) — the true/false warm-up. Single attempt. */
+  /* xAPI: item 006 / q1 (004 before the 2026-10-27 split) — the true/false warm-up. Single attempt.
+     Reports 'true' / 'false', never the button label: Kata compares result.response with the
+     question's correctXapiResponsesPattern (["true"]), so "נכון" / "לא נכון" could never be scored
+     (guide §6.3b, 2026-11-10). Option 0 is "נכון". */
   xapiAnswered('006', 'q1', correct, true,
-    xapiAnswerText(opts[s16Selected]));
+    s16Selected === 0 ? 'true' : 'false');
 
   var contBtn = document.getElementById('s16-continue');
   if (contBtn) {
@@ -2328,8 +2331,11 @@ function partBoot() {
      wrong-image flash, not covering it. The other family is never shown -- the choice is made
      once on screen 0 and carried in the state document -- so preloading it bought nothing. */
   var char = window.lomdaState.selectedCharacter === 'video' ? 'Character2' : 'Character1';
-  preloadImages(['', '_binoculars', '_roller', '_popcorn', '_cards', '_holdhands', '_workout']
-    .map(function (v) { return './assets/images/' + char + v + '.png'; }));
+  /* The poses carry '-opt' since the 2026-11-10 re-encode (docs-and-tools/reencode-media.py); the base
+     avatar keeps its name. _test/verify-report.js PRELOAD_VARIANTS checks every name built here. */
+  preloadImages(['.png', '_binoculars-opt.png', '_roller-opt.png', '_popcorn-opt.png', '_cards-opt.png',
+                 '_holdhands-opt.png', '_workout-opt.png']
+    .map(function (v) { return './assets/images/' + char + v; }));
 
   document.querySelectorAll('[data-screen="0"] .option-card').forEach(card => {
     card.addEventListener('keydown', function (e) {

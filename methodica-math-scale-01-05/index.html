@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>קנה מידה — לומדה</title>
+  <link rel="preload" as="script" fetchpriority="high" href="https://lomdot.education.gov.il/metodica/720active/common/xapiwrapper.min.js">
+  <link rel="preload" as="script" fetchpriority="high" href="https://lomdot.education.gov.il/metodica/720active/common/xapi-720-l.js">
+  <link rel="preconnect" href="https://kata.cet.ac.il">
   <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
@@ -25,6 +28,9 @@
   <div id="boot-cover" style="position:fixed;inset:0;z-index:9999;background:#ffffff"></div>
   <script>
   (function () {
+    /* A Kata launch always carries ?registration: hold the cover from the first frame, not from
+       bootXAPI (the last script tag, which on a cold cache runs after this net's 800ms). */
+    if (/[?&]registration=/.test(location.search)) window.__resumeInFlight = true;
     var t0 = Date.now();
     function tick() {
       var c = document.getElementById('boot-cover');
@@ -43,8 +49,8 @@
     ════════════════════════════════════════ -->
     <button class="flag-btn" id="flag-btn" onclick="openReportModal()" aria-label="מצאתם בעיה?" title="מצאתם בעיה?">
       <span class="flag-btn-icon" aria-hidden="true">
-        <img class="flag-btn-icon-default" src="assets/images/btn-flag-default.png" alt="">
-        <img class="flag-btn-icon-hover" src="assets/images/btn-flag-hover.png" alt="">
+        <img class="flag-btn-icon-default" src="assets/images/btn-flag-default.png" alt="" loading="lazy">
+        <img class="flag-btn-icon-hover" src="assets/images/btn-flag-hover.png" alt="" loading="lazy">
       </span>
       <span class="flag-btn-label">מצאתם בעיה?</span>
     </button>
@@ -59,7 +65,7 @@
           <p class="s25-text-large">עכשיו מגיעה שאלת השיא</p>
           <p class="s0-text-hint">יש בה 4 סעיפים. עליכם להצליח ב - 3 לפחות.  ​</p>
         </div>
-        <img id="s43-char-img" src="./assets/images/Character1_workout.png" alt="דמות מלווה" class="s6-char-img">
+        <img id="s43-char-img" src="./assets/images/Character1_workout-opt.png" alt="דמות מלווה" class="s6-char-img">
       </div>
       </div>
 
@@ -74,7 +80,7 @@
 
       <div class="screen-stage">
       <div class="s44-bg">
-        <img src="./assets/images/Rescue team.jpg" alt="סיירת הרחפנים" class="s44-bg-img">
+        <img src="./assets/images/Rescue team-opt.jpg" alt="סיירת הרחפנים" class="s44-bg-img" loading="lazy">
       </div>
 
       <div class="s44-content">
@@ -119,7 +125,7 @@
 
           <!-- LEFT: Area map image -->
           <div class="s18-q-left">
-            <img class="s18-console-img" src="./assets/images/Area.jpg" alt="מפה של השטח">
+            <img class="s18-console-img" src="./assets/images/Area-opt.jpg" alt="מפה של השטח" loading="lazy">
             <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-v05-s2')" aria-label="הגדל תמונה">
               <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
               <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -176,7 +182,7 @@
 
       <div class="screen-stage">
       <div class="s44-bg">
-        <img src="./assets/images/Team.jpg" alt="צוות חיפוש" class="s44-bg-img">
+        <img src="./assets/images/Team-opt.jpg" alt="צוות חיפוש" class="s44-bg-img" loading="lazy">
       </div>
 
       <div class="s44-content">
@@ -242,7 +248,7 @@
 
           <!-- LEFT: Area map image -->
           <div class="s18-q-left">
-            <img class="s18-console-img" src="./assets/images/Area 2.jpg" alt="מפה של השטח">
+            <img class="s18-console-img" src="./assets/images/Area 2-opt.jpg" alt="מפה של השטח" loading="lazy">
             <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-v05-s4')" aria-label="הגדל תמונה">
               <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
               <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -299,7 +305,7 @@
 
       <div class="screen-stage">
       <div class="s44-bg">
-        <img src="./assets/images/Noa.jpg" alt="נועה מחילוץ" class="s44-bg-img">
+        <img src="./assets/images/Noa-opt.jpg" alt="נועה מחילוץ" class="s44-bg-img" loading="lazy">
       </div>
 
       <div class="s44-content">
@@ -355,7 +361,7 @@
           <div class="s18-q-left">
             <div class="s49-img-wrap">
               <div class="s49-image-zoom">
-                <img class="s18-console-img s49-zoomed-img" src="./assets/images/Area.jpg" alt="מפה של השטח - זום">
+                <img class="s18-console-img s49-zoomed-img" src="./assets/images/Area-opt.jpg" alt="מפה של השטח - זום" loading="lazy">
               </div>
               <div class="s49-zoom-label">ZOOM X4</div>
             </div>
@@ -415,7 +421,7 @@
 
       <div class="screen-stage">
       <div class="s44-bg">
-        <img src="./assets/images/Elicopter.jpg" alt="מסוק חילוץ" class="s44-bg-img">
+        <img src="./assets/images/Elicopter-opt.jpg" alt="מסוק חילוץ" class="s44-bg-img" loading="lazy">
       </div>
 
       <div class="s44-content">
@@ -475,7 +481,7 @@
 
           <!-- LEFT: Helicopter image -->
           <div class="s18-q-left">
-            <img class="s18-console-img" src="./assets/images/Elicopter2.png" alt="מסוק חילוץ">
+            <img class="s18-console-img" src="./assets/images/Elicopter2.png" alt="מסוק חילוץ" loading="lazy">
             <button class="img-zoom-btn" onclick="openImgZoom('img-zoom-v05-s8')" aria-label="הגדל תמונה">
               <svg class="zoom-icon-normal" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="42" height="42" rx="21" fill="white"/><rect x="1" y="1" width="42" height="42" rx="21" stroke="#3B2FC2" stroke-width="2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="#3B2FC2"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="#3B2FC2"/></svg>
               <svg class="zoom-icon-hover" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="22" fill="#3B2FC2"/><path d="M24.9232 20.0001C24.9232 17.2811 22.7191 15.077 20.0001 15.077C17.2811 15.077 15.077 17.2811 15.077 20.0001C15.077 22.7191 17.2811 24.9232 20.0001 24.9232C22.7191 24.9232 24.9232 22.7191 24.9232 20.0001ZM28.0002 20.0001C28.0002 24.4184 24.4184 28.0002 20.0001 28.0002C15.5818 28.0002 12 24.4184 12 20.0001C12 15.5818 15.5818 12 20.0001 12C24.4184 12 28.0002 15.5818 28.0002 20.0001Z" fill="white"/><path d="M23.8354 23.8354C24.4362 23.2345 25.4101 23.2345 26.0109 23.8354L31.5494 29.3739C32.1502 29.9747 32.1502 30.9486 31.5494 31.5494C30.9486 32.1502 29.9747 32.1502 29.3739 31.5494L23.8354 26.0109C23.2345 25.4101 23.2345 24.4362 23.8354 23.8354Z" fill="white"/></svg>
@@ -532,7 +538,7 @@
 
       <div class="screen-stage">
       <div class="s44-bg">
-        <img src="./assets/images/Happy Team.jpg" alt="צוות חילוץ שמח" class="s44-bg-img">
+        <img src="./assets/images/Happy Team-opt.jpg" alt="צוות חילוץ שמח" class="s44-bg-img" loading="lazy">
       </div>
 
       <div class="s44-content">
@@ -661,7 +667,7 @@
       </button>
       <div class="img-zoom-modal__stage">
         <div class="scq-img-inner img-zoom-clone">
-          <img src="./assets/images/Area.jpg" alt="מפה של השטח" onerror="this.style.display='none'">
+          <img src="./assets/images/Area-opt.jpg" alt="מפה של השטח" onerror="this.style.display='none'" loading="lazy">
         </div>
       </div>
     </div>
@@ -676,7 +682,7 @@
       </button>
       <div class="img-zoom-modal__stage">
         <div class="scq-img-inner img-zoom-clone">
-          <img src="./assets/images/Area 2.jpg" alt="מפה של השטח" onerror="this.style.display='none'">
+          <img src="./assets/images/Area 2-opt.jpg" alt="מפה של השטח" onerror="this.style.display='none'" loading="lazy">
         </div>
       </div>
     </div>
@@ -691,7 +697,7 @@
       </button>
       <div class="img-zoom-modal__stage">
         <div class="scq-img-inner img-zoom-clone">
-          <img src="./assets/images/Area.jpg" alt="מפה של השטח - זום" onerror="this.style.display='none'">
+          <img src="./assets/images/Area-opt.jpg" alt="מפה של השטח - זום" onerror="this.style.display='none'" loading="lazy">
         </div>
       </div>
     </div>
@@ -706,7 +712,7 @@
       </button>
       <div class="img-zoom-modal__stage">
         <div class="scq-img-inner img-zoom-clone">
-          <img src="./assets/images/Elicopter2.png" alt="מסוק חילוץ" onerror="this.style.display='none'">
+          <img src="./assets/images/Elicopter2.png" alt="מסוק חילוץ" onerror="this.style.display='none'" loading="lazy">
         </div>
       </div>
     </div>
@@ -715,7 +721,7 @@
   </main>
   <div id="a11y-announcer" role="status" aria-live="polite" aria-atomic="true"
        style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
-  <script src="../unit-js/10-identity.js?v=5"></script>
+  <script src="../unit-js/10-identity.js?v=6"></script>
   <script src="../unit-js/15-ui.js?v=6"></script>
   <!-- iPad-shaped-viewport gate — must load after scaleApp() is defined and before 90-boot.js
        wires it to the resize listener, so the wrapped version is what gets used -->
@@ -724,10 +730,10 @@
   <script src="../unit-js/25-report.js?v=4"></script>
   <script src="../unit-js/28-feedback-drag.js?v=4"></script>
   <script src="../unit-js/30-nav.js?v=5"></script>
-  <script src="../unit-js/40-resume.js?v=7"></script>
-  <script src="../unit-js/50-loader.js?v=6"></script>
+  <script src="../unit-js/40-resume.js?v=8"></script>
+  <script src="../unit-js/50-loader.js?v=7"></script>
   <script src="../unit-js/60-devbridge.js?v=4"></script>
-  <script src="script.js?v=18"></script>
+  <script src="script.js?v=19"></script>
   <script src="../unit-js/90-boot.js?v=5"></script>
 </body>
 </html>
