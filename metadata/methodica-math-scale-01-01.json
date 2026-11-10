@@ -4,14 +4,15 @@
   "learningUnitId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01/",
   "componentPurpose": "both",
   "isAssessment": false,
-  "manufacture": "methodica",
   "recommendedAfterFail": [],
   "isRequired": true,
   "relativeDifficulty": 3,
   "masteryLevel": null,
   "order": 1,
   "depthLevel": "core-curriculum-basic",
-  "cognitiveLevel": "process-thinking",
+  "cognitiveLevels": [
+    "process-thinking"
+  ],
   "languages": [
     "Hebrew"
   ],
@@ -57,46 +58,25 @@
         },
         {
           "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-003/q2",
-          "questionType": "matching",
+          "questionType": "performance",
           "questionText": "בחרו את המספרים המתאימים מכל רשימה, והשלימו את המרת היחידות: ב-3 ק\"מ יש __ מטרים; ב-17 מטרים יש __ ס\"מ; ב-32 ס\"מ יש __ מ\"מ; ב-7 ק\"מ יש __ ס\"מ",
-          "answers": {
-            "source": [
-              "ב-3 ק\"מ יש __ מטרים",
-              "ב-17 מטרים יש __ ס\"מ",
-              "ב-32 ס\"מ יש __ מ\"מ",
-              "ב-7 ק\"מ יש __ ס\"מ"
-            ],
-            "target": [
-              "300",
-              "3,000",
-              "30,000",
-              "170",
-              "1,700",
-              "17,000",
-              "320",
-              "3,200",
-              "32,000",
-              "7,000",
-              "70,000",
-              "700,000"
-            ]
-          },
+          "answers": null,
           "correctAnswers": [
             {
-              "source": "ב-3 ק\"מ יש __ מטרים",
-              "target": "3,000"
+              "stepId": "ב-3 ק\"מ יש __ מטרים",
+              "response": "3,000"
             },
             {
-              "source": "ב-17 מטרים יש __ ס\"מ",
-              "target": "1,700"
+              "stepId": "ב-17 מטרים יש __ ס\"מ",
+              "response": "1,700"
             },
             {
-              "source": "ב-32 ס\"מ יש __ מ\"מ",
-              "target": "320"
+              "stepId": "ב-32 ס\"מ יש __ מ\"מ",
+              "response": "320"
             },
             {
-              "source": "ב-7 ק\"מ יש __ ס\"מ",
-              "target": "700,000"
+              "stepId": "ב-7 ק\"מ יש __ ס\"מ",
+              "response": "700,000"
             }
           ]
         }
@@ -123,46 +103,25 @@
         },
         {
           "questionId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01-01/methodica-math-scale-01-01-004/q2",
-          "questionType": "matching",
+          "questionType": "performance",
           "questionText": "בחרו את המספרים המתאימים מכל רשימה, והשלימו את המרת היחידות: ב-3 ק\"מ יש __ מטרים; ב-17 מטרים יש __ ס\"מ; ב-32 ס\"מ יש __ מ\"מ; ב-7 ק\"מ יש __ ס\"מ",
-          "answers": {
-            "source": [
-              "ב-3 ק\"מ יש __ מטרים",
-              "ב-17 מטרים יש __ ס\"מ",
-              "ב-32 ס\"מ יש __ מ\"מ",
-              "ב-7 ק\"מ יש __ ס\"מ"
-            ],
-            "target": [
-              "300",
-              "3,000",
-              "30,000",
-              "170",
-              "1,700",
-              "17,000",
-              "320",
-              "3,200",
-              "32,000",
-              "7,000",
-              "70,000",
-              "700,000"
-            ]
-          },
+          "answers": null,
           "correctAnswers": [
             {
-              "source": "ב-3 ק\"מ יש __ מטרים",
-              "target": "3,000"
+              "stepId": "ב-3 ק\"מ יש __ מטרים",
+              "response": "3,000"
             },
             {
-              "source": "ב-17 מטרים יש __ ס\"מ",
-              "target": "1,700"
+              "stepId": "ב-17 מטרים יש __ ס\"מ",
+              "response": "1,700"
             },
             {
-              "source": "ב-32 ס\"מ יש __ מ\"מ",
-              "target": "320"
+              "stepId": "ב-32 ס\"מ יש __ מ\"מ",
+              "response": "320"
             },
             {
-              "source": "ב-7 ק\"מ יש __ ס\"מ",
-              "target": "700,000"
+              "stepId": "ב-7 ק\"מ יש __ ס\"מ",
+              "response": "700,00"
             }
           ]
         }

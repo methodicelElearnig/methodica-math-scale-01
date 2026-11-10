@@ -4,17 +4,18 @@
   "learningUnitId": "https://lomdot.education.gov.il/metodica/720active/math/scale/01/methodica-math-scale-01/",
   "componentPurpose": "practice",
   "isAssessment": false,
-  "manufacture": "methodica",
   "recommendedAfterFail": [],
   "isRequired": true,
   "relativeDifficulty": 3,
-  "masteryLevel": "intermediate",
+  "masteryLevel": null,
   "order": 3,
   "depthLevel": "core-curriculum-basic",
-  "cognitiveLevel": "process-thinking",
+  "cognitiveLevels": [
+    "process-thinking"
+  ],
   "languages": ["Hebrew"],
   "skills": [],
-  "estimatedTimeInMinutes": 1,
+  "estimatedTimeInMinutes": 10,
   "createdAt": "2026-06-24T00:00:00.000Z",
   "updatedAt": "2026-07-29T00:00:00.000Z",
   "subContent": [

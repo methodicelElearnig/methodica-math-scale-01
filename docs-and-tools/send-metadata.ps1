@@ -93,8 +93,9 @@ $ContentBaseUrl = 'https://lomdot.education.gov.il/metodica/720/math/scale/01'
 # Title language key: wraps a string title into the API object, e.g.
 #   "מדידת מסה" -> { "Hebrew": "מדידת מסה" }. Change only for non-Hebrew content.
 $TitleLangKey = 'Hebrew'
-# Manufacture value sent on the unit (the metadata unit file carries none).
-$UnitManufacture = 'methodica'
+# NOTE: there is no $UnitManufacture any more (2026-11-10, metadata synced with Kata). 720 v2.5
+# renamed the field to `manufacturer` and moved it to the unit, and KATA derives the owning
+# provider from the API key. See New-UnitBody.
 # Fallback depthLevel — used ONLY if a component's metadata omits it (components
 # normally carry their own relativeDifficulty / depthLevel / cognitiveLevel).
 $DefaultDepthLevel = 'core-curriculum-basic'
@@ -365,26 +366,27 @@ function New-UnitBody {
                "'methodica-math-scale-01'. The unit id must end with the unit slug, not the folder number.")
     }
 
-    # targetSector / targetAudience: validated rather than forwarded blind.
-    foreach ($v in @($Unit.targetSector)) {
+    # targetSectors / targetAudience: validated rather than forwarded blind.
+    # 720 v2.5 renamed targetSector -> targetSectors (still a list) and made targetAudience a
+    # SINGLE value; metadata/ carries those names since the 2026-11-10 sync with Kata.
+    foreach ($v in @($Unit.targetSectors)) {
         if ($ValidTargetSector -notcontains $v) {
-            throw "Invalid targetSector '$v' on the unit — expected one of: $($ValidTargetSector -join ', ')."
+            throw "Invalid targetSectors value '$v' on the unit — expected one of: $($ValidTargetSector -join ', ')."
         }
     }
-    foreach ($v in @($Unit.targetAudience)) {
-        if ($ValidTargetAudience -notcontains $v) {
-            throw "Invalid targetAudience '$v' on the unit — expected one of: $($ValidTargetAudience -join ', ')."
-        }
+    if ($ValidTargetAudience -notcontains $Unit.targetAudience) {
+        throw ("Invalid targetAudience '$($Unit.targetAudience)' on the unit — expected ONE of: " +
+               "$($ValidTargetAudience -join ', '). v2.5 makes this a single value, not a list.")
     }
 
+    # Not sent (v2.5): prerequisiteLearningObjective (dependencies live on the learning objective)
+    # and manufacture / manufacturer (KATA derives the provider from the API key).
     return [ordered]@{
-        uniqueKey                     = $unitKey
-        title                         = [ordered]@{ $TitleLangKey = $Unit.title }
-        learningObjective             = $Unit.learningObjective
-        targetSector                  = @($Unit.targetSector)
-        targetAudience                = @($Unit.targetAudience)
-        prerequisiteLearningObjective = @($Unit.prerequisiteLearningObjective)
-        manufacture                   = $UnitManufacture
+        uniqueKey         = $unitKey
+        title             = [ordered]@{ $TitleLangKey = $Unit.title }
+        learningObjective = $Unit.learningObjective
+        targetSectors     = @($Unit.targetSectors)
+        targetAudience    = $Unit.targetAudience
     }
 }
 
@@ -411,7 +413,9 @@ function New-ComponentBody {
     if ($ov.ContainsKey('cognitiveLevel')) {
         $cog = $ov.cognitiveLevel
     } else {
-        $label = $Comp.cognitiveLevel
+        # v2.5: the metadata field is cognitiveLevelS, a list (since the 2026-11-10 sync with Kata).
+        # This unit tags exactly one per component; the old scalar name is still read as a fallback.
+        $label = if ($null -ne $Comp.cognitiveLevels) { @($Comp.cognitiveLevels)[0] } else { $Comp.cognitiveLevel }
         $cog   = if ($CognitiveLevelMap.ContainsKey($label)) { $CognitiveLevelMap[$label] } else { $label }
         if ($PendingCognitiveLevel -contains $cog) {
             throw ("cognitiveLevel '$cog' ($slug) is a 720 science level (v2.2 pp.17-18) that KATA has NOT loaded yet — " +
