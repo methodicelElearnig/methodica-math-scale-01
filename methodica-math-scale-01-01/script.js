@@ -1064,8 +1064,9 @@ function sqQ2Submit() {
   var p = 's' + sqScreen + 'q-';
   document.getElementById(p + 'q2-check').disabled = true;
   /* xAPI: capture the learner's four dropdown values BEFORE the loop below overwrites every
-     dd-val with the correct answer. Read from state, not the DOM, for exactly that reason. */
-  var _q2Answer = sqQ2Selections.join(' | ');
+     dd-val with the correct answer. Read from state, not the DOM, for exactly that reason.
+     Kata: performance, one step per row in row order — sent as 'step[.]value[,]…' (2026-11-11). */
+  var _q2Answer = { steps: sqQ2Selections.slice() };
   var allCorrect = true;
   sqQ2Selections.forEach(function(val, i) {
     var dd = document.querySelector('[data-screen="' + sqScreen + '"] .sq-dropdown[data-row="' + i + '"]');
@@ -1636,8 +1637,10 @@ function s21Submit() {
   var answer = input ? input.value : '';
   var correct = checkRatio(answer, 1, 25000);
   s21Attempts++;
+  /* checkRatio grades '1 : 25000' right as well; Kata's fill-in pattern lists only the 25,000 : 1
+     forms, so a right answer is reported in that order (the layer sends Kata's own spelling). */
   xapiAnswered('009', 'q1', correct, correct || s21Attempts >= 2,
-    String(answer).trim());
+    correct ? '25000 : 1' : String(answer).trim());
   var feedback    = document.getElementById('s21-feedback');
   var fbBold      = document.getElementById('s21-fb-bold');
   var fbRegular   = document.getElementById('s21-fb-regular');

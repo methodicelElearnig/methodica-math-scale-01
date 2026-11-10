@@ -127,7 +127,7 @@ function s26Submit() {
 
   var correct = (s26Vals[1] === S26_CORRECT[1] && s26Vals[2] === S26_CORRECT[2] && s26Vals[3] === S26_CORRECT[3]);
   xapiAnswered('001', 'q1', correct, correct || (s26Attempts + 1) >= 2,
-    [s26Vals[1], s26Vals[2], s26Vals[3]].join(' | '));
+    { pairs: [1, 2, 3].map(function (n) { return { source: n - 1, target: s26Vals[n] }; }) });
   var labels  = { 1: '5', 2: '1,000', 3: '5,000' };
 
   var fb      = document.getElementById('s26-feedback');
@@ -297,7 +297,7 @@ function s27Submit() {
   var correctLabels = { 1: '35,000', 2: '350' };
   var isCorrect     = s27Vals[1] === S27_CORRECT[1] && s27Vals[2] === S27_CORRECT[2];
   xapiAnswered('002', 'q1', isCorrect, isCorrect || (s27Attempts + 1) >= 2,
-    [s27Vals[1], s27Vals[2]].join(' | '));
+    { pairs: [1, 2].map(function (n) { return { source: n - 1, target: s27Vals[n] }; }) });
 
   fb.classList.remove('s5-fb--correct', 's5-fb--incorrect');
 
@@ -475,7 +475,7 @@ function s28Submit() {
   var hasAll    = S28_CORRECT.every(function(i) { return s28Selected.indexOf(i) >= 0; });
   var isCorrect = hasAll && !hasGimel;
   xapiAnswered('003', 'q1', isCorrect, isCorrect || (s28Attempts + 1) >= 2,
-    s28Selected.slice().sort(function(a,b){ return a - b; }).map(function(i){ return xapiAnswerText(document.querySelectorAll('[data-screen="3"] .s5-opt')[i]); }).join(' | '));
+    { choices: s28Selected.slice() });   // option order = metadata answers order (א–ד)
 
   var explanation = '<strong>סעיפים א ו-ב</strong> נכונים, כיוון שכפלנו את קנה המידה ב-4 וב-10 בהתאמה.​<br>' +
                     '<strong>סעיף ג</strong> אינו נכון, כיוון ש-1 ס"מ במפה מייצג 50 ס"מ במציאות ולא 50 מטרים. ​<br>' +
@@ -732,7 +732,7 @@ function s30Submit() {
 
   var correctLabels = { 1: '600', 2: 'חילוק', 3: '200', 4: '3' };
   xapiAnswered('005', 'q1', isCorrect, isCorrect || (s30Attempts + 1) >= 2,
-    [s30Vals[1], s30Vals[2], s30Vals[3], s30Vals[4]].join(' | '));
+    { pairs: [1, 2, 3, 4].map(function (n) { return { source: n - 1, target: s30Vals[n] }; }) });
 
   var fb     = document.getElementById('s30-feedback');
   var fbBold = document.getElementById('s30-fb-bold');

@@ -90,8 +90,11 @@ function s45Check() {
   var val     = parseFloat((input ? input.value : '').replace(',', ''));
   var correct = (val === 25000);
   s45Attempts++;
+  /* The learner types the number before ': 1'. Kata keeps this as fill-in '25,000 : 1' (he) or
+     numeric '25000' (ar): value feeds numeric, text feeds fill-in; the layer picks by type. */
+  var _raw = input ? input.value.trim() : '';
   xapiAnswered('001', 'q1', correct, correct || s45Attempts >= 2,
-    String(val));
+    { value: _raw, text: _raw + ' : 1' });
 
   var fb      = document.getElementById('s45-feedback');
   var fbBold  = document.getElementById('s45-fb-bold');
@@ -225,7 +228,7 @@ function s47Check() {
                  Array.from(s47Selected).every(i => S47_CORRECT.has(i)));
   s47Attempts++;
   xapiAnswered('001', 'q2', correct, correct || s47Attempts >= 2,
-    Array.from(s47Selected).sort(function(a,b){ return a - b; }).map(function(i){ return xapiAnswerText(document.querySelectorAll('[data-screen="4"] .s47-option')[i]); }).join(' | '));
+    { choices: Array.from(s47Selected) });   // option order = metadata answers order
 
   var fb      = document.getElementById('s47-feedback');
   var fbBold  = document.getElementById('s47-fb-bold');
@@ -367,7 +370,7 @@ function s49Submit() {
   var correct = (s49Selected === S49_CORRECT);
   s49Attempts++;
   xapiAnswered('001', 'q3', correct, correct || s49Attempts >= 2,
-    xapiAnswerText(document.querySelectorAll('[data-screen="6"] .s5-opt')[s49Selected]));
+    { choices: [s49Selected] });   // the option shows a longer sentence than Kata's answer: by index
 
   var fb      = document.getElementById('s49-feedback');
   var fbBold  = document.getElementById('s49-fb-bold');
@@ -488,7 +491,7 @@ function s51Submit() {
   var correct = (s51Selected === S51_CORRECT);
   s51Attempts++;
   xapiAnswered('001', 'q4', correct, correct || s51Attempts >= 2,
-    xapiAnswerText(document.querySelectorAll('[data-screen="8"] .s5-opt')[s51Selected]));
+    { choices: [s51Selected] });   // by index: the option ends in a geresh Kata's text does not have
 
   var fb      = document.getElementById('s51-feedback');
   var fbBold  = document.getElementById('s51-fb-bold');

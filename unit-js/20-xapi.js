@@ -153,46 +153,201 @@ function xapiFinishItems(){
    an invariant from docs-and-tools/REPORT-XAPI.md §2: a reporting failure must not be able to
    corrupt the score. It is now enforced in one place rather than relied on at 25 call sites. */
 
-/* ── Answer-text builders, for question types that are not single choice ──
-   result.response should carry what the learner actually answered. For single choice that is
-   xapiAnswerText(optEl); drag and field questions need to describe a state rather than one
-   element. All three are deliberately generic so they can move between units unchanged. */
+/* ═══════════════════ result.response = Kata's correctXapiResponsesPattern form ═══════════════════
+   MOE runbook (10.11.26): a right answer must send exactly the string Kata keeps in the question's
+   correctXapiResponsesPattern, character by character — '[,]' between choices / pairs, '[.]' between
+   a step (or source) and its value, the metadata's own wording and number formatting ('1,000').
+   Until 2026-11-11 this unit sent home-made strings: values joined with ' | ' without step names,
+   multi-select with ' | ', drop-target ids ('drag-12 -> target-yuval-gova'), and on-screen labels
+   with a trailing U+200B. Ported from mass-density-01 (unit-js/20-xapi.js), with the Arabic twin's
+   bidi strip (ar volume-liquid-01) plus U+200B / U+061C / U+FEFF; the screen's gershayim (U+05F4)
+   reads as the metadata's '"'.
+   The call sites pass WHAT the learner chose (an option index, a value, a pair); the builders below
+   turn it into the metadata's strings, so a re-sync of metadata/ from Kata changes the wording
+   without touching code. The library (xapi-720-l.js, answered block) passes result.response
+   through verbatim. The retired xapiZoneAnswer / xapiFieldsAnswer / xapiMultiAnswer (the
+   'id=value | …' producers) must not come back — _test/verify-report.js greps for them. */
 
-/* A drag board: for each zone, the items the learner dropped in it.
-   'ton: locomotive | kg: giant turtle | gram: apple, grain of salt'
-   ⚠️ Unused in this unit — component 04's drag question serialises its own ddqPlacement map,
-   because its markup has no <prefix>-zone-<id> containers. Kept so this file stays identical
-   across units; delete it only if the whole family stops using zone markup. */
-function xapiZoneAnswer(prefix, zoneIds){
+/* The metadata question object for (item suffix, qKey) — or null. Same matching as xapiQ. */
+function _xapiFindQuestion(suffix, qKey) {
   try {
-    return zoneIds.map(function(z){
-      var el = document.getElementById(prefix + '-zone-' + z);
-      var items = el ? el.querySelectorAll('[class*="drag-item"], [class*="placed-card"]') : [];
-      var names = [];
-      for (var i = 0; i < items.length; i++) names.push(xapiAnswerText(items[i]));
-      return z + ': ' + (names.join(', ') || '—');
-    }).join(' | ');
-  } catch (e) { return ''; }
+    var sc = (window.METADATA && window.METADATA.subContent) || [];
+    for (var i = 0; i < sc.length; i++) {
+      if (_xapiTrim(sc[i].id).slice(-(suffix.length + 1)) !== '-' + suffix) continue;
+      var qs = sc[i].questions || [];
+      for (var j = 0; j < qs.length; j++) {
+        var v = _xapiTrim(qs[j].questionId);
+        if (v === qKey || v.slice(-(qKey.length + 1)) === '/' + qKey) return qs[j];
+      }
+      var n = parseInt(String(qKey).replace(/\D/g, ''), 10);
+      return (n >= 1 && n <= qs.length) ? qs[n - 1] : null;
+    }
+  } catch (e) {}
+  return null;
 }
 
-/* A group of inputs or dropdowns. `values` is optional — without it .value is read from the DOM.
-   's18-input-1=1400 | s18-input-2=900' */
-function xapiFieldsAnswer(ids, values){
-  try {
-    return ids.map(function(id){
-      var v = values ? values[id] : (document.getElementById(id) || {}).value;
-      return id + '=' + (v == null || v === '' ? '—' : v);
-    }).join(' | ');
-  } catch (e) { return ''; }
+/* performance steps as [{name, correctAnswer}]. Two metadata shapes: an explicit steps[], or the
+   Kata shape: answers null, correctAnswers [{stepId, response}] — the stepId is the step name, in
+   correctAnswers order. */
+function _xapiSteps(q) {
+  if (q.steps) return q.steps;
+  var ca = q.correctAnswers || [];
+  if (!ca.length || !ca.every(function (c) { return c && c.stepId != null; })) return null;
+  return ca.map(function (c) { return { name: c.stepId, correctAnswer: c.response }; });
 }
 
-/* Multiple choice: the labels of the selected options, via the screen's own lookup function. */
-function xapiMultiAnswer(ids, optElFn){
+/* {questionId, parentId, questionType, answers, correctAnswers, steps} — one lookup. */
+function xapiQMeta(suffix, qKey) {
+  var ids = xapiQ(suffix, qKey), q = _xapiFindQuestion(suffix, qKey) || {};
+  return { questionId: ids.questionId, parentId: ids.parentId,
+           questionType: q.questionType || null,
+           answers: q.answers == null ? null : q.answers,
+           correctAnswers: q.correctAnswers || null,
+           steps: _xapiSteps(q) };
+}
+
+var XAPI_SEP_LIST = '[,]', XAPI_SEP_PAIR = '[.]';
+var _XAPI_DELIMS = /\[,\]|\[\.\]|\[:\]/g;
+
+/* Invisible marks: bidi (LRM / RLM / ALM, embeddings, isolates), the zero-width space the screen
+   labels end with (01-01 010, 01-05 001/q3) and a stray BOM. Lookup only — what is emitted is
+   always the metadata string, or the learner's own text with these removed. */
+var _XAPI_BIDI = /[\u200B\u200E\u200F\u061C\u202A-\u202E\u2066-\u2069\uFEFF]/g;
+function _xapiNorm(s) {
+  s = String(s == null ? '' : s);
+  if (s.normalize) s = s.normalize('NFC');
+  return s.replace(_XAPI_BIDI, '').replace(/[\u05F3\u2019\u02BC]/g, "'").replace(/\u05F4/g, '"')
+          .replace(/\s+/g, ' ').trim();
+}
+/* The same value with spaces, thousands commas and a closing full stop dropped: '1000' finds
+   '1,000', '25000:1' finds '25,000 : 1', an option ending in '.' finds its metadata text.
+   Second-chance lookup only. */
+function _xapiLoose(s) { return _xapiNorm(s).replace(/[\s,]/g, '').replace(/\.$/, ''); }
+/* learner-typed text: the delimiters cannot be escaped in xAPI, so they are blanked */
+function _xapiFree(s) { return _xapiNorm(s).replace(_XAPI_DELIMS, ' ').replace(/\s+/g, ' ').trim(); }
+
+/* Resolve one UI value to the metadata entry it names. pool = array of metadata strings.
+   value: a string (matched by _xapiNorm, then _xapiLoose) or a number (index into the pool).
+   Returns {text, idx} — text is the METADATA string, byte for byte, when found. */
+function _xapiPick(value, pool, item, qKey, where) {
+  pool = pool || [];
+  if (typeof value === 'number') {
+    if (pool[value] != null) return { text: String(pool[value]), idx: value };
+    console.warn('[xAPI] response: index ' + value + ' outside metadata ' + where, item, qKey);
+    return { text: '', idx: 1e9 };
+  }
+  var n = _xapiNorm(value), i;
+  for (i = 0; i < pool.length; i++) if (_xapiNorm(pool[i]) === n) return { text: String(pool[i]), idx: i };
+  var l = _xapiLoose(value);
+  for (i = 0; i < pool.length; i++) if (l !== '' && _xapiLoose(pool[i]) === l) return { text: String(pool[i]), idx: i };
+  if (n !== '') console.warn('[xAPI] response: "' + n + '" not in metadata ' + where, item, qKey);
+  return { text: _xapiFree(n), idx: 1e9 };
+}
+
+/* choice: selected → [text | index]; emitted in answers order, whatever the click order */
+function xapiChoiceResponse(item, qKey, selected) {
+  var m = xapiQMeta(item, qKey), pool = Array.isArray(m.answers) ? m.answers : [];
+  var picks = (selected || []).map(function (v) { return _xapiPick(v, pool, item, qKey, 'answers'); });
+  picks.sort(function (a, b) { return a.idx - b.idx; });
+  var texts = picks.map(function (p) { return p.text; }).filter(function (t) { return t !== ''; });
+  return { response: texts.join(XAPI_SEP_LIST), readable: texts.join(', ') };
+}
+
+/* matching: pairs → [{source, target}] (strings or indexes). Only the pairs the learner PLACED are
+   emitted. Order: the pairs that are in correctAnswers first, in correctAnswers order — the order
+   Kata builds correctXapiResponsesPattern in, so a right answer is byte-identical to it — then the
+   wrong pairs in answers.source, answers.target order. One entry per placed pair. */
+function xapiMatchingResponse(item, qKey, pairs) {
+  var m = xapiQMeta(item, qKey);
+  var src = (m.answers && m.answers.source) || [], tgt = (m.answers && m.answers.target) || [];
+  var placed = [];   // [{s: {text, idx}, t: {text, idx}}]
+  (pairs || []).forEach(function (p) {
+    var s = _xapiPick(p.source, src, item, qKey, 'answers.source');
+    var t = _xapiPick(p.target, tgt, item, qKey, 'answers.target');
+    if (s.text !== '') placed.push({ s: s, t: t });   // an empty slot / an unplaced card is not a pair
+  });
+  /* rank = position in correctAnswers (each entry claimed once); wrong pairs rank after every right one */
+  var ca = Array.isArray(m.correctAnswers) ? m.correctAnswers : [], claimed = {};
+  placed.forEach(function (p) {
+    p.rank = 1e9;
+    for (var j = 0; j < ca.length; j++) {
+      if (claimed[j] || !ca[j] || String(ca[j].source) !== p.s.text || String(ca[j].target) !== p.t.text) continue;
+      claimed[j] = true; p.rank = j; break;
+    }
+  });
+  placed.sort(function (a, b) { return (a.rank - b.rank) || (a.s.idx - b.s.idx) || (a.t.idx - b.t.idx); });
+  var out = [], readable = [];
+  placed.forEach(function (p) { out.push(p.s.text + XAPI_SEP_PAIR + p.t.text); readable.push((p.s.text || '—') + ' → ' + (p.t.text || '—')); });
+  return { response: out.join(XAPI_SEP_LIST), readable: readable.join(' | ') };
+}
+
+/* performance: values → [text, …] in steps order (or { <step name>: text }). A value equal to the
+   step's correct answer up to spaces / thousands commas is sent in the metadata's own form. */
+function xapiPerformanceResponse(item, qKey, values) {
+  var m = xapiQMeta(item, qKey), steps = m.steps || [];
+  if (!steps.length) console.warn('[xAPI] performance: no steps[] / correctAnswers[].stepId in metadata', item, qKey);
+  var out = [], readable = [];
+  steps.forEach(function (st, i) {
+    var name = String(st.name == null ? i + 1 : st.name);
+    var v = values == null ? '' : (Array.isArray(values) ? values[i] : (values[name] != null ? values[name] : values[i]));
+    v = _xapiFree(v);
+    if (st.correctAnswer != null && v !== '' && _xapiLoose(v) === _xapiLoose(st.correctAnswer)) v = String(st.correctAnswer);
+    out.push(name + XAPI_SEP_PAIR + v); readable.push(name + ': ' + (v || '—'));
+  });
+  return { response: out.join(XAPI_SEP_LIST), readable: readable.join(' | ') };
+}
+
+/* fill-in: a typed value equal to one of correctAnswers up to spaces / thousands commas is sent as
+   that entry (the first in correctAnswers order), so '25000:1' and '25,000 : 1' both match Kata. */
+function xapiFillInResponse(item, qKey, values) {
+  var m = xapiQMeta(item, qKey), ca = Array.isArray(m.correctAnswers) ? m.correctAnswers : [];
+  var vs = (Array.isArray(values) ? values : [values]).map(function (v) {
+    var s = _xapiFree(v), l = _xapiLoose(s);
+    for (var j = 0; j < ca.length; j++) if (typeof ca[j] === 'string' && l !== '' && _xapiLoose(ca[j]) === l) return ca[j];
+    return s;
+  });
+  return { response: vs.join(XAPI_SEP_LIST), readable: vs.join(' | ') };
+}
+function xapiNumericResponse(item, qKey, value) {
+  var n = Number(_xapiLoose(value));
+  var s = (isNaN(n) || _xapiLoose(value) === '') ? _xapiFree(value) : String(n);
+  return { response: s, readable: s };
+}
+function xapiTrueFalseResponse(item, qKey, value) {
+  var s = (value === true || value === 'true') ? 'true' : 'false';
+  return { response: s, readable: s };
+}
+function xapiOtherResponse(item, qKey, text) {
+  var s = _xapiFree(text);
+  return { response: s, readable: s };
+}
+function _xapiNoShape(item, qKey, want) {
+  console.warn('[xAPI] response: metadata type needs "' + want + '" but the call site passed none', item, qKey);
+  return [];
+}
+
+/* Dispatcher. spec = string | { type?, choices | pairs | steps | values | value | text }.
+   The METADATA type governs (Kata reads the metadata); spec.type is only a cross-check. */
+function xapiResponse(item, qKey, spec) {
+  var m = xapiQMeta(item, qKey), type = m.questionType;
+  if (typeof spec === 'string' || spec == null) spec = { text: spec == null ? '' : spec };
+  if (spec.type && type && spec.type !== type)
+    console.warn('[xAPI] response: call site says "' + spec.type + '", metadata says "' + type + '"', item, qKey);
+  if (!type) { type = spec.type || 'other'; console.warn('[xAPI] response: no questionType in metadata, using "' + type + '"', item, qKey); }
   try {
-    return (ids || []).map(function(id){
-      return xapiAnswerText(optElFn(id)) || String(id);
-    }).join(', ');
-  } catch (e) { return ''; }
+    switch (type) {
+      case 'choice':      return xapiChoiceResponse(item, qKey, spec.choices != null ? spec.choices : [spec.text]);
+      case 'matching':    return xapiMatchingResponse(item, qKey, spec.pairs || _xapiNoShape(item, qKey, 'pairs'));
+      case 'performance': return xapiPerformanceResponse(item, qKey, spec.steps != null ? spec.steps : spec.values);
+      case 'fill-in':     return xapiFillInResponse(item, qKey, spec.values != null ? spec.values : spec.text);
+      case 'numeric':     return xapiNumericResponse(item, qKey, spec.value != null ? spec.value : spec.text);
+      case 'true-false':  return xapiTrueFalseResponse(item, qKey, spec.value != null ? spec.value : spec.text);
+      default:            return xapiOtherResponse(item, qKey, spec.text != null ? spec.text : JSON.stringify(spec));
+    }
+  } catch (e) {
+    console.error('[xAPI] response formatting failed', item, qKey, e);
+    return { response: _xapiFree(spec.text), readable: _xapiFree(spec.text) };
+  }
 }
 
 /* Report one graded answer.
@@ -201,15 +356,18 @@ function xapiMultiAnswer(ids, optElFn){
      correct   whether the answer is correct
      isLast    whether this is the final answer to the question (correct, or attempts exhausted).
                Only 'answered.last' enters the component score denominator.
-     answer    the learner's answer text, as they see it */
+     answer    spec for xapiResponse ({choices} | {pairs} | {steps} | {value} | {text}), or a plain
+               string for a single-value type */
 function xapiAnswered(item, qKey, correct, isLast, answer){
   XAPI_Q_RESULTS[item + '/' + qKey] = !!correct;
   if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
   try {
+    var r = xapiResponse(item, qKey, answer);
     sendStatement720(isLast ? 'answered.last' : 'answered', 'question',
       { success: !!correct,
         score: { scaled: correct ? 1 : 0 },
-        extensions: { student_answer: [answer == null ? '' : String(answer)] } },
+        response: r.response,
+        extensions: { student_answer: [r.readable] } },
       xapiQ(item, qKey));
   } catch (e) { console.error('[xAPI] answered ' + item + '/' + qKey, e); }
 }

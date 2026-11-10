@@ -9,6 +9,7 @@
 | `verify-report.js` | **Structure.** 1032 assertions (2026-11-10). Loads the real `index.html`, `script.js` and every `unit-js/*.js` of all five components into jsdom, runs the script tags in document order from disk, and asserts against what actually ran. It does not call the code in isolation — it runs it. |
 | `statement-flow.js` | **Behaviour.** 41 assertions. Which statements actually leave the lomda when a learner does a thing, in what order, with what result — and, more importantly, which ones do **not** leave when the same screen is reached again by resume or by the back button. |
 | `true-false.js` | **True/false responses** (2026-11-10, guide §6.3b). Every `true-false` question of `metadata/` (01-006 q1), each option through the real handler: the answered statement reports `true` / `false`, matching the correct answer exactly when `success`. 3 of its 9 checks fail on the code before (it sent the label). |
+| `responses.js` | **Answer responses** (2026-11-11, MOE runbook 10.11.26). Every metadata question with a `correctXapiResponsesPattern`, answered through its real handlers: the right answer sends Kata's pattern byte for byte; every choice option sends its metadata answer verbatim, `success` exactly on the pattern; multi-select in reverse click order sends the same string; no ` \| `, `->`, input / drop-target id or invisible mark. 41 of its 348 checks fail on the code before. |
 | `xapi-720-l.js` | The `-k` stub plus `saveState720OnLeave` (writes like `saveState720`, counts its calls in `sessionStorage`, `__leaveWrites()`). The unit loads `-l` since 2026-11-10; section 22 boots on both stubs. |
 | `xapi-720-k.js` | A local stand-in for the CDN library, backed by `sessionStorage`. Loaded in the browser via `?xapiLib=`, and executed directly by both harnesses. It also models the real library's **deferral guard** — an item's `completed` is dropped, with no queue and no retry, unless an `answered` for that item passed through in the same page load. Keep it: without the guard the suite is blind to a whole class of permanently lost statements, which is how one survived every assertion here until it was found live against Kata. |
 
@@ -25,7 +26,7 @@ mkdir -p /tmp/lomda-test && cd /tmp/lomda-test && npm install jsdom
 Then from the unit root:
 
 ```bash
-NODE_PATH=/tmp/lomda-test/node_modules node _test/verify-report.js && NODE_PATH=/tmp/lomda-test/node_modules node _test/statement-flow.js
+NODE_PATH=/tmp/lomda-test/node_modules node _test/verify-report.js && NODE_PATH=/tmp/lomda-test/node_modules node _test/statement-flow.js && NODE_PATH=/tmp/lomda-test/node_modules node _test/responses.js
 ```
 
 Exit 0 means everything passed; failures print as a list at the end. Both accept an alternative base
