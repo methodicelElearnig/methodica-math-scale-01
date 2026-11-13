@@ -1269,14 +1269,17 @@ function checkLearningTypePick() {
   ok('pick', "advanceFromS2 enters the path through goToPath (which reports 'selected')",
     /function\s+advanceFromS2[\s\S]{0,160}?goToPath\(\s*window\.lomdaState\.selectedDesign\s*\)/.test(src));
   const x = fs.readFileSync(path.join(BASE, 'unit-js', '20-xapi.js'), 'utf8');
-  ok('pick', "xapiSelectedLearningType reports through the picks ledger, after the USING_G guard",
-    /function\s+xapiSelectedLearningType[\s\S]{0,400}?XAPI_USING_G[\s\S]{0,300}?sendStatementOnce\(\s*'picks'\s*,\s*'learning-type\/'\s*\+\s*path\s*,\s*'selected'/.test(x));
+  /* every confirmed choice / switch reports (2026-11-12, monday 13451706244): no once-per-path ledger */
+  const selFn = (/function\s+xapiSelectedLearningType[\s\S]*?\n\}/.exec(x) || [''])[0];
+  ok('pick', "xapiSelectedLearningType sends directly on every call (no picks ledger), after the USING_G guard",
+    /XAPI_USING_G[\s\S]{0,300}?sendStatement720\(\s*'selected'\s*,\s*'onlinelesson'/.test(selFn) && !/sendStatementOnce|'picks'/.test(selFn));
   const r = fs.readFileSync(path.join(BASE, 'unit-js', '40-resume.js'), 'utf8');
   ok('pick', 'emptyUnitState declares a picks ledger', /picks:\s*\{\}/.test(r));
 
   /* Behavioural (2026-11-02, guide §6.3a): category learning-type, object = the component, response =
      the chosen path item's catalogue mediaFormat; on המשך and the s3 / s4 toggles, never on a
-     card click; once per distinct path; nothing while a restore paints. */
+     card click; on EVERY confirmed choice and switch (2026-11-12 — was once per distinct path); the
+     switch to the cards (4 -> 3, a B-2 hub) closes the video item 003; nothing while a restore paints. */
   const meta = JSON.parse(fs.readFileSync(path.join(BASE, 'metadata', PART_DIR('01') + '.json'), 'utf8'));
   const sub = Object.fromEntries(meta.subContent.map((s) => [s.id.replace(/\/$/, '').slice(-3), s]));
   const { dom, val, exec } = loadComponent('01');
@@ -1286,7 +1289,7 @@ function checkLearningTypePick() {
     JSON.stringify(paths));
   ok('pick', 'XAPI_LEARNING_PATHS: each path item is the item its screen reports (video s4, cards s3)',
     val('SCREEN_TO_SUBCONTENT[4][0]') === paths.video.item && val('SCREEN_TO_SUBCONTENT[3][0]') === paths.cards.item);
-  exec('window.XAPI_USING_G = true; window.__sel = []; window.sendStatement720 = function (v, t, r, o) { if (v === "selected") window.__sel.push({ t: t, r: r, o: o }); };');
+  exec('window.XAPI_USING_G = true; window.__sel = []; window.__done = []; window.xapiItemAnswered = {}; window.sendStatement720 = function (v, t, r, o) { if (v === "selected") window.__sel.push({ t: t, r: r, o: o }); if (v === "completed" && o && o.objectId) window.__done.push(String(o.objectId).replace(/\\/$/, "").slice(-3)); };');
   exec("_unitState = { v: 5, component: currentPartSlug(), payload: null, done: {}, doneItems: {}, hints: {}, picks: {}, ui: {}, results: {} };");
   const card = (v) => '[data-screen="2"] .option-card[data-value="' + v + '"]';
   exec("goTo(2); selectDesign(document.querySelector('" + card('cards') + "')); selectDesign(document.querySelector('" + card('video') + "'));");
@@ -1294,11 +1297,14 @@ function checkLearningTypePick() {
   exec('advanceFromS2();');
   const first = JSON.parse(val('JSON.stringify(window.__sel)')); const at1 = val('currentScreen');
   exec("goTo(2); selectDesign(document.querySelector('" + card('video') + "')); advanceFromS2();");
-  const repick = val('window.__sel.length');
+  const repick = JSON.parse(val('JSON.stringify(window.__sel.slice(1))'));
+  exec("window.xapiItemAnswered[xapiItemId('003')] = true;");   /* 003 is graded: the library only closes an answered item */
   exec("document.querySelector('[data-screen=\"4\"] .s3-toggle-opt[data-view=\"cards\"]').click();");
-  const toCards = JSON.parse(val('JSON.stringify(window.__sel.slice(1))')); const at2 = val('currentScreen');
+  const toCards = JSON.parse(val('JSON.stringify(window.__sel.slice(2))')); const at2 = val('currentScreen');
+  const closed003 = JSON.parse(val('JSON.stringify(window.__done)')).includes('003');
   exec("document.querySelector('[data-screen=\"3\"] .s3-toggle-opt[data-view=\"video\"]').click();");
-  const back = val('window.__sel.length'); const at3 = val('currentScreen');
+  const back = JSON.parse(val('JSON.stringify(window.__sel.slice(3))')); const at3 = val('currentScreen');
+  const activeTab = val("document.querySelector('[data-screen=\"4\"] .s3-toggle-opt--active').hasAttribute('onclick')");
   exec("_unitState.picks = {}; window.__sel = []; _restoring = true; goTo(2); advanceFromS2(); _restoring = false;");
   const restoring = val('window.__sel.length');
   const one = (l, f) => l.length === 1 && l[0].t === 'onlinelesson' && l[0].o && l[0].o.category === 'learning-type'
@@ -1306,12 +1312,61 @@ function checkLearningTypePick() {
   ok('pick', 'a card click sends nothing (only the confirmed choice reports)', onClick === 0, String(onClick));
   ok('pick', 'המשך on video -> s4 and one selected — learning-type, component object, response "' + paths.video.mediaFormat + '"',
     one(first, paths.video.mediaFormat) && at1 === 4, JSON.stringify(first) + ' at ' + at1);
-  ok('pick', 'המשך again on the same path sends nothing', repick === 1, String(repick));
+  ok('pick', 'המשך again on the same path reports again (every confirmed choice)', one(repick, paths.video.mediaFormat), JSON.stringify(repick));
   ok('pick', 'the s4 cards toggle -> s3 and one selected, response "' + paths.cards.mediaFormat + '"',
     one(toCards, paths.cards.mediaFormat) && at2 === 3, JSON.stringify(toCards) + ' at ' + at2);
-  ok('pick', 'the s3 video toggle back to an already-reported path -> s4, nothing sent', back === 2 && at3 === 4, back + ' at ' + at3);
+  ok('pick', 'the s4 cards toggle (4 -> 3, B-2 hub) closes the video item 003', closed003, val('JSON.stringify(window.__done)'));
+  ok('pick', 'the s3 video toggle back to an already-reported path -> s4, reports again, response "' + paths.video.mediaFormat + '"',
+    one(back, paths.video.mediaFormat) && at3 === 4, JSON.stringify(back) + ' at ' + at3);
+  ok('pick', 'the active tab has no click handler (a click on it reports nothing)', activeTab === false);
   ok('pick', 'nothing is sent while a restore paints', restoring === 0, String(restoring));
   dom.window.close();
+}
+
+/* ══════════════ 18b. Back never closes an item (B-2) ══════════════
+   monday 13454123722 (2026-11-12): xapiOnScreen closed the current item on any move into another item,
+   Back included — a Back from a half-answered item sent its completed with the failed result and the
+   doneItems ledger then blocked the real one. Per component: the first graded item E with an earlier
+   item: wrong answer, Back → no completed for E; return, right answer, forward → exactly one, carrying
+   the item result of that moment. */
+
+function checkBackNeverCloses() {
+  let covered = 0;
+  for (const c of COMPONENTS) {
+    const { dom, val, exec, consoleErrors } = loadComponent(c);
+    const map = JSON.parse(val('JSON.stringify(SCREEN_TO_SUBCONTENT)'));
+    const evalItems = JSON.parse(val('JSON.stringify(typeof XAPI_EVAL_ITEMS !== "undefined" ? XAPI_EVAL_ITEMS : {})'));
+    const screens = Object.keys(map).map(Number).filter((n) => val('!!document.querySelector(\'[data-screen="' + n + '"]\')')).sort((a, b) => a - b);
+    const itemOf = (n) => (map[n] ? map[n][0] : null);
+    const iE = screens.findIndex((n, i) => i > 0 && evalItems[itemOf(n)] && itemOf(screens[i - 1]) && itemOf(screens[i - 1]) !== itemOf(n)
+      && screens.slice(i + 1).some((m) => itemOf(m) && itemOf(m) !== itemOf(n)));
+    if (iE < 0) { dom.window.close(); continue; }
+    covered++;
+    const E = itemOf(screens[iE]), prev = screens[iE - 1], after = screens.slice(iE + 1).find((m) => itemOf(m) && itemOf(m) !== E);
+    const meta = JSON.parse(fs.readFileSync(path.join(BASE, 'metadata', PART_DIR(c) + '.json'), 'utf8'));
+    const it = meta.subContent.find((s) => s.id.replace(/\/$/, '').slice(-3) === E);
+    const qs = ((it && it.questions) || []).filter((q) => q.correctAnswers && (q.correctAnswers.length || Object.keys(q.correctAnswers).length))
+      .map((q) => E + '/' + q.questionId.split('/').pop());
+    exec('window.XAPI_USING_G = true; window.xapiItemAnswered = {}; window.__done = []; window.sendStatement720 = function (v, t, r, o) { if (v === "completed" && o && o.objectId) window.__done.push({ it: String(o.objectId).replace(/\\/$/, "").slice(-3), r: r || null }); };');
+    exec("_unitState = { v: 5, component: currentPartSlug(), payload: null, done: {}, doneItems: {}, hints: {}, picks: {}, ui: {}, results: {} };");
+    const setAll = (v) => exec('(function(){ var k = ' + JSON.stringify(qs) + '; k.forEach(function (q) { XAPI_Q_RESULTS[q] = ' + v + '; }); window.xapiItemAnswered[xapiItemId("' + E + '")] = true; })();');
+    const closes = () => JSON.parse(val('JSON.stringify(window.__done)')).filter((d) => d.it === E);
+    const tag = c + ' item ' + E + ' (s' + screens[iE] + ')';
+    exec('goTo(' + prev + '); goTo(' + screens[iE] + ');');
+    setAll(false);
+    exec('goTo(' + prev + ');');   /* the Back */
+    ok('back', tag + ': Back after a wrong answer sends no completed', closes().length === 0, JSON.stringify(closes()));
+    exec('goTo(' + screens[iE] + ');');
+    setAll(true);
+    exec('goTo(' + after + ');');
+    const cl = closes();
+    ok('back', tag + ': the forward move after the right answer sends exactly one completed', cl.length === 1, String(cl.length));
+    ok('back', tag + ': that completed carries the item result of the moment it closes',
+      !!cl[0] && JSON.stringify(cl[0].r) === val('JSON.stringify(xapiItemResult("' + E + '"))'), JSON.stringify(cl[0] && cl[0].r));
+    ok('back', tag + ': no console.error', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | '));
+    dom.window.close();
+  }
+  ok('back', 'B-2 covered in at least 3 components', covered >= 3, String(covered));
 }
 
 /* ══════════════ 19. The YouTube path is anchored and filtered ══════════════
@@ -1784,6 +1839,7 @@ function main() {
   checkLatchGuards();
   checkHintLedgerPersists();
   checkLearningTypePick();
+  checkBackNeverCloses();
   checkYouTubeReporting();
   checkWriteGuard();
   checkBootWindow();
