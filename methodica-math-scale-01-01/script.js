@@ -475,10 +475,10 @@ function advanceFromS2() {
 /* Entering a learning path — screen 2's המשך, and the mode toggles on screens 3 and 4 (switching
    path is a choice too; screen 5's toggle wiring below points here as well, though its buttons are
    not in the markup). xAPI: 'selected' under the learning-type category, not a graded answer
-   (../unit-js/20-xapi.js xapiSelectedLearningType: once per distinct path through the picks ledger —
-   the same keys 'learning-type/video' / '…/cards' as before, so a learner who already reported a
-   path is not reported again; response = the path item's mediaFormat since 02.11.26, it was the
-   card's label). Then video → screen 4, anything else → the flip cards, screen 3.
+   (../unit-js/20-xapi.js xapiSelectedLearningType: every confirmed choice and every switch reports,
+   since 12.11.26 — it was once per distinct path through the picks ledger; response = the path item's
+   mediaFormat since 02.11.26, it was the card's label). Then video → screen 4, anything else → the flip
+   cards, screen 3 (a B-2 hub, XAPI_HUB_SCREENS below: the switch 4 → 3 still closes the video item).
    (The screen-0 avatar choice stays unreported: it is decoration, not a learning preference.) */
 function goToPath(v) {
   xapiSelectedLearningType(v);
@@ -2332,6 +2332,9 @@ var XAPI_EVAL_ITEMS = { '003': 1, '004': 1, '006': 1, '007': 1, '008': 1, '009':
 /* The screen-2 learning-path choice ('selected', learning-type — goToPath above): selectedDesign -> the
    path's item and its catalogue mediaFormat (the statement's response). */
 var XAPI_LEARNING_PATHS = { video: { item: '003', mediaFormat: 'video' }, cards: { item: '004', mediaFormat: 'text' } };
+/* B-2 hub (../unit-js/20-xapi.js _xapiIsBackward, 2026-11-12): screen 3, the flip cards. The video screen's
+   toggle (goToPath('cards'), 4 -> 3) is a lower screen but a path switch, not a Back: it still closes 003. */
+var XAPI_HUB_SCREENS = { 3: 1 };
 
 
 /* Report modal, draggable feedback, a11y wiring and image zoom: ../unit-js/ */
