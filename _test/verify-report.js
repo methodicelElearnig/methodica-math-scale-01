@@ -1278,8 +1278,9 @@ function checkLearningTypePick() {
 
   /* Behavioural (2026-11-02, guide §6.3a): category learning-type, object = the component, response =
      the chosen path item's catalogue mediaFormat; on המשך and the s3 / s4 toggles, never on a
-     card click; on EVERY confirmed choice and switch (2026-11-12 — was once per distinct path); the
-     switch to the cards (4 -> 3, a B-2 hub) closes the video item 003; nothing while a restore paints. */
+     card click; on EVERY confirmed choice and switch (2026-11-12 — was once per distinct path); a switch
+     on the toggle sends no item completed in either direction and the path item closes on the forward move
+     out of it (monday 13451740972, 2026-11-17); nothing while a restore paints. */
   const meta = JSON.parse(fs.readFileSync(path.join(BASE, 'metadata', PART_DIR('01') + '.json'), 'utf8'));
   const sub = Object.fromEntries(meta.subContent.map((s) => [s.id.replace(/\/$/, '').slice(-3), s]));
   const { dom, val, exec } = loadComponent('01');
@@ -1301,9 +1302,13 @@ function checkLearningTypePick() {
   exec("window.xapiItemAnswered[xapiItemId('003')] = true;");   /* 003 is graded: the library only closes an answered item */
   exec("document.querySelector('[data-screen=\"4\"] .s3-toggle-opt[data-view=\"cards\"]').click();");
   const toCards = JSON.parse(val('JSON.stringify(window.__sel.slice(2))')); const at2 = val('currentScreen');
-  const closed003 = JSON.parse(val('JSON.stringify(window.__done)')).includes('003');
+  const doneNow = () => JSON.parse(val('JSON.stringify(window.__done)')).filter((d) => d === '003' || d === '004');
+  const afterToCards = doneNow();
+  exec("window.xapiItemAnswered[xapiItemId('004')] = true;");
   exec("document.querySelector('[data-screen=\"3\"] .s3-toggle-opt[data-view=\"video\"]').click();");
   const back = JSON.parse(val('JSON.stringify(window.__sel.slice(3))')); const at3 = val('currentScreen');
+  const afterBack = doneNow();
+  const hubs = val('typeof XAPI_HUB_SCREENS === "undefined" ? null : JSON.stringify(XAPI_HUB_SCREENS)');
   const activeTab = val("document.querySelector('[data-screen=\"4\"] .s3-toggle-opt--active').hasAttribute('onclick')");
   exec("_unitState.picks = {}; window.__sel = []; _restoring = true; goTo(2); advanceFromS2(); _restoring = false;");
   const restoring = val('window.__sel.length');
@@ -1315,11 +1320,20 @@ function checkLearningTypePick() {
   ok('pick', 'המשך again on the same path reports again (every confirmed choice)', one(repick, paths.video.mediaFormat), JSON.stringify(repick));
   ok('pick', 'the s4 cards toggle -> s3 and one selected, response "' + paths.cards.mediaFormat + '"',
     one(toCards, paths.cards.mediaFormat) && at2 === 3, JSON.stringify(toCards) + ' at ' + at2);
-  ok('pick', 'the s4 cards toggle (4 -> 3, B-2 hub) closes the video item 003', closed003, val('JSON.stringify(window.__done)'));
+  ok('pick', 'switch: the s4 cards toggle (4 -> 3) sends no completed for a path item', afterToCards.length === 0, afterToCards.join(','));
+  ok('pick', 'switch: the s3 video toggle (3 -> 4, a higher screen) sends no completed for a path item', afterBack.length === 0, afterBack.join(','));
+  ok('pick', 'switch: screen 3 is not a B-2 hub any more', hubs === null, String(hubs));
   ok('pick', 'the s3 video toggle back to an already-reported path -> s4, reports again, response "' + paths.video.mediaFormat + '"',
     one(back, paths.video.mediaFormat) && at3 === 4, JSON.stringify(back) + ' at ' + at3);
   ok('pick', 'the active tab has no click handler (a click on it reports nothing)', activeTab === false);
   ok('pick', 'nothing is sent while a restore paints', restoring === 0, String(restoring));
+  /* the path item closes like any other: on the forward move out of it (s3 / s4 Continue -> screen 6) */
+  exec("window.__done = []; _unitState.doneItems = {}; xapiCurrentItem = null; goTo(2); selectDesign(document.querySelector('" + card('video') + "')); advanceFromS2();" +
+    " window.xapiItemAnswered[xapiItemId('003')] = true; window.xapiItemAnswered[xapiItemId('004')] = true;" +
+    " document.querySelector('[data-screen=\"4\"] .s3-toggle-opt[data-view=\"cards\"]').click(); document.querySelector('[data-screen=\"3\"] .s3-toggle-opt[data-view=\"video\"]').click(); window.__done = []; advanceFromS3();");
+  const exitDone = JSON.parse(val('JSON.stringify(window.__done)'));
+  ok('pick', 'switch: video -> cards -> video, then Continue (4 -> 6) closes the video item 003 once, and only it',
+    JSON.stringify(exitDone) === JSON.stringify(['003']) && val('currentScreen') === 6, JSON.stringify(exitDone) + ' at ' + val('currentScreen'));
   dom.window.close();
 }
 
@@ -1342,7 +1356,10 @@ function checkBackNeverCloses() {
       && screens.slice(i + 1).some((m) => itemOf(m) && itemOf(m) !== itemOf(n)));
     if (iE < 0) { dom.window.close(); continue; }
     covered++;
-    const E = itemOf(screens[iE]), prev = screens[iE - 1], after = screens.slice(iE + 1).find((m) => itemOf(m) && itemOf(m) !== E);
+    /* a path item's forward exit is not the other path's screen (only the toggle goes there, and a switch closes nothing) */
+    const pathItems = Object.values(JSON.parse(val('JSON.stringify(typeof XAPI_LEARNING_PATHS !== "undefined" ? XAPI_LEARNING_PATHS : {})'))).map((p) => p.item);
+    const E = itemOf(screens[iE]), prev = screens[iE - 1];
+    const after = screens.slice(iE + 1).find((m) => itemOf(m) && itemOf(m) !== E && !(pathItems.includes(E) && pathItems.includes(itemOf(m))));
     const meta = JSON.parse(fs.readFileSync(path.join(BASE, 'metadata', PART_DIR(c) + '.json'), 'utf8'));
     const it = meta.subContent.find((s) => s.id.replace(/\/$/, '').slice(-3) === E);
     const qs = ((it && it.questions) || []).filter((q) => q.correctAnswers && (q.correctAnswers.length || Object.keys(q.correctAnswers).length))

@@ -472,16 +472,23 @@ function advanceFromS2() {
   goToPath(window.lomdaState.selectedDesign);
 }
 
-/* Entering a learning path — screen 2's המשך, and the mode toggles on screens 3 and 4 (switching
-   path is a choice too; screen 5's toggle wiring below points here as well, though its buttons are
-   not in the markup). xAPI: 'selected' under the learning-type category, not a graded answer
-   (../unit-js/20-xapi.js xapiSelectedLearningType: every confirmed choice and every switch reports,
-   since 12.11.26 — it was once per distinct path through the picks ledger; response = the path item's
-   mediaFormat since 02.11.26, it was the card's label). Then video → screen 4, anything else → the flip
-   cards, screen 3 (a B-2 hub, XAPI_HUB_SCREENS below: the switch 4 → 3 still closes the video item).
+/* Entering a learning path — screen 2's המשך (goToPath) and the mode toggles on screens 3 and 4
+   (switchToPath: switching path is a choice too; screen 5's toggle wiring below points there as well,
+   though its buttons are not in the markup). xAPI: 'selected' under the learning-type category, not a
+   graded answer (../unit-js/20-xapi.js xapiSelectedLearningType: every confirmed choice and every switch
+   reports, since 12.11.26; response = the path item's mediaFormat since 02.11.26). Then video → screen 4,
+   anything else → the flip cards, screen 3.
    (The screen-0 avatar choice stays unreported: it is decoration, not a learning preference.) */
 function goToPath(v) {
   xapiSelectedLearningType(v);
+  goTo(v === 'video' ? 4 : 3);
+}
+/* The toggle on a path screen (monday 13451740972, 2026-11-17): a switch is a choice but not a forward
+   move, so it must not close the item it leaves — xapiPathSwitch() marks the next xapiOnScreen. The path
+   item closes on the forward move out of it (screen 6). */
+function switchToPath(v) {
+  xapiSelectedLearningType(v);
+  xapiPathSwitch();
   goTo(v === 'video' ? 4 : 3);
 }
 
@@ -692,12 +699,12 @@ function s5Enter() {
       btnVideo.classList.add('s3-toggle-opt--active');
       btnVideo.removeAttribute('onclick');
       btnCards.classList.remove('s3-toggle-opt--active');
-      btnCards.setAttribute('onclick', "goToPath('cards')");
+      btnCards.setAttribute('onclick', "switchToPath('cards')");
     } else {
       btnCards.classList.add('s3-toggle-opt--active');
       btnCards.removeAttribute('onclick');
       btnVideo.classList.remove('s3-toggle-opt--active');
-      btnVideo.setAttribute('onclick', "goToPath('video')");
+      btnVideo.setAttribute('onclick', "switchToPath('video')");
     }
   }
 
@@ -2332,9 +2339,8 @@ var XAPI_EVAL_ITEMS = { '003': 1, '004': 1, '006': 1, '007': 1, '008': 1, '009':
 /* The screen-2 learning-path choice ('selected', learning-type — goToPath above): selectedDesign -> the
    path's item and its catalogue mediaFormat (the statement's response). */
 var XAPI_LEARNING_PATHS = { video: { item: '003', mediaFormat: 'video' }, cards: { item: '004', mediaFormat: 'text' } };
-/* B-2 hub (../unit-js/20-xapi.js _xapiIsBackward, 2026-11-12): screen 3, the flip cards. The video screen's
-   toggle (goToPath('cards'), 4 -> 3) is a lower screen but a path switch, not a Back: it still closes 003. */
-var XAPI_HUB_SCREENS = { 3: 1 };
+/* No B-2 hub here (monday 13451740972, 2026-11-17): a switch on the path toggle (switchToPath) is marked
+   with xapiPathSwitch() and closes nothing; the path item closes on the forward move out of it. */
 
 
 /* Report modal, draggable feedback, a11y wiring and image zoom: ../unit-js/ */

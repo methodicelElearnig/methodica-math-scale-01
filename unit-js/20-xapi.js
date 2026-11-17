@@ -122,9 +122,9 @@ function xapiSeedAnsweredFromResume(){
    at that moment, and the ledger then swallowed the real one after the learner came back and answered.
    The forward button is blocked until a question is finished, so the first forward close carries the final
    result. Rank: a numeric id is its number; a string id is its index in SCREEN_ORDER when the unit has one,
-   else in SCREEN_TO_SUBCONTENT's key order. Screens in a part's XAPI_HUB_SCREENS are never backward — in
-   part 01 the flip-cards screen, which the video screen's path toggle jumps back to: a path switch still
-   closes the item it leaves. The item comparison is the fallback for the first call. */
+   else in SCREEN_TO_SUBCONTENT's key order. Screens in a part's XAPI_HUB_SCREENS (a map / menu that a
+   finished item routes back to) are never backward; no part declares one. The item comparison is the
+   fallback for the first call. */
 var _xapiLastScreen = null;
 function _xapiScreenRank(s) {
   if (s == null) return null;
@@ -141,17 +141,26 @@ function _xapiIsBackward(fromItem, toItem, toScreen, fromScreen) {
   return !!(fromItem && toItem && Number(toItem) < Number(fromItem));
 }
 
+/* monday 13451740972 (2026-11-17): a learning-path switch never closes the item it leaves.
+   The path toggle's handler calls xapiPathSwitch() right before its goTo; the next xapiOnScreen skips the
+   close. A path item closes like any other item: on a forward move out of it, or in xapiFinishItems. Until
+   17.11 a switch closed the item it left, so "switch and back" sent 'completed' for both path items without
+   either being used. */
+var _xapiPathSwitching = false;
+function xapiPathSwitch() { _xapiPathSwitching = true; }
+
 /* Item-level initialized/completed pairs, driven from goTo(). Paging inside one item emits
    nothing; the item closes when the learner moves FORWARD into a screen belonging to a different
-   item (a Back does not close it — B-2 above). */
+   item (a Back does not close it — B-2 above; a switch on the path toggle does not either — above). */
 function xapiOnScreen(screen){
   var fromScreen = _xapiLastScreen;
   _xapiLastScreen = screen;
+  var switching = _xapiPathSwitching; _xapiPathSwitching = false;
   if (!window.XAPI_USING_G || typeof sendStatement720 !== 'function') return;
   var map = (typeof SCREEN_TO_SUBCONTENT !== 'undefined') ? SCREEN_TO_SUBCONTENT[screen] : null;
   var item = map ? map[0] : null;
   if (item === xapiCurrentItem) return;
-  if (xapiCurrentItem && !_xapiIsBackward(xapiCurrentItem, item, screen, fromScreen)) {
+  if (xapiCurrentItem && !switching && !_xapiIsBackward(xapiCurrentItem, item, screen, fromScreen)) {
     try { sendCompletedOnce('doneItems', itemLedgerKey(xapiCurrentItem), 'question', xapiItemResult(xapiCurrentItem), { objectId: xapiItemId(xapiCurrentItem), expectsAnswer: _xapiIsEval(xapiCurrentItem) }); } catch (e) {}
   }
   xapiCurrentItem = item;
